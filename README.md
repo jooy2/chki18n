@@ -2,6 +2,8 @@
 
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/jooy2/chki18n/blob/main/LICENSE) ![Commit Count](https://img.shields.io/github/commit-activity/y/jooy2/chki18n) [![Followers](https://img.shields.io/github/followers/jooy2?style=social)](https://github.com/jooy2) ![Stars](https://img.shields.io/github/stars/jooy2/chki18n?style=social)
 
+> Check and verify your i18n translation files
+
 **chki18n** is a command-line tool that validates multilingual translation files against i18n (Internationalization) standards.
 
 It automatically detects common mistakes that can occur when managing multilingual files and suggests ways to improve them. With this tool, you can validate files in advance within CI environments or other automated workflows.
@@ -15,12 +17,14 @@ This tool does not provide automatic text translation. It only performs checks.
 
 ## Verification List
 
-| Level   | Name                | Example                                      |
-| ------- | ------------------- | -------------------------------------------- |
-| Error   | File Validation     | Missing files, parsing failure...            |
-| Warning | Empty locale key    |                                              |
-| Warning | Duplicate values    | They use different keys but the same value   |
-| Warning | Useless translation | The English and Chinese phrases are the same |
+| Level | Check code | Reason |
+| --- | --- | --- |
+| Error | INVALID_FILE | Missing files, parsing failure... |
+| Warning | NO_KEY | The 'a' key, which exists in Language A, is missing in Language B |
+| Warning | EMPTY_VALUE | The key is defined, but its value is empty. |
+| Warning | DUPLICATE_VALUE | They use different keys but the same value |
+| Warning | NOT_TRANSLATED_VALUE | This is the same as the text in the target language. It appears that the translation has not been completed. |
+| Warning | DUMMY_KEY | This key does not exist in the target language and is therefore not used. |
 
 ## How-to-use (CLI)
 

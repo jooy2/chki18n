@@ -35,6 +35,8 @@ export default pluginTypeScriptESLint.config([
 			'n/no-missing-import': 'off',
 			'n/no-unpublished-import': 'off',
 			'n/no-unsupported-features/node-builtins': 'off',
+			'n/no-unsupported-features/es-builtins': 'off',
+			'n/no-unsupported-features/es-syntax': 'off',
 			'n/no-process-exit': 'off',
 			'n/hashbang': 'off',
 			'@typescript-eslint/no-unused-vars': 'error',
