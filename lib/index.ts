@@ -1,15 +1,21 @@
 #!/usr/bin/env node
 import chalk from 'chalk';
-import { join, resolve } from 'path';
+import minimist from 'minimist';
 import { readdir, readFile } from 'fs/promises';
 import { flatten } from 'flat';
 import { safeJSONParse } from 'qsu';
+import { joinFilePath } from 'qsu/node';
+import { platform } from 'node:os';
+import { isAbsolute } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __primaryLocale = 'ko';
-const __header = chalk.bgGreenBright.whiteBright(' Translation ');
+const __header = chalk.bgBlueBright.whiteBright(' Chki18n ');
 const __tagError = chalk.bgRedBright.whiteBright(' ERROR ');
 const __tagWarning = chalk.bgYellowBright.whiteBright(' WARN ');
 const __tagInfo = chalk.bgGrey.whiteBright(' INFO ');
+
+const __isWindows = platform() === 'win32';
 
 function errorAndExit(message: string) {
 	console.error(`${__header}${__tagError} ${message}`);
@@ -19,13 +25,26 @@ function errorAndExit(message: string) {
 	process.exit(1);
 }
 
-const checkValidTranslation = async (targetDirectory: string) => {
+export const check = async (path: string, options?: { path?: string }) => {
+	const args = minimist(process.argv.slice(2));
+	const opt = args || options;
+
+	let targetDirectory = args._?.[0] || opt?.path || path;
+
+	console.log(args);
+
 	if (!targetDirectory) {
 		errorAndExit('`targetDirectory` is required.');
 		return;
 	}
 
-	console.info(`${__header}${__tagInfo} Process to check valid translation...`);
+	if (!isAbsolute(targetDirectory)) {
+		targetDirectory = joinFilePath(__isWindows, process.cwd(), targetDirectory);
+	}
+
+	console.info(
+		`${__header}${__tagInfo} Process to check valid translation... (Path: ${targetDirectory})`
+	);
 
 	const localeObj: any = {};
 	let targetFiles;
@@ -40,7 +59,7 @@ const checkValidTranslation = async (targetDirectory: string) => {
 
 	// Get translation strings from file
 	for (const file of targetFiles) {
-		const filePath = join(targetDirectory, file);
+		const filePath = joinFilePath(__isWindows, targetDirectory, file);
 
 		if (filePath.endsWith('.json')) {
 			try {
@@ -138,15 +157,18 @@ const checkValidTranslation = async (targetDirectory: string) => {
 	}
 
 	console.info(`${__header}${__tagInfo} Done!`);
+
+	return {
+		success: true
+	};
 };
 
-(async () => {
-	const targetDirectory = process?.argv?.[2];
+const isCliMode = process.argv[1] === fileURLToPath(import.meta.url);
 
-	if (!targetDirectory) {
-		errorAndExit('`targetDirectory` is required');
-		return;
-	}
+if (isCliMode) {
+	(async () => {
+		await check('');
+	})();
+}
 
-	await checkValidTranslation(resolve(targetDirectory));
-})();
+export default check;
