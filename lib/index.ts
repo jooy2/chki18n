@@ -1,81 +1,62 @@
 #!/usr/bin/env node
-import chalk from 'chalk';
 import minimist from 'minimist';
 import { readdir, readFile } from 'fs/promises';
 import { flatten } from 'flat';
-import { safeJSONParse } from 'qsu';
+import { objToPrettyStr, safeJSONParse } from 'qsu';
 import { joinFilePath } from 'qsu/node';
-import { platform } from 'node:os';
 import { isAbsolute } from 'node:path';
-import { realpathSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-
-const __primaryLocale = 'ko';
-const __isCliMode = (() => {
-	try {
-		return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
-	} catch {
-		return false;
-	}
-})();
-const __header = chalk.bgBlueBright.whiteBright(' Chki18n ');
-const __tagError = chalk.bgRedBright.whiteBright(' ERROR ');
-const __tagWarning = chalk.bgYellowBright.whiteBright(' WARN ');
-const __tagInfo = chalk.bgGrey.whiteBright(' INFO ');
-
-const __isWindows = platform() === 'win32';
+import packageJson from '../package.json' with { type: 'json' };
+import { _debugLog, _error, _log } from './logger.js';
+import { __isCliMode, __isWindows } from './constants.js';
+import type { AnyValueObject } from './_types/global';
 
 function _errorAndExit(message: string) {
-	console.error(`${__header}${__tagError} ${message}`);
-	console.error(
-		`${__header}${__tagError} The job was aborted due to an invalid translation file. See above issues.`
-	);
+	_error(message);
+	_error(`The job was aborted due to an invalid translation file. See above issues.`);
 
 	setTimeout(() => process.exit(1), 1000);
+
+	return {
+		success: false
+	};
 }
 
-function _log(message: string, level: 'info' | 'warn' | 'error' = 'info') {
-	let tag: string;
-
-	switch (level) {
-		case 'warn':
-			tag = __tagWarning;
-			break;
-		case 'error':
-			tag = __tagError;
-			break;
-		case 'info':
-		default:
-			tag = __tagInfo;
-			break;
-	}
-
-	console.log(`${__header}${tag} ${message}`);
-}
-
-export const check = async (path: string, options?: { path?: string }) => {
+export const checkTranslationFiles = async (
+	path: string,
+	options?: { path?: string; target?: string; info?: boolean; warn?: boolean }
+) => {
+	/* =====================================================
+	 * Initialize & Validate option
+	 * ===================================================== */
 	const args = minimist(process.argv.slice(2));
 	const opt = args || options;
 
-	let targetDirectory = args._?.[0] || opt?.path || path;
+	console.log(opt);
 
-	if (!targetDirectory) {
-		_errorAndExit('No `path` argument is specified.');
-		return;
+	_debugLog(`Options: ${objToPrettyStr(opt)}`, opt);
+
+	let _path = args._?.[0] || opt?.path || path;
+	const _noWarn = opt?.warn === false;
+	const _targetLang = opt?.target ?? 'en';
+
+	if (!_path) {
+		return _errorAndExit('No `path` argument is specified.');
 	}
 
-	if (!isAbsolute(targetDirectory)) {
-		targetDirectory = joinFilePath(__isWindows, process.cwd(), targetDirectory);
+	if (!isAbsolute(_path)) {
+		_path = joinFilePath(__isWindows, process.cwd(), _path);
 	}
 
-	_log(`Process to check valid translation... (Path: ${targetDirectory})`);
+	_log(`Chki18n ${packageJson.version} (Check-and-verify-your-i18n-files)\n`, 'info', opt);
+	_log(`Process to check specified translation files... (Current path: ${_path})`, 'info', opt);
+	_log(`This comparison is based on the following language: ${_targetLang}\n\n`, 'info', opt);
 
-	const localeObj: any = {};
+	const localeObj: AnyValueObject = {};
 	let targetFiles;
 
 	// Get files from locale directory
 	try {
-		targetFiles = await readdir(targetDirectory);
+		targetFiles = await readdir(_path);
 	} catch {
 		_errorAndExit('Failed to fetch translate file lists from locale directory');
 		return;
@@ -83,7 +64,7 @@ export const check = async (path: string, options?: { path?: string }) => {
 
 	// Get translation strings from file
 	for (const file of targetFiles) {
-		const filePath = joinFilePath(__isWindows, targetDirectory, file);
+		const filePath = joinFilePath(__isWindows, _path, file);
 
 		if (filePath.endsWith('.json')) {
 			try {
@@ -99,24 +80,41 @@ export const check = async (path: string, options?: { path?: string }) => {
 		}
 	}
 
+	/* =====================================================
+	 * Validate i18n locales
+	 * ===================================================== */
+
+	/* -----------------------
+	 * [CHECK] Empty keys
+	 * ----------------------- */
 	const listDoesNotHaveKeys = [];
-	const listNotTranslatedKeys = [];
-	const listDuplicatedValues = [];
 
 	let objUniqueLocaleValues: any = {};
 
 	// Search key is missing
-	for (const compareKey of Object.keys(localeObj[__primaryLocale])) {
+	for (const compareKey of Object.keys(localeObj[_targetLang])) {
 		for (const locale of Object.keys(localeObj)) {
-			if (locale !== __primaryLocale) {
+			if (locale !== _targetLang) {
 				if (!Object.keys(localeObj[locale]).includes(compareKey)) {
 					listDoesNotHaveKeys.push(
-						` - ${locale} -> '${compareKey}' (${__primaryLocale}: ${localeObj[__primaryLocale][compareKey]})`
+						` - ${locale} -> '${compareKey}' (${_targetLang}: ${localeObj[_targetLang][compareKey]})`
 					);
 				}
 			}
 		}
 	}
+
+	if (listDoesNotHaveKeys.length > 0) {
+		_errorAndExit(
+			`Some translation files did not include the following keys:\n\n${listDoesNotHaveKeys.join('\n')}\n`
+		);
+		return;
+	}
+
+	/* -----------------------
+	 * [CHECK] Duplicate values
+	 * ----------------------- */
+	const listDuplicatedValues = [];
 
 	// Search duplicate value
 	for (const locale of Object.keys(localeObj)) {
@@ -144,45 +142,46 @@ export const check = async (path: string, options?: { path?: string }) => {
 		}
 	}
 
+	if (listDuplicatedValues.length > 0 && !_noWarn) {
+		_log(
+			`Some keys have duplicate values. Ignore this warning if necessary:\n\n${listDuplicatedValues.join('\n')}\n`,
+			'warn',
+			opt
+		);
+	}
+
+	/* -----------------------
+	 * [CHECK] Not translated keys
+	 * ----------------------- */
+	const listNotTranslatedKeys = [];
+
 	// Search not translated key
 	for (const locale of Object.keys(localeObj)) {
-		if (locale !== __primaryLocale) {
+		if (locale !== _targetLang) {
 			for (const notTranslateCheckKey of Object.keys(localeObj[locale])) {
 				if (
-					localeObj[locale][notTranslateCheckKey] ===
-					localeObj[__primaryLocale][notTranslateCheckKey]
+					localeObj[locale][notTranslateCheckKey] === localeObj[_targetLang][notTranslateCheckKey]
 				) {
 					listNotTranslatedKeys.push(
-						` - ${locale} -> '${notTranslateCheckKey}' (${__primaryLocale}: ${localeObj[locale][notTranslateCheckKey]?.replace(/\n/g, '\\n')})`
+						` - ${locale} -> '${notTranslateCheckKey}' (${_targetLang}: ${localeObj[locale][notTranslateCheckKey]?.replace(/\n/g, '\\n')})`
 					);
 				}
 			}
 		}
 	}
 
-	if (listDuplicatedValues.length > 0) {
-		_log(
-			`Some keys have duplicate values. Ignore this warning if necessary:\n\n${listDuplicatedValues.join('\n')}\n`,
-			'warn'
-		);
-	}
-
-	if (listNotTranslatedKeys.length > 0) {
+	if (listNotTranslatedKeys.length > 0 && !_noWarn) {
 		_log(
 			`Some translation keys have the same value as the primary language. If you don't need a translation, don't define it in the translation file, or make sure the translation is not complete. If everything is fine, ignore this error:\n\n${listNotTranslatedKeys.join('\n')}\n`,
-			'warn'
+			'warn',
+			opt
 		);
 	}
 
-	// Exit with error
-	if (listDoesNotHaveKeys.length > 0) {
-		_errorAndExit(
-			`Some translation files did not include the following keys:\n\n${listDoesNotHaveKeys.join('\n')}\n`
-		);
-		return;
-	}
-
-	_log('Done!\n');
+	/* =====================================================
+	 * End
+	 * ===================================================== */
+	_log('Done!\n', 'info', opt);
 
 	return {
 		success: true
@@ -191,8 +190,8 @@ export const check = async (path: string, options?: { path?: string }) => {
 
 if (__isCliMode) {
 	(async () => {
-		await check('');
+		await checkTranslationFiles('');
 	})();
 }
 
-export default check;
+export default checkTranslationFiles;
