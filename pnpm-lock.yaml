@@ -10,10 +10,22 @@ importers:
       chalk:
         specifier: ^5.6.2
         version: 5.6.2
+      flat:
+        specifier: ^6.0.1
+        version: 6.0.1
+      minimist:
+        specifier: ^1.2.8
+        version: 1.2.8
+      qsu:
+        specifier: ^1.12.0
+        version: 1.12.0
     devDependencies:
       '@eslint/js':
         specifier: ^9.34.0
         version: 9.34.0
+      '@types/minimist':
+        specifier: ^1.2.5
+        version: 1.2.5
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
@@ -206,6 +218,12 @@ packages:
     resolution:
       {
         integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==
+      }
+
+  '@types/minimist@1.2.5':
+    resolution:
+      {
+        integrity: sha512-hov8bUuiLiyFPGyFPE1lwWhmzYbirOXQNNo40+y3zow8aFVTeyn3VWL0VFFfdNddA8S4Vf0Tc062rzyNr7Paag==
       }
 
   '@types/node@25.6.0':
@@ -630,6 +648,14 @@ packages:
       }
     engines: { node: '>=16' }
 
+  flat@6.0.1:
+    resolution:
+      {
+        integrity: sha512-/3FfIa8mbrg3xE7+wAhWeV+bd7L2Mof+xtZb5dRDKZ+wDvYJK4WDYeIOuOhre5Yv5aQObZrlbRmk3RTSiuQBtw==
+      }
+    engines: { node: '>=18' }
+    hasBin: true
+
   flatted@3.3.3:
     resolution:
       {
@@ -829,6 +855,12 @@ packages:
         integrity: sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==
       }
 
+  minimist@1.2.8:
+    resolution:
+      {
+        integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==
+      }
+
   minipass@7.1.3:
     resolution:
       {
@@ -932,6 +964,13 @@ packages:
         integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==
       }
     engines: { node: '>=6' }
+
+  qsu@1.12.0:
+    resolution:
+      {
+        integrity: sha512-kcB2A7XS+ApkxAIc63yOqF2mmvqyA4AezObM1RxAhOB6O0bRA8xCzm6PLwU70CVW9R+0Rozqd0pgOFskNtX2eQ==
+      }
+    engines: { node: '>=18.0.0' }
 
   resolve-from@4.0.0:
     resolution:
@@ -1196,6 +1235,8 @@ snapshots:
   '@types/estree@1.0.8': {}
 
   '@types/json-schema@7.0.15': {}
+
+  '@types/minimist@1.2.5': {}
 
   '@types/node@25.6.0':
     dependencies:
@@ -1494,6 +1535,8 @@ snapshots:
       flatted: 3.3.3
       keyv: 4.5.4
 
+  flat@6.0.1: {}
+
   flatted@3.3.3: {}
 
   get-tsconfig@4.10.1:
@@ -1580,6 +1623,8 @@ snapshots:
     dependencies:
       brace-expansion: 1.1.12
 
+  minimist@1.2.8: {}
+
   minipass@7.1.3: {}
 
   ms@2.1.3: {}
@@ -1625,6 +1670,8 @@ snapshots:
   prettier@3.8.2: {}
 
   punycode@2.3.1: {}
+
+  qsu@1.12.0: {}
 
   resolve-from@4.0.0: {}
 
