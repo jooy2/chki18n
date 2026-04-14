@@ -13,23 +13,32 @@ Currently, only the `json` format and single translation files (`ko.json`, `en.j
 
 This tool does not provide automatic text translation. It only performs checks.
 
-## How-to-use
+## Verification List
+
+| Level   | Name                | Example                                      |
+| ------- | ------------------- | -------------------------------------------- |
+| Error   | File Validation     | Missing files, parsing failure...            |
+| Warning | Empty locale key    |                                              |
+| Warning | Duplicate values    | They use different keys but the same value   |
+| Warning | Useless translation | The English and Chinese phrases are the same |
+
+## How-to-use (CLI)
 
 Below are examples of scannable files:
 
 ```text
 # ko.json
 {
-	"desc": {
-		"hello": "안녕하세요"
-	}
+  "desc": {
+    "hello": "안녕하세요"
+  }
 }
 
 # en.json
 {
-	"desc": {
-		"hello": "Hello"
-	}
+  "desc": {
+    "hello": "Hello"
+  }
 }
 ```
 
@@ -50,13 +59,41 @@ The output will then appear in the terminal as follows. If a validity issue occu
  Translation  ERROR  The job was aborted due to an invalid translation file. See above issues.
 ```
 
+## How-to-use (via JavaScript/Node.js)
+
+This module can be installed and used directly via JavaScript code as well as through the CLI!
+
+Install the module using the command below:
+
+```shell
+# using npm
+$ npm install chki18n
+# or using pnpm
+$ pnpm install chki18n
+# or using yarn
+$ yarn add chki18n
+```
+
+```javascript
+import { checkTranslationFiles } from 'chki18n';
+
+const result = checkTranslationFiles('/Your/locale/path', {
+	/* Options here */
+});
+
+console.log(result);
+```
+
 ## Options
 
 ```shell
 Usage: `chki18n [options]` or `chki18n [options] <targetDirectory>`
 
 Options:
-	--path	The directory where the files to be scanned are located
+	--path	The directory where the files to be scanned are located (Required)
+	--target	The contents of the language file are compared with the language specified here. Typically, language codes such as `ko`, `en`, `zh-Hans`, `zh-Hant`, `zh`, and `ja` are used. (Default: `en`)
+	--no-warn	Do not show warning messages
+	--debug	Show debug messages
 ```
 
 ## Contributing
