@@ -19,11 +19,12 @@ const __tagInfo = chalk.bgGrey.whiteBright(' INFO ');
 const __isWindows = platform() === 'win32';
 
 function _errorAndExit(message: string) {
-	process.stderr.write(`${__header}${__tagError} ${message}`);
-	process.stderr.write(
+	console.error(`${__header}${__tagError} ${message}`);
+	console.error(
 		`${__header}${__tagError} The job was aborted due to an invalid translation file. See above issues.`
 	);
-	process.exit(1);
+
+	setTimeout(() => process.exit(1), 1000);
 }
 
 function _log(message: string, level: 'info' | 'warn' | 'error' = 'info') {
@@ -42,7 +43,7 @@ function _log(message: string, level: 'info' | 'warn' | 'error' = 'info') {
 			break;
 	}
 
-	process.stdout.write(`${__header}${tag} ${message}\n`);
+	console.log(`${__header}${tag} ${message}`);
 }
 
 export const check = async (path: string, options?: { path?: string }) => {
@@ -52,7 +53,7 @@ export const check = async (path: string, options?: { path?: string }) => {
 	let targetDirectory = args._?.[0] || opt?.path || path;
 
 	if (!targetDirectory) {
-		_errorAndExit('`targetDirectory` is required.');
+		_errorAndExit('No `path` argument is specified.');
 		return;
 	}
 
@@ -174,7 +175,7 @@ export const check = async (path: string, options?: { path?: string }) => {
 		return;
 	}
 
-	_log('Done!');
+	_log('Done!\n');
 
 	return {
 		success: true
