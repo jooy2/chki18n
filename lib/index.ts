@@ -7,10 +7,17 @@ import { safeJSONParse } from 'qsu';
 import { joinFilePath } from 'qsu/node';
 import { platform } from 'node:os';
 import { isAbsolute } from 'node:path';
+import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const __primaryLocale = 'ko';
-const __isCliMode = process.argv[1] === fileURLToPath(import.meta.url);
+const __isCliMode = (() => {
+	try {
+		return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+	} catch {
+		return false;
+	}
+})();
 const __header = chalk.bgBlueBright.whiteBright(' Chki18n ');
 const __tagError = chalk.bgRedBright.whiteBright(' ERROR ');
 const __tagWarning = chalk.bgYellowBright.whiteBright(' WARN ');
