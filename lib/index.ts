@@ -10,6 +10,7 @@ import { isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __primaryLocale = 'ko';
+const __isCliMode = process.argv[1] === fileURLToPath(import.meta.url);
 const __header = chalk.bgBlueBright.whiteBright(' Chki18n ');
 const __tagError = chalk.bgRedBright.whiteBright(' ERROR ');
 const __tagWarning = chalk.bgYellowBright.whiteBright(' WARN ');
@@ -17,12 +18,31 @@ const __tagInfo = chalk.bgGrey.whiteBright(' INFO ');
 
 const __isWindows = platform() === 'win32';
 
-function errorAndExit(message: string) {
-	console.error(`${__header}${__tagError} ${message}`);
-	console.info(
+function _errorAndExit(message: string) {
+	process.stderr.write(`${__header}${__tagError} ${message}`);
+	process.stderr.write(
 		`${__header}${__tagError} The job was aborted due to an invalid translation file. See above issues.`
 	);
 	process.exit(1);
+}
+
+function _log(message: string, level: 'info' | 'warn' | 'error' = 'info') {
+	let tag: string;
+
+	switch (level) {
+		case 'warn':
+			tag = __tagWarning;
+			break;
+		case 'error':
+			tag = __tagError;
+			break;
+		case 'info':
+		default:
+			tag = __tagInfo;
+			break;
+	}
+
+	process.stdout.write(`${__header}${tag} ${message}\n`);
 }
 
 export const check = async (path: string, options?: { path?: string }) => {
@@ -31,10 +51,8 @@ export const check = async (path: string, options?: { path?: string }) => {
 
 	let targetDirectory = args._?.[0] || opt?.path || path;
 
-	console.log(args);
-
 	if (!targetDirectory) {
-		errorAndExit('`targetDirectory` is required.');
+		_errorAndExit('`targetDirectory` is required.');
 		return;
 	}
 
@@ -42,9 +60,7 @@ export const check = async (path: string, options?: { path?: string }) => {
 		targetDirectory = joinFilePath(__isWindows, process.cwd(), targetDirectory);
 	}
 
-	console.info(
-		`${__header}${__tagInfo} Process to check valid translation... (Path: ${targetDirectory})`
-	);
+	_log(`Process to check valid translation... (Path: ${targetDirectory})`);
 
 	const localeObj: any = {};
 	let targetFiles;
@@ -53,7 +69,7 @@ export const check = async (path: string, options?: { path?: string }) => {
 	try {
 		targetFiles = await readdir(targetDirectory);
 	} catch {
-		errorAndExit('Failed to fetch translate file lists from locale directory');
+		_errorAndExit('Failed to fetch translate file lists from locale directory');
 		return;
 	}
 
@@ -69,7 +85,7 @@ export const check = async (path: string, options?: { path?: string }) => {
 					localeObj[file.replace('.json', '')] = flatten(safeJSONParse(fileContent, {}));
 				}
 			} catch {
-				errorAndExit(`Failed to read translate file: '${filePath}'`);
+				_errorAndExit(`Failed to read translate file: '${filePath}'`);
 				return;
 			}
 		}
@@ -137,35 +153,35 @@ export const check = async (path: string, options?: { path?: string }) => {
 	}
 
 	if (listDuplicatedValues.length > 0) {
-		console.warn(
-			`${__header}${__tagWarning} Some keys have duplicate values. Ignore this warning if necessary:\n\n${listDuplicatedValues.join('\n')}\n`
+		_log(
+			`Some keys have duplicate values. Ignore this warning if necessary:\n\n${listDuplicatedValues.join('\n')}\n`,
+			'warn'
 		);
 	}
 
 	if (listNotTranslatedKeys.length > 0) {
-		console.warn(
-			`${__header}${__tagWarning} Some translation keys have the same value as the primary language. If you don't need a translation, don't define it in the translation file, or make sure the translation is not complete. If everything is fine, ignore this error:\n\n${listNotTranslatedKeys.join('\n')}\n`
+		_log(
+			`Some translation keys have the same value as the primary language. If you don't need a translation, don't define it in the translation file, or make sure the translation is not complete. If everything is fine, ignore this error:\n\n${listNotTranslatedKeys.join('\n')}\n`,
+			'warn'
 		);
 	}
 
 	// Exit with error
 	if (listDoesNotHaveKeys.length > 0) {
-		errorAndExit(
+		_errorAndExit(
 			`Some translation files did not include the following keys:\n\n${listDoesNotHaveKeys.join('\n')}\n`
 		);
 		return;
 	}
 
-	console.info(`${__header}${__tagInfo} Done!`);
+	_log('Done!');
 
 	return {
 		success: true
 	};
 };
 
-const isCliMode = process.argv[1] === fileURLToPath(import.meta.url);
-
-if (isCliMode) {
+if (__isCliMode) {
 	(async () => {
 		await check('');
 	})();
