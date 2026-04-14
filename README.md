@@ -15,6 +15,17 @@ Currently, only the `json` format and single translation files (`ko.json`, `en.j
 
 This tool does not provide automatic text translation. It only performs checks.
 
+## TODO
+
+- Support for more i18n file types
+- Language detection during parsing
+- More detailed and clear error messages (e.g. bulleted list)
+- Check for more languages
+- Add unit tests
+- Single Test (Test Function by Item)
+- Performance Improvements
+- Generate Report File
+
 ## Verification List
 
 | Level | Check code | Reason |
