@@ -1,0 +1,53 @@
+{
+	"name": "chki18n",
+	"type": "module",
+	"version": "0.0.1",
+	"description": "Reviews text translation files written in i18n format.",
+	"author": "Jooy2 <jooy2.contact@gmail.com>",
+	"license": "MIT",
+	"homepage": "https://github.com/jooy2/chki18n",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/jooy2/chki18n"
+	},
+	"main": "dist/index.js",
+	"bin": "dist/index.js",
+	"exports": {
+		".": "./dist/index.js"
+	},
+	"scripts": {
+		"test": "npm run build && node dist/index.js test/locales",
+		"build": "npm run format && tsc && npm run minify",
+		"minify": "terser-glob 'dist/**/*.js' --config-file terser.config.json",
+		"format": "prettier . --write"
+	},
+	"keywords": [
+		"vue",
+		"vue3",
+		"template",
+		"skeleton",
+		"electron",
+		"vite",
+		"pinia",
+		"vuetify"
+	],
+	"devDependencies": {
+		"@eslint/js": "^9.34.0",
+		"@types/node": "^25.6.0",
+		"@typescript-eslint/parser": "^8.58.2",
+		"eslint": "^9.34.0",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-n": "^17.24.0",
+		"globals": "^17.5.0",
+		"jiti": "^2.6.1",
+		"prettier": "^3.8.2",
+		"terser-glob": "^1.2.1",
+		"typescript": "^6.0.2",
+		"typescript-eslint": "^8.58.2"
+	},
+	"dependencies": {
+		"chalk": "^5.6.2",
+		"flat": "^6.0.1",
+		"qsu": "^1.12.0"
+	}
+}
