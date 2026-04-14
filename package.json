@@ -1,7 +1,7 @@
 {
 	"name": "chki18n",
 	"type": "module",
-	"version": "0.0.5",
+	"version": "0.1.0",
 	"description": "A command-line tool that validates multilingual translation files against i18n (Internationalization) standards.",
 	"author": "Jooy2 <jooy2.contact@gmail.com>",
 	"license": "MIT",
@@ -14,6 +14,9 @@
 	"bin": "dist/index.js",
 	"exports": {
 		".": "./dist/index.js"
+	},
+	"engines": {
+		"node": ">=18.0.0"
 	},
 	"scripts": {
 		"test": "tsc && node --import tsx --test \"./test/**/*.test.ts\"",
