@@ -12,7 +12,9 @@ import type { AnyValueObject } from './_types/global';
 
 function _errorAndExit(message: string, code?: string) {
 	_error(code ? `[${code}] ${message}` : message);
-	_error(`The job was aborted due to an invalid translation file. See above issues.`);
+	_error(
+		`Task complete. But the job was aborted due to an invalid translation file. See above issues.`
+	);
 
 	setTimeout(() => process.exit(1), 1000);
 
@@ -177,7 +179,7 @@ export const checkTranslationFiles = async (
 	}
 
 	if (listNotUsedKeys.length > 0) {
-		return _warnButContinue(
+		_warnButContinue(
 			`The following key does not exist in the target language. It may be an unused key:\n\n${listNotUsedKeys.join('\n')}\n`,
 			CHECK_CODE.DUMMY_KEY,
 			opt
