@@ -20,7 +20,7 @@
 	},
 	"scripts": {
 		"test": "tsc && node --import tsx --test \"./test/**/*.test.ts\"",
-		"test:cli": "npm run build && node dist/index.js --path test/locales",
+		"test:cli": "npm run build && node dist/index.js --debug --path test/samples/locales-no-issue",
 		"build": "npm run format && tsc && npm run minify",
 		"minify": "terser-glob 'dist/**/*.js' --config-file terser.config.json",
 		"format": "prettier . --write"
