@@ -34,6 +34,7 @@ This tool does not provide automatic text translation. It only performs checks.
 | --- | --- | --- |
 | Error | INVALID_FILE | Missing files, parsing failure... |
 | Warning | NO_KEY | The 'a' key, which exists in Language A, is missing in Language B |
+| Warning | NO_INTERPOLATION_KEY | The dynamic string (interpolation key) does not match the primary locale or is missing. |
 | Warning | EMPTY_VALUE | The key is defined, but its value is empty. |
 | Warning | DUPLICATE_VALUE | They use different keys but the same value |
 | Warning | NOT_TRANSLATED_VALUE | This is the same as the text in the target language. It appears that the translation has not been completed. |

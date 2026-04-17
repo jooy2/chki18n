@@ -2,7 +2,7 @@
 import minimist from 'minimist';
 import { readdir, readFile } from 'fs/promises';
 import { flatten } from 'flat';
-import { capitalizeFirst, objToPrettyStr } from 'qsu';
+import { capitalizeFirst, getGroupKeys, objToPrettyStr } from 'qsu';
 import { getFileExtension, getFileName, joinFilePath } from 'qsu/node';
 import { isAbsolute } from 'node:path';
 import packageJson from '../package.json' with { type: 'json' };
@@ -138,18 +138,49 @@ export const checkTranslationFiles = async (
 		key: string;
 		value: string;
 		targetValue: string;
+		interpolation?: string;
 		code: string;
 	}[] = [];
-	for (const compareKey of Object.keys(localeObj[_targetLang])) {
+	const interpolationPrefix: string = '{';
+	const interpolationSuffix: string = '}';
+
+	for (const key of Object.keys(localeObj[_targetLang])) {
 		for (const locale of Object.keys(localeObj)) {
 			if (locale !== _targetLang) {
+				const value: string = localeObj[locale][key];
+				const targetValue: string = localeObj[_targetLang][key];
+				const currentInterpolationList: string[] = getGroupKeys(
+					value,
+					interpolationPrefix,
+					interpolationSuffix
+				);
+				const targetInterpolationList = getGroupKeys(
+					targetValue,
+					interpolationPrefix,
+					interpolationSuffix
+				);
+
+				// [CHECK: NO_INTERPOLATION_KEY] Interpolation key is incorrect
+				for (const interpolation of targetInterpolationList) {
+					if (!currentInterpolationList.includes(interpolation)) {
+						listIssueItems.push({
+							locale,
+							key,
+							value,
+							targetValue,
+							interpolation,
+							code: CHECK_CODE.NO_INTERPOLATION_KEY
+						});
+					}
+				}
+
 				// [CHECK: NO_KEY] Primary locale key is missing
-				if (!Object.keys(localeObj[locale]).includes(compareKey)) {
+				if (!Object.keys(localeObj[locale]).includes(key)) {
 					listIssueItems.push({
 						locale,
-						key: compareKey,
-						value: localeObj[locale][compareKey],
-						targetValue: localeObj[_targetLang][compareKey],
+						key,
+						value,
+						targetValue,
 						code: CHECK_CODE.NO_KEY
 					});
 				}
@@ -157,29 +188,29 @@ export const checkTranslationFiles = async (
 				if (localeObj[locale]?.length < 1) {
 					listIssueItems.push({
 						locale,
-						key: compareKey,
-						value: localeObj[locale][compareKey],
-						targetValue: localeObj[_targetLang][compareKey],
+						key,
+						value,
+						targetValue,
 						code: CHECK_CODE.EMPTY_VALUE
 					});
 				}
 				// [CHECK: NOT_TRANSLATED_VALUE] Not translated keys
-				if (localeObj[locale][compareKey] === localeObj[_targetLang][compareKey]) {
+				if (localeObj[locale][key] === localeObj[_targetLang][key]) {
 					listIssueItems.push({
 						locale,
-						key: compareKey,
-						value: localeObj[locale][compareKey],
-						targetValue: localeObj[_targetLang][compareKey],
+						key,
+						value,
+						targetValue,
 						code: CHECK_CODE.NOT_TRANSLATED_VALUE
 					});
 				}
 				// [CHECK: DUMMY_KEY] Not used keys
-				if (!Object.hasOwn(localeObj[_targetLang], compareKey)) {
+				if (!Object.hasOwn(localeObj[_targetLang], key)) {
 					listIssueItems.push({
 						locale,
-						key: compareKey,
-						value: localeObj[locale][compareKey],
-						targetValue: localeObj[_targetLang][compareKey],
+						key,
+						value,
+						targetValue,
 						code: CHECK_CODE.DUMMY_KEY
 					});
 				}
@@ -245,6 +276,9 @@ export const checkTranslationFiles = async (
 			case CHECK_CODE.NOT_TRANSLATED_VALUE:
 				issueMessage =
 					"Some translation keys have the same value as the primary language. If you don't need a translation, don't define it in the translation file, or make sure the translation is not complete. If everything is fine, ignore this error";
+				break;
+			case CHECK_CODE.NO_INTERPOLATION_KEY:
+				issueMessage = 'The interpolation key does not match the primary locale';
 				break;
 			default:
 			case CHECK_CODE.UNKNOWN:
