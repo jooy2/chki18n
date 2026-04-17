@@ -9,3 +9,7 @@ export type ListIssueItem = {
 	level: 'warn' | 'error' | 'suggest';
 	code: string;
 };
+
+export type Chki18nOptions = { path?: string; target?: string; info?: boolean; warn?: boolean };
+
+export type Chki18nResult = { success: boolean; issues?: Partial<Record<string, ListIssueItem[]>> };

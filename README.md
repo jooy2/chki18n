@@ -92,14 +92,47 @@ $ pnpm install chki18n
 $ yarn add chki18n
 ```
 
+You can use it as shown below.
+
+Unlike the CLI output, the result is returned in object format. The console does not display progress or results.
+
 ```javascript
 import { checkTranslationFiles } from 'chki18n';
 
-const result = checkTranslationFiles('/Your/locale/path', {
+const result = await checkTranslationFiles('/your/locale/directory', {
 	/* Options here */
+	target: 'en',
+	debug: false
 });
 
 console.log(result);
+/*
+{
+  success: false,
+  issues: {
+    NOT_TRANSLATED_VALUE: [
+      {
+        locale: 'ko',
+        key: 'desc.no-str',
+        value: '12345',
+        targetValue: '12345',
+        level: 'warn',
+        code: 'NOT_TRANSLATED_VALUE'
+      }
+    ],
+    NO_KEY: [
+      {
+        locale: 'ko',
+        key: 'attr.folder',
+        value: undefined,
+        targetValue: 'Folder',
+        level: 'error',
+        code: 'NO_KEY'
+      }
+    ]
+  }
+}
+*/
 ```
 
 ## Options

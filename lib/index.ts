@@ -8,18 +8,27 @@ import { isAbsolute } from 'node:path';
 import packageJson from '../package.json' with { type: 'json' };
 import { _debugLog, _error, _log, _pass } from './logger.js';
 import { __isCliMode, __isWindows, CHECK_CODE } from './constants.js';
-import type { AnyValueObject, ListIssueItem } from './_types/global';
+import type { AnyValueObject, Chki18nOptions, Chki18nResult, ListIssueItem } from './_types/global';
 
-function _exitWithException() {
+function _exitWithException(
+	resultIssueItems?: Partial<Record<string, ListIssueItem[]>>
+): Chki18nResult {
 	_error(
 		`The scan is complete. There is a critical issue with the translation file. Please review the results at the top of the page.`
 	);
 
-	setTimeout(() => process.exit(1), 1000);
-
-	return {
-		success: false
+	const resultData = {
+		success: false,
+		issues: resultIssueItems
 	};
+
+	if (__isCliMode) {
+		setTimeout(() => {
+			process.exit(1);
+		}, 1000);
+	}
+
+	return resultData;
 }
 
 function _warnButContinue(message: string, code: string, opt: any) {
@@ -31,14 +40,14 @@ function _passAndContinue(code: string) {
 }
 
 export const checkTranslationFiles = async (
-	path: string,
-	options?: { path?: string; target?: string; info?: boolean; warn?: boolean }
-) => {
+	path?: string,
+	options?: Chki18nOptions
+): Promise<Chki18nResult> => {
 	/* =====================================================
 	 * Initialize & Validate option
 	 * ===================================================== */
-	const args = minimist(process.argv.slice(2));
-	const opt = args || options;
+	const args: AnyValueObject = __isCliMode ? minimist(process.argv.slice(2)) : {};
+	const opt: AnyValueObject = __isCliMode ? args : (options as AnyValueObject);
 
 	_log(
 		`${capitalizeFirst(packageJson.name)} ${packageJson.version} (Check-and-verify-your-i18n-files)\n`,
@@ -47,7 +56,7 @@ export const checkTranslationFiles = async (
 	);
 	_debugLog(`Options: ${objToPrettyStr(opt)}`, opt);
 
-	let _path = args._?.[0] || opt?.path || path;
+	let _path = opt?.path || path || (__isCliMode ? args._?.[0] : null);
 	let _targetLang = opt?.target;
 
 	if (!_targetLang) {
@@ -298,21 +307,21 @@ export const checkTranslationFiles = async (
 				break;
 		}
 
-		console.log('\n');
+		_log('\n');
 		_log(`[${issueCode}] ${issueMessage}:\n`, 'warn', opt);
 
 		for (const item of listResultIssueItems[issueCode]) {
-			console.log(` - ${item.locale} -> '${item.key}' (${_targetLang}: ${item.targetValue})`);
+			_log(` - ${item.locale} -> '${item.key}' (${_targetLang}: ${item.targetValue})`);
 		}
 	}
 
 	/* =====================================================
 	 * End
 	 * ===================================================== */
-	console.log('\n');
+	_log('\n');
 
 	if (exitWithError) {
-		return _exitWithException();
+		return _exitWithException(listResultIssueItems);
 	} else {
 		_log('The scan is complete. No critical issues were found.\n', 'info', opt);
 	}
@@ -324,7 +333,7 @@ export const checkTranslationFiles = async (
 
 if (__isCliMode) {
 	(async () => {
-		await checkTranslationFiles('');
+		await checkTranslationFiles();
 	})();
 }
 

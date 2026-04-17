@@ -1,4 +1,6 @@
 import chalk from 'chalk';
+import { Chki18nOptions } from './_types/global';
+import { __isCliMode } from './constants.js';
 
 const __header = chalk.bgBlueBright.whiteBright(' Chki18n ');
 const __tagError = chalk.bgRedBright.whiteBright(' ERROR ');
@@ -8,14 +10,14 @@ const __tagDebug = chalk.bgBlue.whiteBright(' DEBUG ');
 const __tagPass = chalk.bgGreenBright.whiteBright(' PASS ');
 
 export function _error(message: string) {
-	if (message?.length < 1) {
+	if (!__isCliMode || message?.length < 1) {
 		return;
 	}
 	console.error(`${__header}${__tagError} ${message}`);
 }
 
 export function _pass(message: string) {
-	if (message?.length < 1) {
+	if (!__isCliMode || message?.length < 1) {
 		return;
 	}
 	console.error(`${__header}${__tagPass} ${message}`);
@@ -29,8 +31,17 @@ export function _debugLog(message: string, opt: any) {
 	console.log(`${__header}${__tagDebug} ${message}`);
 }
 
-export function _log(message: string, level: 'info' | 'warn' | 'error', opt: any) {
-	if (message?.length < 1) {
+export function _log(
+	message: string,
+	level: 'info' | 'warn' | 'error' = 'info',
+	opt?: Chki18nOptions
+) {
+	if (!__isCliMode || message?.length < 1) {
+		return;
+	}
+
+	if (!opt) {
+		console.log(message);
 		return;
 	}
 
