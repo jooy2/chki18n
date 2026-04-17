@@ -8,11 +8,11 @@ import { isAbsolute } from 'node:path';
 import packageJson from '../package.json' with { type: 'json' };
 import { _debugLog, _error, _log, _pass } from './logger.js';
 import { __isCliMode, __isWindows, CHECK_CODE } from './constants.js';
-import type { AnyValueObject } from './_types/global';
+import type { AnyValueObject, ListIssueItem } from './_types/global';
 
 function _exitWithException() {
 	_error(
-		`Task complete. But the job was aborted due to an invalid translation file. See above issues.`
+		`The scan is complete. There is a critical issue with the translation file. Please review the results at the top of the page.`
 	);
 
 	setTimeout(() => process.exit(1), 1000);
@@ -133,14 +133,7 @@ export const checkTranslationFiles = async (
 	/* =====================================================
 	 * Validate i18n locales
 	 * ===================================================== */
-	const listIssueItems: {
-		locale: string;
-		key: string;
-		value: string;
-		targetValue: string;
-		interpolation?: string;
-		code: string;
-	}[] = [];
+	const listIssueItems: ListIssueItem[] = [];
 	const interpolationPrefix: string = '{';
 	const interpolationSuffix: string = '}';
 
@@ -169,6 +162,7 @@ export const checkTranslationFiles = async (
 							value,
 							targetValue,
 							interpolation,
+							level: 'error',
 							code: CHECK_CODE.NO_INTERPOLATION_KEY
 						});
 					}
@@ -181,6 +175,7 @@ export const checkTranslationFiles = async (
 						key,
 						value,
 						targetValue,
+						level: 'error',
 						code: CHECK_CODE.NO_KEY
 					});
 				}
@@ -191,6 +186,7 @@ export const checkTranslationFiles = async (
 						key,
 						value,
 						targetValue,
+						level: 'warn',
 						code: CHECK_CODE.EMPTY_VALUE
 					});
 				}
@@ -201,6 +197,7 @@ export const checkTranslationFiles = async (
 						key,
 						value,
 						targetValue,
+						level: 'warn',
 						code: CHECK_CODE.NOT_TRANSLATED_VALUE
 					});
 				}
@@ -211,6 +208,7 @@ export const checkTranslationFiles = async (
 						key,
 						value,
 						targetValue,
+						level: 'warn',
 						code: CHECK_CODE.DUMMY_KEY
 					});
 				}
@@ -246,6 +244,7 @@ export const checkTranslationFiles = async (
 					key: compareKey,
 					value: localeObj[locale][compareKey],
 					targetValue: localeObj[_targetLang][compareKey],
+					level: 'warn',
 					code: CHECK_CODE.DUPLICATE_VALUE
 				});
 			}
@@ -255,11 +254,24 @@ export const checkTranslationFiles = async (
 	/* =====================================================
 	 * Report
 	 * ===================================================== */
-	let issueMessage;
-	let prevIssueCode;
+	let issueMessage: string;
+	let exitWithError: boolean = false;
 
-	for (const item of listIssueItems) {
-		switch (item.code) {
+	if (listIssueItems.findIndex((x) => x.level === 'error') !== -1) {
+		exitWithError = true;
+	}
+
+	const listResultIssueItems: Partial<Record<string, ListIssueItem[]>> = Object.groupBy(
+		listIssueItems,
+		({ code }) => code
+	);
+
+	for (const issueCode of Object.keys(listResultIssueItems)) {
+		if (!listResultIssueItems[issueCode]) {
+			continue;
+		}
+
+		switch (issueCode) {
 			case CHECK_CODE.NO_KEY:
 				issueMessage = 'Some translation files did not include the following keys';
 				break;
@@ -286,20 +298,24 @@ export const checkTranslationFiles = async (
 				break;
 		}
 
-		if (prevIssueCode !== item.code) {
-			console.log('\n');
-			_log(`[${item.code}] ${issueMessage}:\n`, 'warn', opt);
-			prevIssueCode = item.code;
-		}
+		console.log('\n');
+		_log(`[${issueCode}] ${issueMessage}:\n`, 'warn', opt);
 
-		console.log(` - ${item.locale} -> '${item.key}' (${_targetLang}: ${item.targetValue})`);
+		for (const item of listResultIssueItems[issueCode]) {
+			console.log(` - ${item.locale} -> '${item.key}' (${_targetLang}: ${item.targetValue})`);
+		}
 	}
 
 	/* =====================================================
 	 * End
 	 * ===================================================== */
 	console.log('\n');
-	_log('The task is complete.\n', 'info', opt);
+
+	if (exitWithError) {
+		return _exitWithException();
+	} else {
+		_log('The scan is complete. No critical issues were found.\n', 'info', opt);
+	}
 
 	return {
 		success: true

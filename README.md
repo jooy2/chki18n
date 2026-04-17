@@ -1,6 +1,6 @@
 # chki18n
 
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/jooy2/chki18n/blob/main/LICENSE) ![Commit Count](https://img.shields.io/github/commit-activity/y/jooy2/chki18n) [![Followers](https://img.shields.io/github/followers/jooy2?style=social)](https://github.com/jooy2) ![Stars](https://img.shields.io/github/stars/jooy2/chki18n?style=social)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/jooy2/chki18n/blob/main/LICENSE) ![Commit Count](https://img.shields.io/github/commit-activity/y/jooy2/chki18n) [![npm downloads](https://img.shields.io/npm/dm/chki18n.svg)](https://www.npmjs.com/package/chki18n) [![npm latest package](https://img.shields.io/npm/v/chki18n/latest.svg)](https://www.npmjs.com/package/chki18n) ![npm bundle size](https://img.shields.io/bundlephobia/min/chki18n) [![Followers](https://img.shields.io/github/followers/jooy2?style=social)](https://github.com/jooy2) ![Stars](https://img.shields.io/github/stars/jooy2/chki18n?style=social)
 
 > Check and verify your i18n translation files
 
@@ -33,8 +33,8 @@ This tool does not provide automatic text translation. It only performs checks.
 | Level | Check code | Reason |
 | --- | --- | --- |
 | Error | INVALID_FILE | Missing files, parsing failure... |
-| Warning | NO_KEY | The 'a' key, which exists in Language A, is missing in Language B |
-| Warning | NO_INTERPOLATION_KEY | The dynamic string (interpolation key) does not match the primary locale or is missing. |
+| Error | NO_KEY | The 'a' key, which exists in Language A, is missing in Language B |
+| Error | NO_INTERPOLATION_KEY | The dynamic string (interpolation key) does not match the primary locale or is missing. |
 | Warning | EMPTY_VALUE | The key is defined, but its value is empty. |
 | Warning | DUPLICATE_VALUE | They use different keys but the same value |
 | Warning | NOT_TRANSLATED_VALUE | This is the same as the text in the target language. It appears that the translation has not been completed. |
