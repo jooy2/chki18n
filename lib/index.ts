@@ -48,6 +48,7 @@ export const checkTranslationFiles = async (
 	 * ===================================================== */
 	const args: AnyValueObject = __isCliMode ? minimist(process.argv.slice(2)) : {};
 	const opt: AnyValueObject = __isCliMode ? args : (options as AnyValueObject);
+	let singleFileMode: boolean = false;
 
 	_log(
 		`${capitalizeFirst(packageJson.name)} ${packageJson.version} (Check-and-verify-your-i18n-files)\n`,
@@ -86,16 +87,27 @@ export const checkTranslationFiles = async (
 
 	// Get files from locale directory
 	try {
-		targetFiles = await readdir(_path);
+		targetFiles = await readdir(_path, { withFileTypes: true });
+
+		singleFileMode = targetFiles.findIndex((x) => x.isDirectory()) === -1;
+		_debugLog(singleFileMode.toString(), opt);
 	} catch {
 		_error('Failed to fetch translate file lists from locale directory');
 		return _exitWithException();
 	}
 
+	if (!singleFileMode) {
+		_error(
+			'Currently, this tool supports only single translation files. However, we plan to add support for multiple files soon! (Example of a single file: ko.json/en.json...)'
+		);
+		return _exitWithException();
+	}
+
 	// Get translation strings from file
-	for (const file of targetFiles) {
-		const filePath = joinFilePath(__isWindows, _path, file);
+	for (const dirent of targetFiles) {
+		const filePath = joinFilePath(__isWindows, _path, dirent.name);
 		const fileName = getFileName(filePath, false);
+		// const locale = fileName;
 		const fileExt = getFileExtension(filePath);
 
 		if (fileExt !== 'json') {
