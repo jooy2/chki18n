@@ -10,8 +10,7 @@ import { _debugLog, _error, _log, _pass } from './logger.js';
 import { __isCliMode, __isWindows, CHECK_CODE } from './constants.js';
 import type { AnyValueObject } from './_types/global';
 
-function _errorAndExit(message: string, code?: string) {
-	_error(code ? `[${code}] ${message}` : message);
+function _exitWithException() {
 	_error(
 		`Task complete. But the job was aborted due to an invalid translation file. See above issues.`
 	);
@@ -19,8 +18,7 @@ function _errorAndExit(message: string, code?: string) {
 	setTimeout(() => process.exit(1), 1000);
 
 	return {
-		success: false,
-		code: code ?? CHECK_CODE.UNKNOWN
+		success: false
 	};
 }
 
@@ -64,7 +62,8 @@ export const checkTranslationFiles = async (
 	}
 
 	if (!_path) {
-		return _errorAndExit('No `path` argument is specified.');
+		_error('No `path` argument is specified.');
+		return _exitWithException();
 	}
 
 	if (!isAbsolute(_path)) {
@@ -80,7 +79,8 @@ export const checkTranslationFiles = async (
 	try {
 		targetFiles = await readdir(_path);
 	} catch {
-		return _errorAndExit('Failed to fetch translate file lists from locale directory');
+		_error('Failed to fetch translate file lists from locale directory');
+		return _exitWithException();
 	}
 
 	// Get translation strings from file
@@ -101,31 +101,30 @@ export const checkTranslationFiles = async (
 			fileContent = await readFile(filePath, { encoding: 'utf-8' });
 
 			if (!fileContent) {
-				return _errorAndExit(`${commonReadError}File content is empty`, CHECK_CODE.INVALID_FILE);
+				_error(`[${CHECK_CODE.INVALID_FILE}] ${commonReadError}File content is empty`);
+				return _exitWithException();
 			}
 		} catch {
-			return _errorAndExit(
-				`${commonReadError}May be read access denied or invalid file format`,
-				CHECK_CODE.INVALID_FILE
+			_error(
+				`[${CHECK_CODE.INVALID_FILE}] ${commonReadError}May be read access denied or invalid file format`
 			);
+			return _exitWithException();
 		}
 
 		try {
 			parseToJSONContent = JSON.parse(fileContent);
 		} catch {
-			return _errorAndExit(
-				`${commonReadError}Content is not json format or parse failed due to invalid character detected`,
-				CHECK_CODE.INVALID_FILE
+			_error(
+				`[${CHECK_CODE.INVALID_FILE}] ${commonReadError}Content is not json format or parse failed due to invalid character detected`
 			);
+			return _exitWithException();
 		}
 
 		try {
 			localeObj[fileName] = flatten(parseToJSONContent);
 		} catch {
-			return _errorAndExit(
-				`${commonReadError}Invalid translate key or i18n format`,
-				CHECK_CODE.INVALID_FILE
-			);
+			_error(`[${CHECK_CODE.INVALID_FILE}] ${commonReadError}Invalid translate key or i18n format`);
+			return _exitWithException();
 		}
 	}
 
@@ -141,13 +140,10 @@ export const checkTranslationFiles = async (
 		targetValue: string;
 		code: string;
 	}[] = [];
-
-	/* -----------------------
-	 * [CHECK:NO_KEY] Primary locale key is missing
-	 * ----------------------- */
 	for (const compareKey of Object.keys(localeObj[_targetLang])) {
 		for (const locale of Object.keys(localeObj)) {
 			if (locale !== _targetLang) {
+				// [CHECK: NO_KEY] Primary locale key is missing
 				if (!Object.keys(localeObj[locale]).includes(compareKey)) {
 					listIssueItems.push({
 						locale,
@@ -157,16 +153,27 @@ export const checkTranslationFiles = async (
 						code: CHECK_CODE.NO_KEY
 					});
 				}
-			}
-		}
-	}
-
-	/* -----------------------
-	 * [CHECK:DUMMY_KEY] Not used keys
-	 * ----------------------- */
-	for (const locale of Object.keys(localeObj)) {
-		for (const compareKey of Object.keys(localeObj[locale])) {
-			if (locale !== _targetLang) {
+				// [CHECK: EMPTY_VALUE] Value is empty
+				if (localeObj[locale]?.length < 1) {
+					listIssueItems.push({
+						locale,
+						key: compareKey,
+						value: localeObj[locale][compareKey],
+						targetValue: localeObj[_targetLang][compareKey],
+						code: CHECK_CODE.EMPTY_VALUE
+					});
+				}
+				// [CHECK: NOT_TRANSLATED_VALUE] Not translated keys
+				if (localeObj[locale][compareKey] === localeObj[_targetLang][compareKey]) {
+					listIssueItems.push({
+						locale,
+						key: compareKey,
+						value: localeObj[locale][compareKey],
+						targetValue: localeObj[_targetLang][compareKey],
+						code: CHECK_CODE.NOT_TRANSLATED_VALUE
+					});
+				}
+				// [CHECK: DUMMY_KEY] Not used keys
 				if (!Object.hasOwn(localeObj[_targetLang], compareKey)) {
 					listIssueItems.push({
 						locale,
@@ -181,30 +188,10 @@ export const checkTranslationFiles = async (
 	}
 
 	/* -----------------------
-	 * [CHECK:EMPTY_VALUE] Value is empty
+	 * [CHECK:DUPLICATE_VALUE] Duplicate values
 	 * ----------------------- */
 	let objUniqueLocaleValues: AnyValueObject = {};
 
-	// Value is empty
-	for (const compareKey of Object.keys(localeObj[_targetLang])) {
-		for (const locale of Object.keys(localeObj)) {
-			if (locale !== _targetLang) {
-				if (localeObj[locale]?.length < 1) {
-					listIssueItems.push({
-						locale,
-						key: compareKey,
-						value: localeObj[locale][compareKey],
-						targetValue: localeObj[_targetLang][compareKey],
-						code: CHECK_CODE.EMPTY_VALUE
-					});
-				}
-			}
-		}
-	}
-
-	/* -----------------------
-	 * [CHECK:DUPLICATE_VALUE] Duplicate values
-	 * ----------------------- */
 	for (const locale of Object.keys(localeObj)) {
 		objUniqueLocaleValues = {};
 
@@ -230,25 +217,6 @@ export const checkTranslationFiles = async (
 					targetValue: localeObj[_targetLang][compareKey],
 					code: CHECK_CODE.DUPLICATE_VALUE
 				});
-			}
-		}
-	}
-
-	/* -----------------------
-	 * [CHECK:NOT_TRANSLATED_VALUE] Not translated keys
-	 * ----------------------- */
-	for (const locale of Object.keys(localeObj)) {
-		if (locale !== _targetLang) {
-			for (const compareKey of Object.keys(localeObj[locale])) {
-				if (localeObj[locale][compareKey] === localeObj[_targetLang][compareKey]) {
-					listIssueItems.push({
-						locale,
-						key: compareKey,
-						value: localeObj[locale][compareKey],
-						targetValue: localeObj[_targetLang][compareKey],
-						code: CHECK_CODE.NOT_TRANSLATED_VALUE
-					});
-				}
 			}
 		}
 	}
@@ -285,16 +253,18 @@ export const checkTranslationFiles = async (
 		}
 
 		if (prevIssueCode !== item.code) {
-			_log(`${issueMessage}:\n`, 'warn', opt);
+			console.log('\n');
+			_log(`[${item.code}] ${issueMessage}:\n`, 'warn', opt);
 			prevIssueCode = item.code;
 		}
 
-		console.log(` - ${item.locale} -> '${item.key}' (${_targetLang}: ${item.targetValue})})`);
+		console.log(` - ${item.locale} -> '${item.key}' (${_targetLang}: ${item.targetValue})`);
 	}
 
 	/* =====================================================
 	 * End
 	 * ===================================================== */
+	console.log('\n');
 	_log('The task is complete.\n', 'info', opt);
 
 	return {
