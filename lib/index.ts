@@ -134,65 +134,55 @@ export const checkTranslationFiles = async (
 	/* =====================================================
 	 * Validate i18n locales
 	 * ===================================================== */
+	const listIssueItems: {
+		locale: string;
+		key: string;
+		value: string;
+		targetValue: string;
+		code: string;
+	}[] = [];
 
 	/* -----------------------
-	 * [CHECK] Key is missing
+	 * [CHECK:NO_KEY] Primary locale key is missing
 	 * ----------------------- */
-	const listDoesNotHaveKeys = [];
-
-	// Search key is missing
 	for (const compareKey of Object.keys(localeObj[_targetLang])) {
 		for (const locale of Object.keys(localeObj)) {
 			if (locale !== _targetLang) {
 				if (!Object.keys(localeObj[locale]).includes(compareKey)) {
-					listDoesNotHaveKeys.push(
-						` - ${locale} -> '${compareKey}' (${_targetLang}: ${localeObj[_targetLang][compareKey]})`
-					);
+					listIssueItems.push({
+						locale,
+						key: compareKey,
+						value: localeObj[locale][compareKey],
+						targetValue: localeObj[_targetLang][compareKey],
+						code: CHECK_CODE.NO_KEY
+					});
 				}
 			}
 		}
 	}
 
-	if (listDoesNotHaveKeys.length > 0) {
-		return _errorAndExit(
-			`Some translation files did not include the following keys:\n\n${listDoesNotHaveKeys.join('\n')}\n`,
-			CHECK_CODE.NO_KEY
-		);
-	} else {
-		_passAndContinue(CHECK_CODE.NO_KEY);
-	}
-
 	/* -----------------------
-	 * [CHECK] Not used keys
+	 * [CHECK:DUMMY_KEY] Not used keys
 	 * ----------------------- */
-	const listNotUsedKeys = [];
-
-	// Not used keys
 	for (const locale of Object.keys(localeObj)) {
 		for (const compareKey of Object.keys(localeObj[locale])) {
 			if (locale !== _targetLang) {
 				if (!Object.hasOwn(localeObj[_targetLang], compareKey)) {
-					listNotUsedKeys.push(` - ${locale} -> '${compareKey}'`);
+					listIssueItems.push({
+						locale,
+						key: compareKey,
+						value: localeObj[locale][compareKey],
+						targetValue: localeObj[_targetLang][compareKey],
+						code: CHECK_CODE.DUMMY_KEY
+					});
 				}
 			}
 		}
 	}
 
-	if (listNotUsedKeys.length > 0) {
-		_warnButContinue(
-			`The following key does not exist in the target language. It may be an unused key:\n\n${listNotUsedKeys.join('\n')}\n`,
-			CHECK_CODE.DUMMY_KEY,
-			opt
-		);
-	} else {
-		_passAndContinue(CHECK_CODE.DUMMY_KEY);
-	}
-
 	/* -----------------------
-	 * [CHECK] Value is empty
+	 * [CHECK:EMPTY_VALUE] Value is empty
 	 * ----------------------- */
-	const listEmptyValues = [];
-
 	let objUniqueLocaleValues: AnyValueObject = {};
 
 	// Value is empty
@@ -200,27 +190,21 @@ export const checkTranslationFiles = async (
 		for (const locale of Object.keys(localeObj)) {
 			if (locale !== _targetLang) {
 				if (localeObj[locale]?.length < 1) {
-					listEmptyValues.push(` - ${locale} -> '${compareKey}'`);
+					listIssueItems.push({
+						locale,
+						key: compareKey,
+						value: localeObj[locale][compareKey],
+						targetValue: localeObj[_targetLang][compareKey],
+						code: CHECK_CODE.EMPTY_VALUE
+					});
 				}
 			}
 		}
 	}
 
-	if (listEmptyValues.length > 0) {
-		return _errorAndExit(
-			`The value for the following item is empty:\n\n${listEmptyValues.join('\n')}\n`,
-			CHECK_CODE.EMPTY_VALUE
-		);
-	} else {
-		_passAndContinue(CHECK_CODE.EMPTY_VALUE);
-	}
-
 	/* -----------------------
-	 * [CHECK] Duplicate values
+	 * [CHECK:DUPLICATE_VALUE] Duplicate values
 	 * ----------------------- */
-	const listDuplicatedValues = [];
-
-	// Search duplicate value
 	for (const locale of Object.keys(localeObj)) {
 		objUniqueLocaleValues = {};
 
@@ -239,51 +223,73 @@ export const checkTranslationFiles = async (
 			if (!duplicatedKeyName) {
 				objUniqueLocaleValues[compareKey] = searchValue;
 			} else {
-				listDuplicatedValues.push(
-					` - ${locale} -> '${compareKey}' and '${duplicatedKeyName}' (${searchValue?.replace(/\n/g, '\\n')})`
-				);
+				listIssueItems.push({
+					locale,
+					key: compareKey,
+					value: localeObj[locale][compareKey],
+					targetValue: localeObj[_targetLang][compareKey],
+					code: CHECK_CODE.DUPLICATE_VALUE
+				});
 			}
 		}
 	}
 
-	if (listDuplicatedValues.length > 0) {
-		_warnButContinue(
-			`Some keys have duplicate values. Ignore this warning if necessary:\n\n${listDuplicatedValues.join('\n')}\n`,
-			CHECK_CODE.DUPLICATE_VALUE,
-			opt
-		);
-	} else {
-		_passAndContinue(CHECK_CODE.DUPLICATE_VALUE);
-	}
-
 	/* -----------------------
-	 * [CHECK] Not translated keys
+	 * [CHECK:NOT_TRANSLATED_VALUE] Not translated keys
 	 * ----------------------- */
-	const listNotTranslatedKeys = [];
-
-	// Search not translated key
 	for (const locale of Object.keys(localeObj)) {
 		if (locale !== _targetLang) {
-			for (const notTranslateCheckKey of Object.keys(localeObj[locale])) {
-				if (
-					localeObj[locale][notTranslateCheckKey] === localeObj[_targetLang][notTranslateCheckKey]
-				) {
-					listNotTranslatedKeys.push(
-						` - ${locale} -> '${notTranslateCheckKey}' (${_targetLang}: ${localeObj[locale][notTranslateCheckKey]?.replace(/\n/g, '\\n')})`
-					);
+			for (const compareKey of Object.keys(localeObj[locale])) {
+				if (localeObj[locale][compareKey] === localeObj[_targetLang][compareKey]) {
+					listIssueItems.push({
+						locale,
+						key: compareKey,
+						value: localeObj[locale][compareKey],
+						targetValue: localeObj[_targetLang][compareKey],
+						code: CHECK_CODE.NOT_TRANSLATED_VALUE
+					});
 				}
 			}
 		}
 	}
 
-	if (listNotTranslatedKeys.length > 0) {
-		_warnButContinue(
-			`Some translation keys have the same value as the primary language. If you don't need a translation, don't define it in the translation file, or make sure the translation is not complete. If everything is fine, ignore this error:\n\n${listNotTranslatedKeys.join('\n')}\n`,
-			CHECK_CODE.NOT_TRANSLATED_VALUE,
-			opt
-		);
-	} else {
-		_passAndContinue(CHECK_CODE.NOT_TRANSLATED_VALUE);
+	/* =====================================================
+	 * Report
+	 * ===================================================== */
+	let issueMessage;
+	let prevIssueCode;
+
+	for (const item of listIssueItems) {
+		switch (item.code) {
+			case CHECK_CODE.NO_KEY:
+				issueMessage = 'Some translation files did not include the following keys';
+				break;
+			case CHECK_CODE.DUMMY_KEY:
+				issueMessage =
+					'The following key does not exist in the target language. It may be an unused key';
+				break;
+			case CHECK_CODE.EMPTY_VALUE:
+				issueMessage = 'The value for the following item is empty';
+				break;
+			case CHECK_CODE.DUPLICATE_VALUE:
+				issueMessage = 'Some keys have duplicate values. Ignore this warning if necessary';
+				break;
+			case CHECK_CODE.NOT_TRANSLATED_VALUE:
+				issueMessage =
+					"Some translation keys have the same value as the primary language. If you don't need a translation, don't define it in the translation file, or make sure the translation is not complete. If everything is fine, ignore this error";
+				break;
+			default:
+			case CHECK_CODE.UNKNOWN:
+				issueMessage = 'Unknown error';
+				break;
+		}
+
+		if (prevIssueCode !== item.code) {
+			_log(`${issueMessage}:\n`, 'warn', opt);
+			prevIssueCode = item.code;
+		}
+
+		console.log(` - ${item.locale} -> '${item.key}' (${_targetLang}: ${item.targetValue})})`);
 	}
 
 	/* =====================================================
