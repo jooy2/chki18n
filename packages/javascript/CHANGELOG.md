@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.0 (2026-09-02)
+## vNext
 
 > The check logic no longer depends on the file system, so the module can also validate translations an application already holds in memory.
 
