@@ -13,6 +13,7 @@ import type {
 	Chki18nCheckCode,
 	Chki18nFileFormat,
 	Chki18nIssue,
+	Chki18nLevel,
 	Chki18nOptions,
 	Chki18nResolvedOptions
 } from './_types/global.js';
@@ -66,6 +67,13 @@ export const OPTION_DEFINITIONS: {
 		type: 'list',
 		valueName: '<codes>',
 		description: 'Run every check except these comma separated check codes'
+	},
+	{
+		flag: 'levels',
+		option: 'levels',
+		type: 'list',
+		valueName: '<code=level>',
+		description: 'Report a check at another severity, e.g. `EMPTY_VALUE=error`'
 	},
 	{
 		flag: 'interpolation-prefix',
@@ -127,6 +135,8 @@ const toList = (value: unknown): string[] => {
 };
 
 const CHECK_CODE_VALUES = new Set<string>(Object.values(CHECK_CODE));
+
+const LEVEL_VALUES = new Set<string>(['error', 'warn', 'info']);
 
 /**
  * Read raw CLI arguments (as produced by minimist) into the option shape shared
@@ -247,6 +257,31 @@ export function resolveOptions(
 		}
 	}
 
+	// `CODE=level` pairs from the CLI, or a plain object from the API.
+	const levelEntries =
+		raw.levels && !Array.isArray(raw.levels) && typeof raw.levels === 'object'
+			? Object.entries(raw.levels).map(([code, level]) => `${code}=${level}`)
+			: toList(raw.levels);
+	let levels: Partial<Record<Chki18nCheckCode, Chki18nLevel>> | null = null;
+
+	for (const entry of levelEntries) {
+		const [rawCode, rawLevel] = entry.split('=');
+		const code = rawCode?.trim().toUpperCase() as Chki18nCheckCode;
+		const level = rawLevel?.trim().toLowerCase() as Chki18nLevel;
+
+		if (!ANALYZE_CHECK_CODES.includes(code)) {
+			invalid(`\`${rawCode}\` in \`levels\` is not a check whose severity can be changed.`);
+			continue;
+		}
+
+		if (!LEVEL_VALUES.has(level)) {
+			invalid(`\`${rawLevel}\` is not a level. Use \`error\`, \`warn\` or \`info\`.`);
+			continue;
+		}
+
+		(levels ??= {})[code] = level;
+	}
+
 	const interpolationPrefix = raw.interpolationPrefix || DEFAULT_INTERPOLATION_PREFIX;
 	const interpolationSuffix = raw.interpolationSuffix || DEFAULT_INTERPOLATION_SUFFIX;
 
@@ -258,6 +293,7 @@ export function resolveOptions(
 			target,
 			format,
 			enabledChecks,
+			levels,
 			interpolationPrefix,
 			interpolationSuffix,
 			exclude: new Set(excludeList.length > 0 ? excludeList : DEFAULT_EXCLUDE_DIRS),

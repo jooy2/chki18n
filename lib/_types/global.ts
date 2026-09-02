@@ -97,6 +97,12 @@ export type Chki18nOptions = {
 	checks?: Chki18nCheckCode[] | string[] | string;
 	/** Run every check except these. */
 	ignoreChecks?: Chki18nCheckCode[] | string[] | string;
+	/**
+	 * Report these checks at a different severity, e.g. `{ EMPTY_VALUE: 'error' }`
+	 * to fail a run on an empty value. Also accepts the CLI's `CODE=level` list.
+	 * Only comparison checks can be re-graded.
+	 */
+	levels?: Partial<Record<Chki18nCheckCode, Chki18nLevel>> | string[] | string;
 	/** Opening delimiter of an interpolation placeholder. Default `{`. */
 	interpolationPrefix?: string;
 	/** Closing delimiter of an interpolation placeholder. Default `}`. */
@@ -121,6 +127,8 @@ export type Chki18nResolvedOptions = {
 	target: string;
 	format: Chki18nFileFormat;
 	enabledChecks: Set<Chki18nCheckCode>;
+	/** Severity overrides, or `null` when every check keeps its own. */
+	levels: Partial<Record<Chki18nCheckCode, Chki18nLevel>> | null;
 	interpolationPrefix: string;
 	interpolationSuffix: string;
 	exclude: Set<string>;

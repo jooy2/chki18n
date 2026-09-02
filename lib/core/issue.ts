@@ -2,6 +2,7 @@ import { CHECK_CODE, CHECK_META } from '../constants.js';
 import type {
 	Chki18nCheckCode,
 	Chki18nIssue,
+	Chki18nLevel,
 	Chki18nLevelCount,
 	Chki18nSummary
 } from '../_types/global.js';
@@ -34,6 +35,30 @@ export function createIssue(
 	}
 
 	return issue;
+}
+
+/**
+ * Re-grade issues whose check the caller asked to report at another severity.
+ * Applied to a finished list rather than at every call site, so a check that
+ * builds its issues in several places cannot be left half converted.
+ */
+export function applyLevelOverrides(
+	issues: Chki18nIssue[],
+	levels?: Partial<Record<Chki18nCheckCode, Chki18nLevel>> | null
+): Chki18nIssue[] {
+	if (!levels) {
+		return issues;
+	}
+
+	for (const issue of issues) {
+		const level = levels[issue.code];
+
+		if (level) {
+			issue.level = level;
+		}
+	}
+
+	return issues;
 }
 
 /** Group issues by check code, in the order the codes were first seen. */

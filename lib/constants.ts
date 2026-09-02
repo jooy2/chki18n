@@ -1,7 +1,4 @@
-import { platform } from 'node:os';
 import type { Chki18nCheckCode, Chki18nLevel } from './_types/global.js';
-
-export const __isWindows = platform() === 'win32';
 
 export const CHECK_CODE = {
 	UNKNOWN: 'UNKNOWN',

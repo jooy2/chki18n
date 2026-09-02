@@ -10,7 +10,8 @@
 - `createAnalyzer` returns a reusable analyzer whose `checkEntry` re-checks a single key
 - `EXTRA_INTERPOLATION_KEY`, `SURROUNDING_WHITESPACE`, `MISSING_NUMBER` and `INVALID_VALUE_TYPE` checks
 - Support for the folder-per-locale (`en/common.json`) and single-file-per-project (`{ "en": ... }`) layouts, alongside the existing one-file-per-locale layout. Files holding the same keys are compared as a group, so several translation files no longer share one pile of keys
-- `checks`, `ignoreChecks`, `format`, `exclude` and the interpolation delimiter options, available both as CLI flags and as JavaScript options
+- `chki18n/core`, a subpath that exports the comparison engine on its own. It imports no Node built-in, so it bundles for a browser or an editor's renderer process
+- `checks`, `ignoreChecks`, `levels`, `format`, `exclude` and the interpolation delimiter options, available both as CLI flags and as JavaScript options
 - `--help` and `--version`
 
 ### Changed

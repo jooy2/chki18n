@@ -1,6 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { joinFilePath } from 'qsu/node';
-import { __isWindows, CHECK_CODE, FILE_FORMAT, SUPPORTED_EXTENSIONS } from '../constants.js';
+import { CHECK_CODE, FILE_FORMAT, SUPPORTED_EXTENSIONS } from '../constants.js';
+import { __isWindows } from './platform.js';
 import { createIssue } from '../core/issue.js';
 import { isLocaleCode } from '../core/locale.js';
 import type {

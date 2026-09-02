@@ -1,9 +1,10 @@
 import { isAbsolute } from 'node:path';
 import { objToPrettyStr } from 'qsu';
 import { joinFilePath } from 'qsu/node';
-import { __isWindows, CHECK_CODE } from './constants.js';
+import { CHECK_CODE } from './constants.js';
 import { createAnalyzer } from './core/analyzer.js';
 import { createIssue, groupIssuesByCode, hasError, summarizeIssues } from './core/issue.js';
+import { __isWindows } from './loader/platform.js';
 import { scanTranslationDirectory } from './loader/scan.js';
 import { createLogger } from './logger.js';
 import { reportResult } from './reporter.js';
@@ -114,38 +115,10 @@ export async function checkTranslationFiles(
 	return result;
 }
 
-export {
-	ANALYZE_CHECK_CODES,
-	CHECK_CODE,
-	CHECK_META,
-	CROSS_KEY_CHECK_CODES,
-	DEFAULT_EXCLUDE_DIRS,
-	DEFAULT_INTERPOLATION_PREFIX,
-	DEFAULT_INTERPOLATION_SUFFIX,
-	DEFAULT_TARGET_LOCALE,
-	FILE_FORMAT
-} from './constants.js';
-export { analyzeTranslations, createAnalyzer } from './core/analyzer.js';
-export type { Chki18nAnalyzer } from './core/analyzer.js';
-export { extractInterpolationKeys } from './core/interpolation.js';
-export { groupIssuesByCode, summarizeIssues } from './core/issue.js';
-export { isLocaleCode } from './core/locale.js';
-export { argsToOptions, buildUsageText, OPTION_DEFINITIONS, resolveOptions } from './options.js';
-export type {
-	Chki18nCheckCode,
-	Chki18nEntry,
-	Chki18nFileFormat,
-	Chki18nInput,
-	Chki18nIssue,
-	Chki18nLevel,
-	Chki18nLevelCount,
-	Chki18nOptions,
-	Chki18nResolvedOptions,
-	Chki18nResult,
-	Chki18nSourceFile,
-	Chki18nSummary,
-	TranslationGroups,
-	TranslationMap
-} from './_types/global.js';
+// The comparison engine is also published on its own as `chki18n/core`, for
+// callers that must not pull in the Node built-ins the scanner needs.
+export * from './core/index.js';
+export type { Chki18nScanResult } from './loader/scan.js';
+export { scanTranslationDirectory } from './loader/scan.js';
 
 export default checkTranslationFiles;

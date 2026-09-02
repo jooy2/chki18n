@@ -43,7 +43,12 @@ This tool does not provide automatic text translation. It only performs checks.
 | Warning | SURROUNDING_WHITESPACE | The value begins or ends with whitespace |
 | Warning | MISSING_NUMBER | The target language value contains digits but the translation does not |
 
-Every check except `INVALID_FILE` and `INVALID_OPTIONS` can be turned on or off with the `checks` / `ignoreChecks` options.
+Every check except `INVALID_FILE` and `INVALID_OPTIONS` can be turned on or off with the `checks` / `ignoreChecks` options, and re-graded with `levels` when your project treats one of them more or less seriously:
+
+```javascript
+// Fail the run on an empty value, and stop caring about duplicates
+analyzeTranslations(input, { levels: { EMPTY_VALUE: 'error', DUPLICATE_VALUE: 'info' } });
+```
 
 ## Supported file layouts
 
@@ -207,6 +212,16 @@ analyzer.checkEntry({ key: 'a', values: { en: 'Hello' }, locales: ['en', 'ko'] }
 
 For reference, comparing 5,000 keys across 5 locales takes about 17ms with `analyzeTranslations` on flattened input, and a single `checkEntry` call takes about 2µs.
 
+### Importing only the comparison engine
+
+The package root reads directories, so it needs Node. The comparison engine itself does not, and is published separately as `chki18n/core`:
+
+```javascript
+import { analyzeTranslations, createAnalyzer, CHECK_META } from 'chki18n/core';
+```
+
+It exports everything the root does apart from `checkTranslationFiles` and the scanner, and imports no Node built-in, so it bundles for a browser or an editor's renderer process. Read the files with whatever that environment already uses, and hand the parsed objects to `analyzeTranslations`.
+
 ### Rendering the result
 
 Each issue carries its own `level` and a human readable `message`, and `CHECK_META` describes every check, so a user interface never has to hard-code strings:
@@ -238,6 +253,7 @@ Options:
   --format <format>               Layout of the translation files: `auto`, `single`, `folder` or `nested`
   --checks <codes>                Run only these comma separated check codes
   --ignore-checks <codes>         Run every check except these comma separated check codes
+  --levels <code=level>           Report a check at another severity, e.g. `EMPTY_VALUE=error`
   --interpolation-prefix <str>    Opening delimiter of an interpolation key (default: `{`)
   --interpolation-suffix <str>    Closing delimiter of an interpolation key (default: `}`)
   --exclude <dirs>                Comma separated directory names to skip while scanning

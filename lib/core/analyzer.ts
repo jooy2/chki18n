@@ -2,7 +2,13 @@ import { flatten } from 'flat';
 import { CHECK_CODE } from '../constants.js';
 import { resolveOptions } from '../options.js';
 import { extractInterpolationKeys } from './interpolation.js';
-import { createIssue, groupIssuesByCode, hasError, summarizeIssues } from './issue.js';
+import {
+	applyLevelOverrides,
+	createIssue,
+	groupIssuesByCode,
+	hasError,
+	summarizeIssues
+} from './issue.js';
 import type {
 	Chki18nCheckCode,
 	Chki18nEntry,
@@ -437,6 +443,8 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 			}
 		}
 
+		applyLevelOverrides(issues, resolved.options.levels);
+
 		return {
 			success: !hasError(issues),
 			issues,
@@ -479,7 +487,7 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 			null
 		);
 
-		return issues;
+		return applyLevelOverrides(issues, resolved.options.levels);
 	};
 
 	return {
