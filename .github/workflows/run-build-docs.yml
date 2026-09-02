@@ -1,0 +1,37 @@
+name: run-build-docs
+
+# Pull requests only. A push to `main` runs `publish-documentation`, which
+# performs the same three checks before it deploys — running both would build
+# the site twice for one commit.
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: docs
+
+jobs:
+  run-build-docs:
+    runs-on: ubuntu-latest
+    name: Build the documentation site
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+      - run: npm ci
+      - name: Type-check the site's own TypeScript
+        run: npm run typecheck
+      - name: Check formatting
+        run: npm run format
+      # Fails on a dead page link, which is what keeps the two locales from
+      # drifting into different shapes.
+      - name: Build
+        run: npm run build

@@ -3,6 +3,8 @@ dist/
 
 # Documentation site
 docs-dist/
+# Built by `docs/scripts/copy-changelog.mjs` from each package's own CHANGELOG.md
+docs/*/reference/changelog.md
 docs/.vitepress/cache/
 docs/.vitepress/dist/
 

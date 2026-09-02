@@ -1,0 +1,35 @@
+/**
+ * The palette, taken from the logo: the blue of the front speech bubble and the
+ * amber of the one behind it. VitePress derives its own hover and active states
+ * from `--vp-c-brand-1`, so setting the three shades is enough for links,
+ * buttons and the sidebar's active entry to agree.
+ */
+:root {
+	--vp-c-brand-1: #2d7dd2;
+	--vp-c-brand-2: #4a91dd;
+	--vp-c-brand-3: #1f66b3;
+	--vp-c-brand-soft: rgb(45 125 210 / 14%);
+
+	/* The hero's title, and the gradient behind the logo on the home page. */
+	--vp-home-hero-name-color: transparent;
+	--vp-home-hero-name-background: linear-gradient(120deg, #2d7dd2, #efa95c);
+	--vp-home-hero-image-background-image: linear-gradient(-45deg, #2d7dd2 40%, #efa95c 60%);
+	--vp-home-hero-image-filter: blur(56px);
+}
+
+.dark {
+	/* Lifted a step in the dark theme, where the mid blue reads as too heavy
+	 * against a near-black background. */
+	--vp-c-brand-1: #6fa8e6;
+	--vp-c-brand-2: #4a91dd;
+	--vp-c-brand-3: #2d7dd2;
+	--vp-c-brand-soft: rgb(111 168 230 / 16%);
+}
+
+/**
+ * Check codes are read as identifiers, not as prose. Tables of them line up
+ * better when the column does not re-wrap `NO_INTERPOLATION_KEY` mid-word.
+ */
+.vp-doc table code {
+	white-space: nowrap;
+}
