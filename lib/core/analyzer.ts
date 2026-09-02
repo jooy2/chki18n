@@ -2,13 +2,8 @@ import { flatten } from 'flat';
 import { CHECK_CODE } from '../constants.js';
 import { resolveOptions } from '../options.js';
 import { extractInterpolationKeys } from './interpolation.js';
-import {
-	applyLevelOverrides,
-	createIssue,
-	groupIssuesByCode,
-	hasError,
-	summarizeIssues
-} from './issue.js';
+import { applyLevelOverrides, createIssue } from './issue.js';
+import { buildResult } from './result.js';
 import type {
 	Chki18nCheckCode,
 	Chki18nEntry,
@@ -271,7 +266,7 @@ function checkDuplicateValues(
 }
 
 /** Keys of every locale, target language first so reports follow its order. */
-const collectKeys = (maps: TranslationMap[], targetIndex: number): string[] => {
+export const collectKeys = (maps: TranslationMap[], targetIndex: number): string[] => {
 	const keys: string[] = [];
 	const seen = new Set<string>();
 
@@ -304,7 +299,7 @@ const collectKeys = (maps: TranslationMap[], targetIndex: number): string[] => {
  * works on. With `flattened` the caller's objects are used as they are, which is
  * what makes analysing data already held in memory allocation free.
  */
-function prepareGroups(
+export function prepareGroups(
 	input: Chki18nInput,
 	options: Chki18nResolvedOptions,
 	issues: Chki18nIssue[]
@@ -381,7 +376,9 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 
 	const analyze = (input: Chki18nInput): Chki18nResult => {
 		const startedAt = Date.now();
-		const issues: Chki18nIssue[] = [...resolved.issues];
+		// Whatever produced the input may already have found problems (an
+		// unreadable file, say); they belong in the same report.
+		const issues: Chki18nIssue[] = [...(input?.issues ?? []), ...resolved.issues];
 		const groups = prepareGroups(input ?? {}, resolved.options, issues);
 		const groupNames = Object.keys(groups);
 		const allLocales = new Set<string>();
@@ -445,19 +442,14 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 
 		applyLevelOverrides(issues, resolved.options.levels);
 
-		return {
-			success: !hasError(issues),
-			issues,
-			issuesByCode: groupIssuesByCode(issues),
-			summary: summarizeIssues(issues),
-			target: resolved.options.target,
+		return buildResult(issues, resolved.options, {
 			locales: [...allLocales],
 			groups: groupNames,
 			keyCount,
 			files: input?.files ?? [],
-			fileFormat: null,
+			fileFormat: input?.fileFormat ?? null,
 			elapsedMs: Date.now() - startedAt
-		};
+		});
 	};
 
 	const checkEntry = (entry: Chki18nEntry): Chki18nIssue[] => {

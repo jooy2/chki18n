@@ -147,6 +147,13 @@ export type Chki18nInput = {
 	locales?: { [locale: string]: TranslationMap };
 	/** Maps a `group/locale` pair onto the file it was read from. */
 	files?: Chki18nSourceFile[];
+	/**
+	 * Issues found while producing this input, e.g. a file that could not be
+	 * parsed. They are reported alongside the comparison's own findings.
+	 */
+	issues?: Chki18nIssue[];
+	/** Layout the input came from, carried through to the result. */
+	fileFormat?: Chki18nFileFormat;
 };
 
 /** One key of one group, as fed to the incremental `checkEntry`. */

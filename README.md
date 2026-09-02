@@ -125,6 +125,17 @@ Install the module using the command below:
 npm install chki18n
 ```
 
+### Which entry point
+
+| Situation                                                 | Use                           |
+| --------------------------------------------------------- | ----------------------------- |
+| Check a directory once and be done (CI, a script)         | `checkTranslationFiles`       |
+| Check the same directory again and again                  | `loadTranslations`            |
+| Check data you already have, once                         | `analyzeTranslations`         |
+| Your application owns the values and only needs a verdict | `createAnalyzer().checkEntry` |
+
+The first two read files and need Node. The last two do not, and are also published as [`chki18n/core`](#importing-only-the-comparison-engine).
+
 ### Checking a directory
 
 `checkTranslationFiles` does what the CLI does. Nothing is printed unless you ask for it, and the process is never terminated for you: the returned result is the only thing to act on.
@@ -211,6 +222,49 @@ analyzer.checkEntry({ key: 'a', values: { en: 'Hello' }, locales: ['en', 'ko'] }
 `checkEntry` only runs checks that can be decided from one key. `DUPLICATE_VALUE` needs to see a whole locale at once and is therefore reported by `analyzeTranslations` only; the codes it covers are listed in `CROSS_KEY_CHECK_CODES`.
 
 For reference, comparing 5,000 keys across 5 locales takes about 17ms with `analyzeTranslations` on flattened input, and a single `checkEntry` call takes about 2µs.
+
+### Keeping a directory loaded
+
+`loadTranslations` reads the directory once and hands back a session that holds the parsed, flattened translations. Every later call works on what is already in memory, so checking after an edit costs about a microsecond.
+
+```javascript
+import { loadTranslations } from 'chki18n';
+
+const session = await loadTranslations('/your/locale/directory', { target: 'en' });
+
+session.locales; // ['en', 'ko']
+session.groups; // ['']
+session.keys(); // ['greeting', 'empty', ...] — target language order
+session.analyze(); // the same result shape, without reading a file
+
+session.get('ko', 'greeting'); // '안녕하세요'
+session.checkKey('greeting'); // [{ code: 'NO_INTERPOLATION_KEY', ... }]
+
+// `set` writes the value and reports what that key now looks like
+session.set('ko', 'greeting', '{name}님 안녕하세요'); // []
+session.remove('greeting', { locale: 'ko' }); // [{ code: 'NO_KEY', ... }]
+
+await session.reload(); // throw the edits away and read the directory again
+```
+
+A project with several translation files has several groups. Name one when you mean it, or leave it out and the session looks the key up where it actually lives:
+
+```javascript
+session.get('en', 'failed'); // found in errors.json
+session.set('ko', 'failed', '실패', 'errors.json'); // named explicitly
+session.translations('errors.json'); // { en: {...}, ko: {...} }, flattened
+```
+
+`createSession` is the same thing for translations you already hold, with no file system involved. It is exported from `chki18n/core` too:
+
+```javascript
+import { createSession } from 'chki18n/core';
+
+const session = createSession({ groups: { 'common.json': { en, ko } } }, { target: 'en' });
+session.reset({ groups: nextGroups }); // swap the data, keep the options
+```
+
+A session owns its copy of the values. If your application is already the owner — an editor holding what the user is typing — prefer `checkEntry` above and keep a single source of truth.
 
 ### Importing only the comparison engine
 

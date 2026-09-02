@@ -22,6 +22,9 @@ export { analyzeTranslations, createAnalyzer } from './analyzer.js';
 export type { Chki18nAnalyzer } from './analyzer.js';
 export { extractInterpolationKeys } from './interpolation.js';
 export { createIssue, groupIssuesByCode, summarizeIssues } from './issue.js';
+export { buildResult } from './result.js';
+export { createSession } from './session.js';
+export type { Chki18nSession } from './session.js';
 export { isLocaleCode } from './locale.js';
 export { argsToOptions, buildUsageText, OPTION_DEFINITIONS, resolveOptions } from '../options.js';
 export type {
