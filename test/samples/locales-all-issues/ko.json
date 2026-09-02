@@ -1,0 +1,12 @@
+{
+	"greeting": "안녕하세요",
+	"empty": "",
+	"same": "Same",
+	"count": "여러 개 있습니다",
+	"trim": " 다듬어짐 ",
+	"link": "{url}로 이동",
+	"num": 1,
+	"dup-a": "중복",
+	"dup-b": "중복",
+	"only-ko": "한국어에만 있음"
+}

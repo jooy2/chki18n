@@ -1,0 +1,13 @@
+{
+	"en": {
+		"desc": {
+			"hello": "Hello",
+			"bye": "Goodbye"
+		}
+	},
+	"ko": {
+		"desc": {
+			"hello": "안녕하세요"
+		}
+	}
+}
