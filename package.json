@@ -1,7 +1,7 @@
 {
 	"name": "chki18n",
 	"type": "module",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"description": "A command-line tool that validates multilingual translation files against i18n (Internationalization) standards.",
 	"author": "Jooy2 <jooy2.contact@gmail.com>",
 	"license": "MIT",
@@ -11,16 +11,23 @@
 		"url": "https://github.com/jooy2/chki18n"
 	},
 	"main": "dist/index.js",
-	"bin": "dist/index.js",
-	"exports": {
-		".": "./dist/index.js"
+	"types": "dist/index.d.ts",
+	"bin": {
+		"chki18n": "dist/cli.js"
 	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
+	},
+	"sideEffects": false,
 	"engines": {
 		"node": ">=18.0.0"
 	},
 	"scripts": {
 		"test": "tsc && node --import tsx --test \"./test/**/*.test.ts\"",
-		"test:cli": "npm run build && node dist/index.js --debug --path test/samples/locales-no-issue",
+		"test:cli": "npm run build && node dist/cli.js --debug --path test/samples/locales-no-issue",
 		"build": "npm run format && tsc && npm run minify",
 		"minify": "terser-glob 'dist/**/*.js' --config-file terser.config.json",
 		"format": "prettier . --write"

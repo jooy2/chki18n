@@ -1,15 +1,155 @@
+import type { CHECK_CODE, FILE_FORMAT } from '../constants.js';
+
 export type AnyValueObject = { [key: string]: any };
 
-export type ListIssueItem = {
+/** A single check identifier (see `CHECK_CODE`). */
+export type Chki18nCheckCode = (typeof CHECK_CODE)[keyof typeof CHECK_CODE];
+
+/** Severity of a reported issue. `info` issues never fail a run. */
+export type Chki18nLevel = 'error' | 'warn' | 'info';
+
+/** On-disk layout of the translation files (see `FILE_FORMAT`). */
+export type Chki18nFileFormat = (typeof FILE_FORMAT)[keyof typeof FILE_FORMAT];
+
+/**
+ * Translation strings of one locale. Accepts both the nested shape read from a
+ * file (`{ desc: { hello: 'Hi' } }`) and the flattened shape used internally
+ * (`{ 'desc.hello': 'Hi' }`).
+ */
+export type TranslationMap = { [key: string]: any };
+
+/** `group name -> locale -> strings`. A group is one comparable set of files. */
+export type TranslationGroups = { [group: string]: { [locale: string]: TranslationMap } };
+
+/** A translation file located by the scanner. */
+export type Chki18nSourceFile = {
+	path: string;
+	relativePath: string;
+	group: string;
 	locale: string;
-	key: string;
-	value: string;
-	targetValue: string;
-	interpolation?: string;
-	level: 'warn' | 'error' | 'suggest';
-	code: string;
 };
 
-export type Chki18nOptions = { path?: string; target?: string; info?: boolean; warn?: boolean };
+export type Chki18nIssue = {
+	code: Chki18nCheckCode;
+	level: Chki18nLevel;
+	/** Locale the issue belongs to. Empty for issues that are not locale-bound. */
+	locale: string;
+	/** Flattened translation key. Empty for file/option level issues. */
+	key: string;
+	/** Group the key belongs to. `''` when the caller supplied a single set. */
+	group: string;
+	value?: string;
+	targetValue?: string;
+	/** Interpolation placeholder that triggered the issue. */
+	interpolation?: string;
+	/** The other key involved, e.g. the first key holding a duplicated value. */
+	relatedKey?: string;
+	/** Absolute path of the file the key came from, when known. */
+	file?: string;
+	/** Human readable, one line description of this specific occurrence. */
+	message: string;
+};
 
-export type Chki18nResult = { success: boolean; issues?: Partial<Record<string, ListIssueItem[]>> };
+export type Chki18nLevelCount = { error: number; warn: number; info: number };
+
+export type Chki18nSummary = Chki18nLevelCount & {
+	total: number;
+	byCode: Partial<Record<Chki18nCheckCode, number>>;
+	byLocale: Record<string, Chki18nLevelCount>;
+	byGroup: Record<string, Chki18nLevelCount>;
+};
+
+export type Chki18nResult = {
+	/** `false` when at least one `error` level issue was found. */
+	success: boolean;
+	/** Every issue, in scan order. */
+	issues: Chki18nIssue[];
+	/** The same issues grouped by check code, for report style output. */
+	issuesByCode: Partial<Record<Chki18nCheckCode, Chki18nIssue[]>>;
+	summary: Chki18nSummary;
+	/** Locale used as the comparison base. */
+	target: string;
+	/** Every locale that took part in the comparison. */
+	locales: string[];
+	/** Group names that took part in the comparison. */
+	groups: string[];
+	/** Number of distinct keys compared across all groups. */
+	keyCount: number;
+	/** Files read from disk. Empty when the input was supplied in memory. */
+	files: Chki18nSourceFile[];
+	/** Detected (or forced) on-disk layout. `null` for in-memory input. */
+	fileFormat: Chki18nFileFormat | null;
+	elapsedMs: number;
+};
+
+/**
+ * Options shared by the CLI and the JavaScript API. Every CLI flag maps onto one
+ * of these fields, so both entry points resolve through `resolveOptions`.
+ */
+export type Chki18nOptions = {
+	/** Directory holding the translation files. */
+	path?: string;
+	/** Locale every other locale is compared against. Default `en`. */
+	target?: string;
+	/** Force an on-disk layout instead of detecting it. Default `auto`. */
+	format?: Chki18nFileFormat;
+	/** Only run these checks. Mutually exclusive with `ignoreChecks`. */
+	checks?: Chki18nCheckCode[] | string[] | string;
+	/** Run every check except these. */
+	ignoreChecks?: Chki18nCheckCode[] | string[] | string;
+	/** Opening delimiter of an interpolation placeholder. Default `{`. */
+	interpolationPrefix?: string;
+	/** Closing delimiter of an interpolation placeholder. Default `}`. */
+	interpolationSuffix?: string;
+	/** Directory names skipped while scanning. Replaces the default list. */
+	exclude?: string[] | string;
+	/** Treat the input as already flattened and skip the flatten pass. */
+	flattened?: boolean;
+	/** Print progress and results to the console. Default `false`. */
+	verbose?: boolean;
+	/** Print info level log lines. Only meaningful with `verbose`. */
+	info?: boolean;
+	/** Print warn level log lines. Only meaningful with `verbose`. */
+	warn?: boolean;
+	/** Print debug log lines. */
+	debug?: boolean;
+};
+
+/** Options after defaults, aliases and string forms have been resolved. */
+export type Chki18nResolvedOptions = {
+	path: string | null;
+	target: string;
+	format: Chki18nFileFormat;
+	enabledChecks: Set<Chki18nCheckCode>;
+	interpolationPrefix: string;
+	interpolationSuffix: string;
+	exclude: Set<string>;
+	flattened: boolean;
+	verbose: boolean;
+	info: boolean;
+	warn: boolean;
+	debug: boolean;
+};
+
+/** Input accepted by `analyzeTranslations`. */
+export type Chki18nInput = {
+	/** Several comparable sets, e.g. one entry per translation file name. */
+	groups?: TranslationGroups;
+	/** A single set. Shorthand for `{ groups: { '': locales } }`. */
+	locales?: { [locale: string]: TranslationMap };
+	/** Maps a `group/locale` pair onto the file it was read from. */
+	files?: Chki18nSourceFile[];
+};
+
+/** One key of one group, as fed to the incremental `checkEntry`. */
+export type Chki18nEntry = {
+	key: string;
+	/** `locale -> value`. The target locale's value is read from here too. */
+	values: { [locale: string]: any };
+	group?: string;
+	/**
+	 * Locales to compare. Defaults to the keys of `values`; pass it explicitly
+	 * when a locale that owns no value still has to be reported as missing.
+	 */
+	locales?: string[];
+};
