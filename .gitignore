@@ -1,6 +1,11 @@
 # Project files
 dist/
 
+# Documentation site
+docs-dist/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+
 # Node.js
 node_modules/
 

@@ -6,11 +6,13 @@ on:
   push:
     branches: [main]
     paths:
-      - test/**
-      - lib/**
-      - package.json
+      - packages/javascript/**
       - .github/workflows/run-test-javascript.yml
   workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: packages/javascript
 
 jobs:
   run-test-javascript:
@@ -31,7 +33,7 @@ jobs:
         with:
           node-version: ${{ matrix.node_version }}
           cache: npm
-          cache-dependency-path: '**/package-lock.json'
+          cache-dependency-path: packages/javascript/package-lock.json
       - run: npm ci
       - name: Test module script (functions)
         run: npm run test
