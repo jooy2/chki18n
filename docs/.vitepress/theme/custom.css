@@ -1,29 +1,32 @@
 /**
- * The palette, taken from the logo: the blue of the front speech bubble and the
- * amber of the one behind it. VitePress derives its own hover and active states
- * from `--vp-c-brand-1`, so setting the three shades is enough for links,
- * buttons and the sidebar's active entry to agree.
+ * The palette, sampled from the logo: the blue of the front speech bubble
+ * (#2080c8), the amber of the one beside it (#f0b868) and the slate of the one
+ * behind (#6078a8). VitePress derives its own hover and active states from
+ * `--vp-c-brand-1`, so setting the three shades is enough for links, buttons
+ * and the sidebar's active entry to agree.
  */
 :root {
-	--vp-c-brand-1: #2d7dd2;
-	--vp-c-brand-2: #4a91dd;
-	--vp-c-brand-3: #1f66b3;
-	--vp-c-brand-soft: rgb(45 125 210 / 14%);
+	--vp-c-brand-1: #1a6ba8;
+	--vp-c-brand-2: #2080c8;
+	--vp-c-brand-3: #4a97d8;
+	--vp-c-brand-soft: rgb(32 128 200 / 14%);
 
-	/* The hero's title, and the gradient behind the logo on the home page. */
+	/* The hero's title, and the wash behind the logo on the home page. */
 	--vp-home-hero-name-color: transparent;
-	--vp-home-hero-name-background: linear-gradient(120deg, #2d7dd2, #efa95c);
-	--vp-home-hero-image-background-image: linear-gradient(-45deg, #2d7dd2 40%, #efa95c 60%);
+	--vp-home-hero-name-background: linear-gradient(120deg, #2080c8, #f0b868);
+	--vp-home-hero-image-background-image: linear-gradient(-45deg, #2080c8 40%, #f0b868 60%);
 	--vp-home-hero-image-filter: blur(56px);
 }
 
+/**
+ * A step lighter in the dark theme: the logo's own blue is too heavy against a
+ * near-black background to read as a link.
+ */
 .dark {
-	/* Lifted a step in the dark theme, where the mid blue reads as too heavy
-	 * against a near-black background. */
-	--vp-c-brand-1: #6fa8e6;
-	--vp-c-brand-2: #4a91dd;
-	--vp-c-brand-3: #2d7dd2;
-	--vp-c-brand-soft: rgb(111 168 230 / 16%);
+	--vp-c-brand-1: #6bb0e6;
+	--vp-c-brand-2: #4a97d8;
+	--vp-c-brand-3: #2080c8;
+	--vp-c-brand-soft: rgb(107 176 230 / 16%);
 }
 
 /**

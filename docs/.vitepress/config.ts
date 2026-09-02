@@ -369,7 +369,7 @@ const vitePressConfig: UserConfig = {
 		['link', { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/logo-16.png' }],
 		['link', { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }],
 		['link', { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' }],
-		['meta', { name: 'theme-color', content: '#2d7dd2' }],
+		['meta', { name: 'theme-color', content: '#2080c8' }],
 		// The half of the metadata that is the same on every page. The other half —
 		// the canonical URL, the title, the description, the locale alternates — is
 		// per page and lives in `transformHead`.
