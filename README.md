@@ -12,7 +12,7 @@ Every check, every option and every example. This README is the map; each packag
 
 **chki18n** checks that your translation files agree with each other. Point it at a folder of i18n JSON, name the language everything is compared against, and it reports what is missing, what was never translated and what quietly broke.
 
-- **Eleven checks.** Missing keys, empty values, untranslated strings, interpolation placeholders that do not match, duplicate values, stray whitespace, numbers dropped in translation, and more.
+- **Thirteen checks.** Missing keys, keys defined twice, empty values, untranslated strings, interpolation placeholders that do not match, duplicate values, stray whitespace, numbers dropped in translation, and — pointed at your sources — keys nothing references.
 - **Every layout.** One file per locale (`en.json`), one folder per locale (`en/common.json`), or one file holding them all. Files that share keys are compared as a group, so a key missing from `errors.json` is never confused with one missing from `common.json`.
 - **From the command line or from code.** The same checks and the same options either way — a CLI flag and its API option are one definition, so the two can never disagree.
 - **Fast enough to run on every keystroke.** Comparing 5,000 keys across 5 locales takes about 17ms, and re-checking a single edited key takes about 2µs. An editor can lint as the user types.

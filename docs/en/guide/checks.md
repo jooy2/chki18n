@@ -56,6 +56,24 @@ The reverse: this locale has a key the target language does not. Usually a key t
 [DUMMY_KEY] ko -> 'attr.legacy' (ko: "예전 문구")
 ```
 
+### `DUPLICATE_KEY`
+
+The same key is defined twice, so one of the two values is thrown away before anything gets to read it. Two ways to write it, and neither is visible afterwards:
+
+```json
+// The literal kind — valid JSON, and `JSON.parse` answers "Hi" without a word
+{ "greeting": "Hello", "greeting": "Hi" }
+```
+
+```json
+// The collision kind — a nested key and a dotted one flatten to the same thing
+{ "attr": { "folder": "Folder" }, "attr.folder": "Directory" }
+```
+
+The first is what a botched merge conflict leaves behind; the second is what happens when part of a file is written in dotted form and part of it nested. Both are found — the literal kind by reading the file's text before it is parsed, which is the only moment the evidence still exists, and the message names the line it is on.
+
+An error, because a value is being lost. This is the one check whose severity chki18n would rather you did not lower, though `levels` will let you.
+
 ### `INVALID_FILE`
 
 A file that could not be read, was empty, did not parse as JSON, or — when a layout was forced with `format` — matched no file at all. Reported before any comparison, and always an error: a file that could not be read is not a file that passed.
@@ -111,7 +129,33 @@ Two keys in the same locale carry the same value. Sometimes duplication worth co
 [DUPLICATE_VALUE] ko -> 'dup-b' (en: "Beta") The key `dup-a` in the same locale already uses this value.
 ```
 
-This is the one check that has to see a whole locale at once, so it is **not** reported by [`checkEntry`](/api/create-analyzer), which is handed one key at a time. The codes with that property are listed in `CROSS_KEY_CHECK_CODES`.
+Like `DUPLICATE_KEY` and `UNUSED_KEY`, this one has to see more than a single key, so it is **not** reported by [`checkEntry`](/api/create-analyzer). The codes with that property are listed in `CROSS_KEY_CHECK_CODES`.
+
+## Usage checks
+
+### `UNUSED_KEY`
+
+Nothing in your source files appears to reference this key. Off unless you point chki18n at the sources to search:
+
+```bash
+npx chki18n ./locales --target en --source ./src
+```
+
+```javascript
+await checkTranslationFiles('./locales', { target: 'en', source: './src' });
+```
+
+The search is for a key's **leaf segment** — `desc.hello` is looked up as `hello` — because code so often resolves a nested key by its last segment alone, through a scoped `t('hello')` or a namespace bound higher up. Matching the whole dotted key would report working code as unused, which is the worse mistake of the two.
+
+That also decides the severity. A leaf like `name` or `title` will turn up in almost any codebase whether or not the key is used, so this is a hint rather than a finding: it is reported at `info`, it never fails a run, and it is worth reading as "start looking here" rather than "delete this".
+
+The project's own translation files are never searched — a key appears verbatim in the file that defines it, so reading them would mark every key used. Only text files are read (source, styles, templates, docs), skipping anything over 5MB, and the `exclude` list applies here too.
+
+If you already know the answer — an editor that has scanned the project itself — hand it over instead of having it worked out again:
+
+```javascript
+analyzeTranslations({ locales, unusedKeys: ['desc.orphan'] }, { target: 'en' });
+```
 
 ## Interpolation checks
 

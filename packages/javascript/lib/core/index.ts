@@ -20,6 +20,7 @@ export {
 } from '../constants.js';
 export { analyzeTranslations, createAnalyzer } from './analyzer.js';
 export type { Chki18nAnalyzer } from './analyzer.js';
+export { collectFlatKeys, findDuplicateKeys } from './duplicate.js';
 export { extractInterpolationKeys } from './interpolation.js';
 export { createIssue, groupIssuesByCode, summarizeIssues } from './issue.js';
 export { buildResult } from './result.js';

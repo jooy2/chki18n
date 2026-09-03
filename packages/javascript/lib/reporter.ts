@@ -16,16 +16,19 @@ function formatIssue(issue: Chki18nIssue, target: string): string {
 		return ` - ${issue.message}`;
 	}
 
-	const where = issue.group ? `${issue.locale} @${issue.group}` : issue.locale;
+	const where = [issue.locale, issue.group && `@${issue.group}`].filter(Boolean).join(' ');
 	const detail = issue.message === CHECK_META[issue.code]?.description ? '' : ` ${issue.message}`;
 	// Show the target language's wording, which is what the reader compares
-	// against. Keys the target language does not have fall back to their own.
+	// against. Keys the target language does not have fall back to their own —
+	// and a check that is about the key rather than about a value shows neither.
 	const reference =
-		issue.targetValue === undefined
-			? `${issue.locale}: ${quote(issue.value)}`
-			: `${target}: ${quote(issue.targetValue)}`;
+		issue.targetValue !== undefined
+			? ` (${target}: ${quote(issue.targetValue)})`
+			: issue.value !== undefined
+				? ` (${issue.locale}: ${quote(issue.value)})`
+				: '';
 
-	return ` - ${where} -> '${issue.key}' (${reference})${detail}`;
+	return ` - ${where ? `${where} -> ` : ''}'${issue.key}'${reference}${detail}`;
 }
 
 /** Print a finished result the way the CLI shows it. */

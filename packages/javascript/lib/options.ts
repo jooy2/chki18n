@@ -97,6 +97,13 @@ export const OPTION_DEFINITIONS: {
 		description: 'Comma separated directory names to skip while scanning'
 	},
 	{
+		flag: 'source',
+		option: 'source',
+		type: 'string',
+		valueName: '<dir>',
+		description: 'Search this directory of source files for key usages (enables `UNUSED_KEY`)'
+	},
+	{
 		flag: 'no-info',
 		option: 'info',
 		type: 'boolean',
@@ -297,6 +304,7 @@ export function resolveOptions(
 			interpolationPrefix,
 			interpolationSuffix,
 			exclude: new Set(excludeList.length > 0 ? excludeList : DEFAULT_EXCLUDE_DIRS),
+			source: raw.source || null,
 			flattened: raw.flattened === true,
 			verbose: raw.verbose === true,
 			info: raw.info !== false,

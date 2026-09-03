@@ -1,9 +1,9 @@
 import { readdir, readFile } from 'node:fs/promises';
-import { joinFilePath } from 'qsu/node';
+import { join } from 'node:path';
 import { CHECK_CODE, FILE_FORMAT, SUPPORTED_EXTENSIONS } from '../constants.js';
-import { __isWindows } from './platform.js';
 import { createIssue } from '../core/issue.js';
 import { isLocaleCode } from '../core/locale.js';
+import { findDuplicateJsonKeys, type JsonDuplicateKey } from './jsonDuplicates.js';
 import type {
 	Chki18nFileFormat,
 	Chki18nIssue,
@@ -29,6 +29,8 @@ type ScannedFile = {
 	/** Path segments relative to the scan root, file name last. */
 	segments: string[];
 	json: any;
+	/** Keys written twice in the text, which parsing has since collapsed. */
+	duplicateKeys: JsonDuplicateKey[];
 };
 
 const stemOf = (fileName: string): string => fileName.replace(/\.[^.]+$/, '');
@@ -73,7 +75,7 @@ async function collectFiles(
 				continue;
 			}
 
-			const path = joinFilePath(__isWindows, directory, entry.name);
+			const path = join(directory, entry.name);
 
 			if (entry.isDirectory()) {
 				if (!options.exclude.has(entry.name)) {
@@ -129,7 +131,16 @@ async function collectFiles(
 				continue;
 			}
 
-			files.push({ path, relativePath, segments: [...segments, entry.name], json });
+			files.push({
+				path,
+				relativePath,
+				segments: [...segments, entry.name],
+				json,
+				// Read off the text, because `JSON.parse` has already discarded it.
+				duplicateKeys: options.enabledChecks.has(CHECK_CODE.DUPLICATE_KEY)
+					? findDuplicateJsonKeys(content)
+					: []
+			});
 		}
 	};
 
@@ -173,7 +184,8 @@ function detectFileFormat(files: ScannedFile[]): Chki18nFileFormat {
  */
 function buildGroups(
 	files: ScannedFile[],
-	fileFormat: Chki18nFileFormat
+	fileFormat: Chki18nFileFormat,
+	issues: Chki18nIssue[]
 ): Pick<Chki18nScanResult, 'groups' | 'files' | 'skipped'> {
 	const groups: TranslationGroups = {};
 	const sources: Chki18nSourceFile[] = [];
@@ -182,6 +194,26 @@ function buildGroups(
 	const add = (group: string, locale: string, translations: any, file: ScannedFile) => {
 		(groups[group] ??= {})[locale] = translations;
 		sources.push({ path: file.path, relativePath: file.relativePath, group, locale });
+
+		// A `nested` file's paths start with the locale that owns them; every
+		// other layout's are already relative to the locale's own root.
+		const prefix = fileFormat === FILE_FORMAT.NESTED ? `${locale}.` : '';
+
+		for (const duplicate of file.duplicateKeys) {
+			if (prefix && !duplicate.path.startsWith(prefix)) {
+				continue;
+			}
+
+			issues.push(
+				createIssue(CHECK_CODE.DUPLICATE_KEY, {
+					locale,
+					group,
+					key: duplicate.path.slice(prefix.length),
+					file: file.path,
+					message: `The key is written twice in '${file.relativePath}' (line ${duplicate.line}), so one of its values is lost.`
+				})
+			);
+		}
 	};
 
 	for (const file of files) {
@@ -241,7 +273,7 @@ export async function scanTranslationDirectory(
 	const issues: Chki18nIssue[] = [];
 	const files = await collectFiles(path, options, issues);
 	const fileFormat = options.format === FILE_FORMAT.AUTO ? detectFileFormat(files) : options.format;
-	const built = buildGroups(files, fileFormat);
+	const built = buildGroups(files, fileFormat, issues);
 
 	if (built.files.length < 1) {
 		issues.push(

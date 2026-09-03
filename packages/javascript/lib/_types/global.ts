@@ -109,6 +109,11 @@ export type Chki18nOptions = {
 	interpolationSuffix?: string;
 	/** Directory names skipped while scanning. Replaces the default list. */
 	exclude?: string[] | string;
+	/**
+	 * Directory of source files to search for key usages. Without it the
+	 * `UNUSED_KEY` check has nothing to go on and reports nothing.
+	 */
+	source?: string;
 	/** Treat the input as already flattened and skip the flatten pass. */
 	flattened?: boolean;
 	/** Print progress and results to the console. Default `false`. */
@@ -132,6 +137,7 @@ export type Chki18nResolvedOptions = {
 	interpolationPrefix: string;
 	interpolationSuffix: string;
 	exclude: Set<string>;
+	source: string | null;
 	flattened: boolean;
 	verbose: boolean;
 	info: boolean;
@@ -154,6 +160,15 @@ export type Chki18nInput = {
 	issues?: Chki18nIssue[];
 	/** Layout the input came from, carried through to the result. */
 	fileFormat?: Chki18nFileFormat;
+	/**
+	 * Flattened keys nothing appears to reference, as `UNUSED_KEY` issues.
+	 *
+	 * Whether a key is used is a fact about the source tree rather than about
+	 * the translations, so it is supplied rather than worked out here.
+	 * `checkTranslationFiles` fills this in when given a `source` directory; an
+	 * application that already knows can pass its own answer.
+	 */
+	unusedKeys?: string[];
 };
 
 /** One key of one group, as fed to the incremental `checkEntry`. */

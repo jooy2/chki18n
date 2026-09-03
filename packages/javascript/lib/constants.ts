@@ -7,6 +7,8 @@ export const CHECK_CODE = {
 	INVALID_VALUE_TYPE: 'INVALID_VALUE_TYPE',
 	NO_KEY: 'NO_KEY',
 	DUMMY_KEY: 'DUMMY_KEY',
+	DUPLICATE_KEY: 'DUPLICATE_KEY',
+	UNUSED_KEY: 'UNUSED_KEY',
 	EMPTY_VALUE: 'EMPTY_VALUE',
 	NO_INTERPOLATION_KEY: 'NO_INTERPOLATION_KEY',
 	EXTRA_INTERPOLATION_KEY: 'EXTRA_INTERPOLATION_KEY',
@@ -55,6 +57,16 @@ export const CHECK_META: Record<
 		summary: 'The following keys do not exist in the target language',
 		description: 'The key is missing from the target language, so it may be unused.'
 	},
+	[CHECK_CODE.DUPLICATE_KEY]: {
+		level: 'error',
+		summary: 'Some keys are defined more than once',
+		description: 'The key is defined twice, so one of its two values is silently lost.'
+	},
+	[CHECK_CODE.UNUSED_KEY]: {
+		level: 'info',
+		summary: 'The following keys were not found in the scanned source files',
+		description: 'Nothing in the scanned sources appears to reference this key.'
+	},
 	[CHECK_CODE.EMPTY_VALUE]: {
 		level: 'warn',
 		summary: 'The value for the following items is empty',
@@ -102,6 +114,8 @@ export const ANALYZE_CHECK_CODES: Chki18nCheckCode[] = [
 	CHECK_CODE.INVALID_VALUE_TYPE,
 	CHECK_CODE.NO_KEY,
 	CHECK_CODE.DUMMY_KEY,
+	CHECK_CODE.DUPLICATE_KEY,
+	CHECK_CODE.UNUSED_KEY,
 	CHECK_CODE.EMPTY_VALUE,
 	CHECK_CODE.NO_INTERPOLATION_KEY,
 	CHECK_CODE.EXTRA_INTERPOLATION_KEY,
@@ -115,7 +129,13 @@ export const ANALYZE_CHECK_CODES: Chki18nCheckCode[] = [
  * Checks that need to see every key of a locale at once, so they cannot be
  * answered by `checkEntry`, which is handed one key at a time.
  */
-export const CROSS_KEY_CHECK_CODES: Chki18nCheckCode[] = [CHECK_CODE.DUPLICATE_VALUE];
+export const CROSS_KEY_CHECK_CODES: Chki18nCheckCode[] = [
+	CHECK_CODE.DUPLICATE_VALUE,
+	// A key can only be seen twice by looking at the whole file, and whether one
+	// is referenced is a fact about the source tree rather than about the key.
+	CHECK_CODE.DUPLICATE_KEY,
+	CHECK_CODE.UNUSED_KEY
+];
 
 /** How translation files are laid out on disk. */
 export const FILE_FORMAT = {
@@ -152,3 +172,66 @@ export const DEFAULT_EXCLUDE_DIRS = [
 
 /** File extensions the scanner reads. */
 export const SUPPORTED_EXTENSIONS = ['json'];
+
+/**
+ * Extensions the unused-key scan will read, as an allowlist rather than a
+ * blocklist of binaries: an unknown binary decoded as UTF-8 could contain a
+ * key's bytes by chance and wrongly mark it used, so anything unrecognised is
+ * skipped.
+ */
+export const SOURCE_EXTENSIONS = [
+	// Web and app source
+	'js',
+	'jsx',
+	'mjs',
+	'cjs',
+	'ts',
+	'tsx',
+	'mts',
+	'cts',
+	'vue',
+	'svelte',
+	'astro',
+	'html',
+	'htm',
+	'xml',
+	'xhtml',
+	'php',
+	'rb',
+	'py',
+	'go',
+	'rs',
+	'java',
+	'kt',
+	'kts',
+	'swift',
+	'dart',
+	'cs',
+	'ex',
+	'exs',
+	// Styles and templates
+	'css',
+	'scss',
+	'sass',
+	'less',
+	'styl',
+	'hbs',
+	'ejs',
+	'pug',
+	'twig',
+	'erb',
+	'liquid',
+	// Data and docs that can carry a key
+	'json',
+	'jsonc',
+	'json5',
+	'yaml',
+	'yml',
+	'toml',
+	'md',
+	'mdx',
+	'txt'
+];
+
+/** Files above this size are skipped by the unused-key scan. */
+export const SOURCE_MAX_FILE_BYTES = 5 * 1024 * 1024;

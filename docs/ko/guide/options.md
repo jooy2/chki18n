@@ -19,6 +19,7 @@ title: 옵션
 | `interpolationPrefix` | `--interpolation-prefix` | `string` | `'{'` |
 | `interpolationSuffix` | `--interpolation-suffix` | `string` | `'}'` |
 | `exclude` | `--exclude` | `string[]` 또는 쉼표로 구분된 문자열 | 아래 참고 |
+| `source` | `--source` | `string` | — |
 | `info` | `--no-info` | `boolean` | `true` |
 | `warn` | `--no-warn` | `boolean` | `true` |
 | `debug` | `--debug` | `boolean` | `false` |
@@ -84,6 +85,16 @@ await checkTranslationFiles('.', { exclude: [...DEFAULT_EXCLUDE_DIRS, 'fixtures'
 ```
 
 이름이 `.`으로 시작하는 항목은 이 설정과 무관하게 항상 건너뜁니다.
+
+### `source`
+
+키가 사용되는지 검색할 소스 파일 디렉토리입니다. [`UNUSED_KEY`](./checks#unused-key) 검사에 필요하며, 지정하지 않으면 그 검사는 아무것도 보고하지 않습니다.
+
+```bash
+npx chki18n ./locales --target en --source ./src
+```
+
+텍스트 파일만 읽고 5MB를 넘는 파일은 건너뛰며, `exclude`도 함께 적용됩니다. 프로젝트 자신의 번역 파일은 검색하지 않습니다.
 
 ## 검사 선택
 

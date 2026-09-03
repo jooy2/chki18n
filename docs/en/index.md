@@ -8,7 +8,7 @@ description: Find the missing keys, the empty values and the broken interpolatio
 hero:
   name: chki18n
   text: Your translation files, checked
-  tagline: Missing keys, empty values, strings never translated, interpolation that no longer matches. Eleven checks over every i18n JSON layout, from the command line or from your own code.
+  tagline: Missing keys, empty values, strings never translated, interpolation that no longer matches. Thirteen checks over every i18n JSON layout, from the command line or from your own code.
   actions:
     - theme: brand
       text: Get started
@@ -24,8 +24,8 @@ hero:
     alt: chki18n
 
 features:
-  - title: Eleven checks, one report
-    details: Missing keys, empty values, untranslated strings, mismatched interpolation, duplicate values, stray whitespace, numbers dropped in translation. Each with a severity you can override.
+  - title: Thirteen checks, one report
+    details: Missing keys, keys defined twice, empty values, untranslated strings, mismatched interpolation, duplicate values, stray whitespace, keys nothing references. Each with a severity you can override.
     link: /guide/checks
     linkText: What it checks
   - title: Every layout you already use

@@ -56,6 +56,24 @@ chki18n이 보고하는 모든 문제에는 검사 코드, 심각도, 그리고 
 [DUMMY_KEY] ko -> 'attr.legacy' (ko: "예전 문구")
 ```
 
+### `DUPLICATE_KEY`
+
+같은 키가 두 번 정의되어, 두 값 중 하나가 읽히기도 전에 버려지는 경우입니다. 두 가지 형태가 있고 둘 다 나중에는 흔적이 남지 않습니다.
+
+```json
+// 리터럴 중복 — 유효한 JSON이며, JSON.parse는 아무 말 없이 "Hi"를 반환합니다
+{ "greeting": "Hello", "greeting": "Hi" }
+```
+
+```json
+// 평탄화 충돌 — 중첩 키와 점 표기 키가 같은 키로 합쳐집니다
+{ "attr": { "folder": "Folder" }, "attr.folder": "Directory" }
+```
+
+앞의 것은 머지 충돌을 잘못 정리했을 때 남고, 뒤의 것은 파일 일부는 점 표기로, 일부는 중첩으로 쓸 때 생깁니다. 둘 다 검출합니다. 리터럴 중복은 파싱 전에 파일 텍스트를 읽어서 찾아내며 — 증거가 남아 있는 유일한 시점입니다 — 메시지에 몇 번째 줄인지 표시합니다.
+
+값이 사라지는 문제이므로 오류입니다. chki18n이 심각도를 낮추지 않기를 권하는 유일한 검사이지만, `levels`로 바꿀 수는 있습니다.
+
 ### `INVALID_FILE`
 
 읽지 못했거나, 비어 있거나, JSON으로 파싱되지 않거나, `format`으로 구조를 강제했을 때 일치하는 파일이 하나도 없는 경우입니다. 비교보다 먼저 보고되며 항상 오류입니다. 읽지 못한 파일은 통과한 파일이 아니기 때문입니다.
@@ -111,7 +129,33 @@ npx chki18n ./locales --ignore-checks NOT_TRANSLATED_VALUE
 [DUPLICATE_VALUE] ko -> 'dup-b' (en: "Beta") The key `dup-a` in the same locale already uses this value.
 ```
 
-이 검사만은 로케일 전체를 한 번에 봐야 하므로, 키 하나씩 받는 [`checkEntry`](/ko/api/create-analyzer)에서는 **보고되지 않습니다**. 그런 성질을 가진 코드는 `CROSS_KEY_CHECK_CODES`에 정리되어 있습니다.
+`DUPLICATE_KEY`, `UNUSED_KEY`와 마찬가지로 이 검사는 키 하나보다 넓은 범위를 봐야 하므로 [`checkEntry`](/ko/api/create-analyzer)에서는 **보고되지 않습니다**. 그런 성질을 가진 코드는 `CROSS_KEY_CHECK_CODES`에 정리되어 있습니다.
+
+## 사용 여부 검사
+
+### `UNUSED_KEY`
+
+소스 파일 어디에서도 이 키를 참조하지 않는 것으로 보이는 경우입니다. 검사할 소스 위치를 지정해야 동작합니다.
+
+```bash
+npx chki18n ./locales --target en --source ./src
+```
+
+```javascript
+await checkTranslationFiles('./locales', { target: 'en', source: './src' });
+```
+
+검색은 키의 **마지막 세그먼트**를 기준으로 합니다. `desc.hello`는 `hello`로 찾습니다. 코드에서 중첩 키를 마지막 세그먼트만으로 참조하는 경우가 매우 흔하기 때문입니다. 네임스페이스가 상위에 묶인 `t('hello')` 같은 형태입니다. 점으로 이어진 전체 키로 찾으면 멀쩡히 동작하는 코드를 미사용으로 보고하게 되는데, 둘 중 그쪽이 더 나쁜 실수입니다.
+
+심각도도 여기서 결정됩니다. `name`이나 `title` 같은 세그먼트는 키의 실제 사용 여부와 무관하게 거의 모든 코드베이스에 등장하므로, 이것은 발견이라기보다 힌트입니다. `info` 수준으로 보고되고 실행을 실패시키지 않으며, "지우세요"가 아니라 "여기부터 살펴보세요"로 읽는 것이 맞습니다.
+
+프로젝트 자신의 번역 파일은 검색 대상에서 제외됩니다. 키는 그것을 정의한 파일에 그대로 등장하므로, 번역 파일을 읽으면 모든 키가 사용중으로 판정됩니다. 텍스트 파일(소스, 스타일, 템플릿, 문서)만 읽으며 5MB를 넘는 파일은 건너뛰고, `exclude` 목록도 함께 적용됩니다.
+
+이미 답을 알고 있다면 — 프로젝트를 직접 스캔한 편집기라면 — 다시 계산하게 하지 말고 넘기세요.
+
+```javascript
+analyzeTranslations({ locales, unusedKeys: ['desc.orphan'] }, { target: 'en' });
+```
 
 ## 보간 검사
 

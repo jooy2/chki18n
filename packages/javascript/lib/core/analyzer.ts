@@ -2,6 +2,7 @@ import { flatten } from 'flat';
 import { CHECK_CODE } from '../constants.js';
 import { resolveOptions } from '../options.js';
 import { extractInterpolationKeys } from './interpolation.js';
+import { findDuplicateKeys } from './duplicate.js';
 import { applyLevelOverrides, createIssue } from './issue.js';
 import { buildResult } from './result.js';
 import type {
@@ -31,6 +32,8 @@ type CheckFlags = {
 	invalidValueType: boolean;
 	noKey: boolean;
 	dummyKey: boolean;
+	duplicateKey: boolean;
+	unusedKey: boolean;
 	emptyValue: boolean;
 	noInterpolationKey: boolean;
 	extraInterpolationKey: boolean;
@@ -46,6 +49,8 @@ const buildCheckFlags = (enabled: Set<Chki18nCheckCode>): CheckFlags => ({
 	invalidValueType: enabled.has(CHECK_CODE.INVALID_VALUE_TYPE),
 	noKey: enabled.has(CHECK_CODE.NO_KEY),
 	dummyKey: enabled.has(CHECK_CODE.DUMMY_KEY),
+	duplicateKey: enabled.has(CHECK_CODE.DUPLICATE_KEY),
+	unusedKey: enabled.has(CHECK_CODE.UNUSED_KEY),
 	emptyValue: enabled.has(CHECK_CODE.EMPTY_VALUE),
 	noInterpolationKey: enabled.has(CHECK_CODE.NO_INTERPOLATION_KEY),
 	extraInterpolationKey: enabled.has(CHECK_CODE.EXTRA_INTERPOLATION_KEY),
@@ -330,6 +335,21 @@ export function prepareGroups(
 				continue;
 			}
 
+			// Before flattening, because flattening is what hides it: two
+			// definitions go in and one key comes out.
+			if (options.enabledChecks.has(CHECK_CODE.DUPLICATE_KEY)) {
+				for (const key of findDuplicateKeys(map)) {
+					issues.push(
+						createIssue(CHECK_CODE.DUPLICATE_KEY, {
+							locale,
+							group,
+							key,
+							message: `The key \`${key}\` is defined more than once, so one of its values is lost.`
+						})
+					);
+				}
+			}
+
 			try {
 				preparedLocales[locale] = flatten(map);
 			} catch {
@@ -383,6 +403,10 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 		const groupNames = Object.keys(groups);
 		const allLocales = new Set<string>();
 		const fileOf = buildFileLookup(input?.files);
+		// Supplied rather than worked out: whether a key is referenced is a fact
+		// about the source tree, which the comparison never sees.
+		const unusedKeys =
+			flags.unusedKey && input?.unusedKeys?.length ? new Set(input.unusedKeys) : null;
 		let keyCount = 0;
 
 		for (const group of groupNames) {
@@ -433,6 +457,12 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 					resolved.options,
 					fileOf
 				);
+
+				// Not locale-bound: the key is unreferenced, not one language's
+				// translation of it.
+				if (unusedKeys?.has(key)) {
+					issues.push(createIssue(CHECK_CODE.UNUSED_KEY, { key, group }));
+				}
 			}
 
 			if (flags.duplicateValue) {

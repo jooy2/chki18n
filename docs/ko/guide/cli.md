@@ -34,6 +34,7 @@ npx chki18n --path ./locales --target en
   --interpolation-prefix <str>    Opening delimiter of an interpolation key (default: `{`)
   --interpolation-suffix <str>    Closing delimiter of an interpolation key (default: `}`)
   --exclude <dirs>                Comma separated directory names to skip while scanning
+  --source <dir>                  Search this directory of source files for key usages (enables `UNUSED_KEY`)
   --no-info                       Do not show info messages
   --no-warn                       Do not show warning messages
   --debug                         Show debug messages

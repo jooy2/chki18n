@@ -114,6 +114,6 @@ The first two read files and need Node. The last two do no file system work at a
 
 ## Next
 
-- [What it checks](./checks) — the eleven checks, and how to switch one off.
+- [What it checks](./checks) — the thirteen checks, and how to switch one off.
 - [File layouts](./file-layouts) — if your files are not one-per-locale.
 - [Options](./options) — everything you can pass, from either side.

@@ -1,14 +1,15 @@
-import { isAbsolute } from 'node:path';
+import { resolve } from 'node:path';
 import { objToPrettyStr } from 'qsu';
-import { joinFilePath } from 'qsu/node';
 import { CHECK_CODE } from './constants.js';
+import { collectFlatKeys } from './core/duplicate.js';
 import { createIssue } from './core/issue.js';
 import { createSession, type Chki18nSession } from './core/session.js';
-import { __isWindows } from './loader/platform.js';
 import { scanTranslationDirectory } from './loader/scan.js';
+import { findUnusedKeys } from './loader/unusedKeys.js';
 import { createLogger } from './logger.js';
 import { reportResult } from './reporter.js';
-import type { Chki18nOptions, Chki18nResult } from './_types/global.js';
+import { CHECK_CODE as CODES } from './constants.js';
+import type { Chki18nOptions, Chki18nResult, TranslationGroups } from './_types/global.js';
 
 export type Chki18nFileSession = Chki18nSession & {
 	/** Absolute path the translations were read from. */
@@ -32,15 +33,42 @@ export async function loadTranslations(
 	path?: string,
 	options?: Chki18nOptions
 ): Promise<Chki18nFileSession> {
-	const session = createSession({}, { ...options, path, flattened: false });
+	// `path` first: an explicit `options.path` wins over the argument, which is
+	// what the CLI relies on when it passes everything through as options.
+	const session = createSession({}, { path, ...options, flattened: false });
 	const resolvedPath = session.options.path;
-	const scanPath = !resolvedPath
-		? ''
-		: isAbsolute(resolvedPath)
-			? resolvedPath
-			: joinFilePath(__isWindows, process.cwd(), resolvedPath);
+	const scanPath = resolvedPath ? resolve(resolvedPath) : '';
 
 	let skipped: string[] = [];
+
+	/**
+	 * The keys nothing in `source` refers to, or none when no source directory
+	 * was given. The project's own translation files are excluded from the
+	 * search: a key appears verbatim in the file that defines it, which would
+	 * mark every key used.
+	 */
+	const unusedKeysOf = async (groups: TranslationGroups, files: { path: string }[]) => {
+		if (!session.options.source || !session.options.enabledChecks.has(CODES.UNUSED_KEY)) {
+			return [];
+		}
+
+		const keys = new Set<string>();
+
+		for (const locales of Object.values(groups)) {
+			for (const translations of Object.values(locales)) {
+				collectFlatKeys(translations, keys);
+			}
+		}
+
+		const scan = await findUnusedKeys(
+			resolve(session.options.source),
+			[...keys],
+			session.options,
+			files.map((file) => file.path)
+		);
+
+		return scan.unusedKeys;
+	};
 
 	const reload = async (): Promise<void> => {
 		if (!scanPath) {
@@ -63,7 +91,8 @@ export async function loadTranslations(
 			groups: scan.groups,
 			files: scan.files,
 			issues: scan.issues,
-			fileFormat: scan.fileFormat
+			fileFormat: scan.fileFormat,
+			unusedKeys: await unusedKeysOf(scan.groups, scan.files)
 		});
 	};
 
@@ -136,5 +165,7 @@ export async function checkTranslationFiles(
 export * from './core/index.js';
 export type { Chki18nScanResult } from './loader/scan.js';
 export { scanTranslationDirectory } from './loader/scan.js';
+export { findUnusedKeys, leafOfKey } from './loader/unusedKeys.js';
+export type { Chki18nUsageScan } from './loader/unusedKeys.js';
 
 export default checkTranslationFiles;

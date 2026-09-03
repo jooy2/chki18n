@@ -12,7 +12,7 @@ Every check, every option and every example. This README is just the quick start
 
 **chki18n** checks that your i18n translation files agree with each other. Point it at a folder of JSON, name the language everything is compared against, and it reports what is missing, what was never translated and what quietly broke.
 
-- **Eleven checks** — missing keys, empty values, untranslated strings, mismatched interpolation placeholders, duplicate values, stray whitespace and more.
+- **Thirteen checks** — missing keys, keys defined twice, empty values, untranslated strings, mismatched interpolation placeholders, stray whitespace, and keys nothing in your source references.
 - **Every layout** — one file per locale, one folder per locale, or one file holding them all.
 - **CLI and library** share one set of checks and one set of options.
 - **ESM, typed, and fast** — an in-memory comparison of 5,000 keys across 5 locales takes about 17ms.

@@ -10,6 +10,9 @@
 - `createAnalyzer` returns a reusable analyzer whose `checkEntry` re-checks a single key
 - `loadTranslations` reads a directory once and returns a session that holds the parsed translations: `analyze`, `checkKey`, `get`, `set`, `remove`, `keys`, `translations` and `reload` all work on what is already in memory. `createSession` is the same for translations passed in directly
 - `EXTRA_INTERPOLATION_KEY`, `SURROUNDING_WHITESPACE`, `MISSING_NUMBER` and `INVALID_VALUE_TYPE` checks
+- `DUPLICATE_KEY`, which catches a key defined twice — both the literal kind (`{"a": 1, "a": 2}`, which `JSON.parse` resolves silently) and the kind where a nested key and a dotted one flatten onto each other
+- `UNUSED_KEY`, reported at `info`, for keys nothing in a `source` directory appears to reference. An application that has already worked this out can pass its own answer as `unusedKeys` instead
+- `source`, the directory the unused-key scan searches
 - Support for the folder-per-locale (`en/common.json`) and single-file-per-project (`{ "en": ... }`) layouts, alongside the existing one-file-per-locale layout. Files holding the same keys are compared as a group, so several translation files no longer share one pile of keys
 - `Chki18nInput` accepts `issues` and `fileFormat`, so whatever produced the input can report its own problems into the same result
 - `chki18n/core`, a subpath that exports the comparison engine on its own. It imports no Node built-in, so it bundles for a browser or an editor's renderer process
@@ -28,6 +31,8 @@
 
 - `EMPTY_VALUE` and `DUMMY_KEY` were written so their conditions could never be true, and never reported anything
 - A missing target language file threw instead of being reported
+- A relative path was joined as if it were absolute, so a scan rooted at one found nothing. Paths now resolve against the working directory
+- An explicit `path` option was overridden by the (absent) first argument, which is how the CLI passes it
 
 ## 0.1.0 ~ 0.3.0 (2026-04-14 ~ 2026-04-17) (Beta)
 

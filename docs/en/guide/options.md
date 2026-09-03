@@ -85,6 +85,16 @@ await checkTranslationFiles('.', { exclude: [...DEFAULT_EXCLUDE_DIRS, 'fixtures'
 
 Hidden entries — anything starting with `.` — are always skipped, whatever this is set to.
 
+### `source`
+
+A directory of source files to search for key usages, which is what the [`UNUSED_KEY`](./checks#unused-key) check needs. Without it that check reports nothing.
+
+```bash
+npx chki18n ./locales --target en --source ./src
+```
+
+Only text files are read, anything over 5MB is skipped, and `exclude` applies here as well. The project's own translation files are never searched.
+
 ## Choosing checks
 
 ### `checks`
