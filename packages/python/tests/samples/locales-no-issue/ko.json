@@ -1,0 +1,16 @@
+{
+	"desc": {
+		"hello": "안녕하세요",
+		"bye": "안녕히계십시오",
+		"dynamic": "{a}는 {b}입니다.",
+		"no-str": "12345"
+	},
+	"attr": {
+		"menu": "메뉴",
+		"close": "닫기",
+		"open": "열기",
+		"file": "파일",
+		"folder": "폴더",
+		"open-with": "{target}로 열기"
+	}
+}
