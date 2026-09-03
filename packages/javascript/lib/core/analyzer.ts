@@ -5,6 +5,14 @@ import { extractInterpolationKeys } from './interpolation.js';
 import { findDuplicateKeys } from './duplicate.js';
 import { applyLevelOverrides, createIssue } from './issue.js';
 import { buildResult } from './result.js';
+import {
+	extractNumbers,
+	extractTags,
+	findInvisibleCharacter,
+	hasTranslatableText,
+	nameOfInvisibleCharacter,
+	scriptOfLocale
+} from './value.js';
 import type {
 	Chki18nCheckCode,
 	Chki18nEntry,
@@ -24,6 +32,68 @@ const SURROUNDING_WHITESPACE_PATTERN = /^\s|\s$/;
 
 const NO_KEYS: readonly string[] = Object.freeze([]);
 
+const times = (count: number): string => `${count} time${count === 1 ? '' : 's'}`;
+
+/** `a`, `a and b`, `a, b and c` — a list as a sentence reads it. */
+function listOf(items: string[]): string {
+	if (items.length < 3) {
+		return items.join(' and ');
+	}
+
+	return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+/** How often each item appears, for the checks that compare two multisets. */
+function countOf(items: readonly string[]): Map<string, number> {
+	const counts = new Map<string, number>();
+
+	for (const item of items) {
+		counts.set(item, (counts.get(item) ?? 0) + 1);
+	}
+
+	return counts;
+}
+
+/** The same items in the same numbers, whatever order they appear in. */
+function sameItems(a: readonly string[], b: readonly string[]): boolean {
+	if (a.length !== b.length) {
+		return false;
+	}
+
+	// A translation almost always keeps the numbers in the order it found them,
+	// so the answer is usually one walk and no allocation at all.
+	for (let index = 0; index < a.length; index += 1) {
+		if (a[index] !== b[index]) {
+			return [...a].sort().join('\u0000') === [...b].sort().join('\u0000');
+		}
+	}
+
+	return true;
+}
+
+/**
+ * Markup tags by their lower case spelling, keeping the first spelling seen so
+ * a message can quote the tag as it was actually written. HTML tag names are
+ * case insensitive, so `<B>` and `<b>` are the same tag.
+ */
+function countTags(tags: readonly string[]): Map<string, { count: number; text: string }> {
+	const counts = new Map<string, { count: number; text: string }>();
+
+	for (const tag of tags) {
+		const id = tag.toLowerCase();
+		const found = counts.get(id);
+
+		if (found) {
+			found.count += 1;
+			continue;
+		}
+
+		counts.set(id, { count: 1, text: tag });
+	}
+
+	return counts;
+}
+
 /**
  * Whether each comparison check is enabled, resolved once instead of asking the
  * enabled-set again for every key of every locale.
@@ -38,10 +108,15 @@ type CheckFlags = {
 	emptyValue: boolean;
 	noInterpolationKey: boolean;
 	extraInterpolationKey: boolean;
+	interpolationCount: boolean;
+	tagMismatch: boolean;
 	notTranslatedValue: boolean;
+	untranslatedScript: boolean;
 	duplicateValue: boolean;
 	surroundingWhitespace: boolean;
+	invisibleCharacter: boolean;
 	missingNumber: boolean;
+	numberMismatch: boolean;
 };
 
 type FileLookup = ((group: string, locale: string) => string | undefined) | null;
@@ -56,10 +131,15 @@ const buildCheckFlags = (enabled: Set<Chki18nCheckCode>): CheckFlags => ({
 	emptyValue: enabled.has(CHECK_CODE.EMPTY_VALUE),
 	noInterpolationKey: enabled.has(CHECK_CODE.NO_INTERPOLATION_KEY),
 	extraInterpolationKey: enabled.has(CHECK_CODE.EXTRA_INTERPOLATION_KEY),
+	interpolationCount: enabled.has(CHECK_CODE.INTERPOLATION_COUNT),
+	tagMismatch: enabled.has(CHECK_CODE.TAG_MISMATCH),
 	notTranslatedValue: enabled.has(CHECK_CODE.NOT_TRANSLATED_VALUE),
+	untranslatedScript: enabled.has(CHECK_CODE.UNTRANSLATED_SCRIPT),
 	duplicateValue: enabled.has(CHECK_CODE.DUPLICATE_VALUE),
 	surroundingWhitespace: enabled.has(CHECK_CODE.SURROUNDING_WHITESPACE),
-	missingNumber: enabled.has(CHECK_CODE.MISSING_NUMBER)
+	invisibleCharacter: enabled.has(CHECK_CODE.INVISIBLE_CHARACTER),
+	missingNumber: enabled.has(CHECK_CODE.MISSING_NUMBER),
+	numberMismatch: enabled.has(CHECK_CODE.NUMBER_MISMATCH)
 });
 
 /** Values are reported as text, whatever their original type was. */
@@ -84,6 +164,69 @@ const buildFileLookup = (files?: Chki18nSourceFile[]): FileLookup => {
 
 	return (group, locale) => paths.get(`${group} ${locale}`);
 };
+
+/**
+ * Report the markup this value does not carry the way the target language does.
+ * Counts rather than presence: a value that opens `<b>` twice and closes it once
+ * renders as broken as one that dropped the tag altogether.
+ */
+function reportTagMismatch(
+	issues: Chki18nIssue[],
+	base: Partial<Chki18nIssue>,
+	value: string,
+	expected: Map<string, { count: number; text: string }>
+): void {
+	const found = countTags(extractTags(value));
+
+	if (found.size < 1 && expected.size < 1) {
+		return;
+	}
+
+	const missing: string[] = [];
+	const extra: string[] = [];
+
+	// One finding per direction rather than per tag: a dropped `<b>...</b>` is a
+	// single mistake, and reporting its two halves separately reads as two.
+	for (const [id, tag] of expected) {
+		const count = found.get(id)?.count ?? 0;
+
+		if (count < tag.count) {
+			missing.push(
+				count < 1 ? `\`${tag.text}\`` : `\`${tag.text}\` (${times(count)} of ${tag.count})`
+			);
+		}
+	}
+
+	for (const [id, tag] of found) {
+		const count = expected.get(id)?.count ?? 0;
+
+		if (tag.count > count) {
+			extra.push(
+				count < 1 ? `\`${tag.text}\`` : `\`${tag.text}\` (${times(tag.count)} of ${count})`
+			);
+		}
+	}
+
+	if (missing.length > 0) {
+		issues.push(
+			createIssue(CHECK_CODE.TAG_MISMATCH, {
+				...base,
+				value,
+				message: `The ${missing.length === 1 ? 'tag' : 'tags'} ${listOf(missing)} of the target language ${missing.length === 1 ? 'is' : 'are'} missing from this value.`
+			})
+		);
+	}
+
+	if (extra.length > 0) {
+		issues.push(
+			createIssue(CHECK_CODE.TAG_MISMATCH, {
+				...base,
+				value,
+				message: `The ${extra.length === 1 ? 'tag' : 'tags'} ${listOf(extra)} ${extra.length === 1 ? 'is' : 'are'} not in the target language.`
+			})
+		);
+	}
+}
 
 /**
  * Compare one key across every locale.
@@ -116,7 +259,18 @@ function checkKeySlots(
 			)
 		: NO_KEYS;
 	const targetHasDigit = targetIsString && DIGIT_PATTERN.test(targetValue as string);
-	const checkInterpolation = flags.noInterpolationKey || flags.extraInterpolationKey;
+	const targetNumbers =
+		flags.numberMismatch && targetHasDigit ? extractNumbers(targetValue as string) : NO_KEYS;
+	// Counted once per key rather than once per locale: what the target language
+	// carries does not change while the locales are walked.
+	const targetTagCounts =
+		flags.tagMismatch && targetIsString ? countTags(extractTags(targetValue as string)) : null;
+	const targetInterpolationCounts =
+		flags.interpolationCount && targetInterpolations.length > 0
+			? countOf(targetInterpolations)
+			: null;
+	const checkInterpolation =
+		flags.noInterpolationKey || flags.extraInterpolationKey || flags.interpolationCount;
 
 	for (let index = 0; index < localeNames.length; index += 1) {
 		if (index === targetIndex) {
@@ -168,6 +322,20 @@ function checkKeySlots(
 			issues.push(createIssue(CHECK_CODE.SURROUNDING_WHITESPACE, { ...base, value }));
 		}
 
+		if (flags.invisibleCharacter) {
+			const invisible = findInvisibleCharacter(value);
+
+			if (invisible) {
+				issues.push(
+					createIssue(CHECK_CODE.INVISIBLE_CHARACTER, {
+						...base,
+						value,
+						message: `The value holds ${nameOfInvisibleCharacter(invisible)}, which nothing will draw.`
+					})
+				);
+			}
+		}
+
 		if (targetIsString) {
 			if (flags.notTranslatedValue && value === targetValue) {
 				issues.push(createIssue(CHECK_CODE.NOT_TRANSLATED_VALUE, { ...base, value }));
@@ -175,6 +343,38 @@ function checkKeySlots(
 
 			if (flags.missingNumber && targetHasDigit && !DIGIT_PATTERN.test(value)) {
 				issues.push(createIssue(CHECK_CODE.MISSING_NUMBER, { ...base, value }));
+			}
+
+			if (flags.numberMismatch && targetHasDigit && DIGIT_PATTERN.test(value)) {
+				const numbers = extractNumbers(value);
+
+				if (!sameItems(targetNumbers, numbers)) {
+					issues.push(
+						createIssue(CHECK_CODE.NUMBER_MISMATCH, {
+							...base,
+							value,
+							message: `The target language uses ${targetNumbers.join(', ')} and this value uses ${numbers.join(', ')}.`
+						})
+					);
+				}
+			}
+
+			if (targetTagCounts && (targetTagCounts.size > 0 || value.indexOf('<') !== -1)) {
+				reportTagMismatch(issues, base, value, targetTagCounts);
+			}
+
+			// A value identical to the target language is already reported as
+			// untranslated; saying it twice adds nothing.
+			if (flags.untranslatedScript && value !== targetValue) {
+				const script = scriptOfLocale(locale);
+
+				if (
+					script &&
+					!script.test(value) &&
+					hasTranslatableText(value, options.interpolationPrefix, options.interpolationSuffix)
+				) {
+					issues.push(createIssue(CHECK_CODE.UNTRANSLATED_SCRIPT, { ...base, value }));
+				}
 			}
 		}
 
@@ -220,6 +420,34 @@ function checkKeySlots(
 					})
 				);
 			}
+		}
+
+		// Only a repeated placeholder can differ in number, and the two checks
+		// above already report one that is missing or unknown outright.
+		if (
+			!targetInterpolationCounts ||
+			(targetInterpolations.length < 2 && currentInterpolations.length < 2)
+		) {
+			continue;
+		}
+
+		const currentCounts = countOf(currentInterpolations);
+
+		for (const [interpolation, expected] of targetInterpolationCounts) {
+			const found = currentCounts.get(interpolation);
+
+			if (found === undefined || found === expected) {
+				continue;
+			}
+
+			issues.push(
+				createIssue(CHECK_CODE.INTERPOLATION_COUNT, {
+					...base,
+					value,
+					interpolation,
+					message: `The interpolation key \`${options.interpolationPrefix}${interpolation}${options.interpolationSuffix}\` is used ${times(found)} here and ${times(expected)} in the target language.`
+				})
+			);
 		}
 	}
 }

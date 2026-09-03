@@ -11,6 +11,12 @@
 - `loadTranslations` reads a directory once and returns a session that holds the parsed translations: `analyze`, `checkKey`, `get`, `set`, `remove`, `keys`, `translations` and `reload` all work on what is already in memory. `createSession` is the same for translations passed in directly
 - `EXTRA_INTERPOLATION_KEY`, `SURROUNDING_WHITESPACE`, `MISSING_NUMBER` and `INVALID_VALUE_TYPE` checks
 - `NO_LOCALE`, for a group of files that holds nothing for a language the other groups have. Until now a translation file nobody created dropped out of the comparison entirely and the run passed
+- `INTERPOLATION_COUNT`, for a placeholder used a different number of times than the target language uses it. The two interpolation checks compare which placeholders a value has, so `{name} invited {name}` translated with one `{name}` passed both
+- `TAG_MISMATCH`, for markup a translation dropped, added or left unbalanced. Tags are counted rather than looked for, and read case-insensitively
+- `UNTRANSLATED_SCRIPT`, for a value holding no character of the script its language is written in. `NOT_TRANSLATED_VALUE` only catches a translation identical to the original, so `Hello` becoming `Hello!` passed it
+- `INVISIBLE_CHARACTER`, for a zero width space, a byte order mark, a bidirectional control or a non-breaking space
+- `NUMBER_MISMATCH`, for a number the translation changed rather than dropped. `MISSING_NUMBER` only asks whether any digits survived
+- `extractTags`, `extractNumbers`, `findInvisibleCharacter`, `scriptOfLocale` and `hasTranslatableText` are exported, so an editor can run the same measurements on a value it is holding
 - `DUPLICATE_KEY`, which catches a key defined twice — both the literal kind (`{"a": 1, "a": 2}`, which `JSON.parse` resolves silently) and the kind where a nested key and a dotted one flatten onto each other
 - `UNUSED_KEY`, reported at `info`, for keys nothing in a `source` directory appears to reference. An application that has already worked this out can pass its own answer as `unusedKeys` instead
 - `source`, the directory the unused-key scan searches

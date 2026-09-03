@@ -13,10 +13,15 @@ export const CHECK_CODE = {
 	EMPTY_VALUE: 'EMPTY_VALUE',
 	NO_INTERPOLATION_KEY: 'NO_INTERPOLATION_KEY',
 	EXTRA_INTERPOLATION_KEY: 'EXTRA_INTERPOLATION_KEY',
+	INTERPOLATION_COUNT: 'INTERPOLATION_COUNT',
+	TAG_MISMATCH: 'TAG_MISMATCH',
 	NOT_TRANSLATED_VALUE: 'NOT_TRANSLATED_VALUE',
+	UNTRANSLATED_SCRIPT: 'UNTRANSLATED_SCRIPT',
 	DUPLICATE_VALUE: 'DUPLICATE_VALUE',
 	SURROUNDING_WHITESPACE: 'SURROUNDING_WHITESPACE',
-	MISSING_NUMBER: 'MISSING_NUMBER'
+	INVISIBLE_CHARACTER: 'INVISIBLE_CHARACTER',
+	MISSING_NUMBER: 'MISSING_NUMBER',
+	NUMBER_MISMATCH: 'NUMBER_MISMATCH'
 } as const;
 
 /**
@@ -88,11 +93,27 @@ export const CHECK_META: Record<
 		summary: 'Some values use interpolation keys the target language does not have',
 		description: 'This value has an interpolation key that the target language does not define.'
 	},
+	[CHECK_CODE.INTERPOLATION_COUNT]: {
+		level: 'error',
+		summary: 'Some values use an interpolation key a different number of times',
+		description:
+			'The value repeats an interpolation key more or fewer times than the target language.'
+	},
+	[CHECK_CODE.TAG_MISMATCH]: {
+		level: 'warn',
+		summary: 'Some values do not carry the same markup as the target language',
+		description: 'The markup tags of this value are not the ones the target language uses.'
+	},
 	[CHECK_CODE.NOT_TRANSLATED_VALUE]: {
 		level: 'warn',
 		summary: 'Some keys have the same value as the target language',
 		description:
 			'The value is identical to the target language, so the translation may be incomplete.'
+	},
+	[CHECK_CODE.UNTRANSLATED_SCRIPT]: {
+		level: 'warn',
+		summary: 'Some values are not written in the script of their language',
+		description: 'The value holds no character of the script this language is written in.'
 	},
 	[CHECK_CODE.DUPLICATE_VALUE]: {
 		level: 'warn',
@@ -104,10 +125,20 @@ export const CHECK_META: Record<
 		summary: 'Some values begin or end with whitespace',
 		description: 'The value has leading or trailing whitespace, which is usually accidental.'
 	},
+	[CHECK_CODE.INVISIBLE_CHARACTER]: {
+		level: 'warn',
+		summary: 'Some values hold a character nothing will draw',
+		description: 'The value holds a zero width, bidirectional or non-breaking character.'
+	},
 	[CHECK_CODE.MISSING_NUMBER]: {
 		level: 'warn',
 		summary: 'Some values dropped a number the target language has',
 		description: 'The target language value contains digits but this value does not.'
+	},
+	[CHECK_CODE.NUMBER_MISMATCH]: {
+		level: 'warn',
+		summary: 'Some values changed a number the target language has',
+		description: 'The numbers in this value are not the ones the target language uses.'
 	}
 };
 
@@ -126,10 +157,15 @@ export const ANALYZE_CHECK_CODES: Chki18nCheckCode[] = [
 	CHECK_CODE.EMPTY_VALUE,
 	CHECK_CODE.NO_INTERPOLATION_KEY,
 	CHECK_CODE.EXTRA_INTERPOLATION_KEY,
+	CHECK_CODE.INTERPOLATION_COUNT,
+	CHECK_CODE.TAG_MISMATCH,
 	CHECK_CODE.NOT_TRANSLATED_VALUE,
+	CHECK_CODE.UNTRANSLATED_SCRIPT,
 	CHECK_CODE.DUPLICATE_VALUE,
 	CHECK_CODE.SURROUNDING_WHITESPACE,
-	CHECK_CODE.MISSING_NUMBER
+	CHECK_CODE.INVISIBLE_CHARACTER,
+	CHECK_CODE.MISSING_NUMBER,
+	CHECK_CODE.NUMBER_MISMATCH
 ];
 
 /**
