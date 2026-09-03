@@ -1,6 +1,6 @@
 # Changelog
 
-## vNext
+## 1.0.0 (2026-09-03)
 
 > The first stable release. The checks no longer depend on the file system, so they run against translations an application already holds in memory as well as against a folder of files; the report was rebuilt around what a reader is looking for, and can be written as JSON, Markdown or GitHub annotations; and the comparison grew to twenty-five checks.
 
