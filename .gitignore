@@ -11,6 +11,21 @@ docs/.vitepress/dist/
 # Node.js
 node_modules/
 
+# Dart
+.dart_tool/
+build/
+# A library pins nothing, so its lock file is noise in every diff.
+packages/dart/pubspec.lock
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
 # IDEs
 .idea/
 
