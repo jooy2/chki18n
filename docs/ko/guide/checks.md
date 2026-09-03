@@ -31,6 +31,8 @@ chki18n이 보고하는 모든 문제에는 검사 코드, 심각도, 그리고 
 | 경고   | `KEY_NAMING`              | `keyCase`가 정한 표기법을 따르지 않는 키             |
 | 경고   | `KEY_DEPTH`               | `maxKeyDepth`보다 깊게 중첩된 키                     |
 | 참고   | `SUSPICIOUS_LENGTH`       | 기준 언어보다 지나치게 길거나 짧은 값                |
+| 경고   | `UNDEFINED_KEY`           | 소스가 부르는데 어느 언어 파일에도 없는 키           |
+| 경고   | `NO_PLURAL_FORM`          | 그 언어에 필요한 복수형이 파일에 없음                |
 
 마지막 세 개는 옵션이 기준을 정해 주기 전까지 아무것도 보고하지 않습니다. `keyCase`, `maxKeyDepth`, `lengthRatio`입니다. 셋 다 정답이 하나로 정해지지 않고 프로젝트가 고르는 값이기 때문입니다.
 
@@ -266,6 +268,53 @@ await checkTranslationFiles('./locales', { target: 'en', source: './src' });
 ```javascript
 analyzeTranslations({ locales, unusedKeys: ['desc.orphan'] }, { target: 'en' });
 ```
+
+### `UNDEFINED_KEY`
+
+`UNUSED_KEY`의 반대이며, 둘 중 심각한 쪽입니다. 소스가 어떤 키를 부르는데 어느 언어 파일에도 그 키가 없습니다. 런타임에 따라 사용자에게 키 문자열이 그대로 보이거나, 빈 문자열이 보이거나, 아무것도 보이지 않습니다.
+
+```javascript
+t('attr.missing'); // 어느 언어 파일에도 없음
+```
+
+```text
+[UNDEFINED_KEY] 'attr.missing' The scanned source asks for `attr.missing` and no language file defines it.
+```
+
+`UNUSED_KEY`와 같은 `source` 디렉토리가 필요하며, 거기서 찾은 호출을 읽습니다. 호출 이름은 `translateFunctions`가 정합니다. 기본값인 `t`, `$t`, `translate`가 i18next, react-i18next, vue-i18n을 함께 덮으며, `i18n.t`와 `useTranslation`이 넘겨준 `t`도 여기 포함됩니다. `<Trans>` 컴포넌트의 `i18nKey` 속성도 읽습니다.
+
+세 가지 형태는 일부러 통과시킵니다. `UNUSED_KEY`가 마지막 단계로 찾는 것과 같은 판단입니다. 잘 도는 코드를 잘못됐다고 말하는 검사가 놓치는 검사보다 나쁩니다.
+
+- 실행 중에 만들어지는 키. ``t(`error.${code}`)``는 실행하기 전에는 알 수 없습니다.
+- 접두사로 닿는 키. 파일이 `attr.folder`를 정의하는데 소스가 `t('folder')`라고 부르면 `keyPrefix`나 네임스페이스가 해결해 줍니다.
+- 원형으로 부르는 복수형 키. 파일이 `item_one`과 `item_other`를 정의하는데 소스가 `t('item')`이라고 부르면 형태는 런타임이 고릅니다.
+
+`t('common:attr.folder')`처럼 키 앞에 붙은 네임스페이스는 읽고 떼어 냅니다. 뒤에 남는 키로 찾습니다.
+
+## 복수형 검사
+
+### `NO_PLURAL_FORM`
+
+복수형 접미사로 쓴 키인데 그 언어에 필요한 형태가 빠졌습니다. 어떤 형태가 필요한지는 원문이 아니라 언어가 정합니다. 영어는 둘, 러시아어는 넷, 한국어는 하나를 씁니다.
+
+```json
+// ru.json — 러시아어는 one, few, many, other가 필요합니다
+{ "item_one": "{count} элемент", "item_other": "{count} элементов" }
+```
+
+```text
+[NO_PLURAL_FORM] ru -> 'item' `ru` needs `item_few` and `item_many` and the file does not define them.
+```
+
+이름이 붙은 범주만 읽습니다. `_zero`, `_one`, `_two`, `_few`, `_many`, `_other`입니다. 원형 키와 `_plural`을 짝지어 쓰던 예전 i18next 방식은 평범한 키로 둡니다. 둘 중 어느 쪽이 어떤 형태인지는 언어마다 다르기 때문입니다.
+
+표에 없는 언어는 판단하지 않습니다. 표는 일부러 보수적으로 만들었습니다. 최근 CLDR은 여러 언어에 축약 십진수용 `many` 범주를 더했는데, 예전 런타임을 쓰는 프로젝트는 그 형태를 쓰지 않습니다.
+
+### `NO_KEY`와 `DUMMY_KEY`에 생긴 변화
+
+복수형은 그 언어의 문법에 속하므로, 두 키 검사가 모든 언어에 모든 형태를 요구하지 않게 됐습니다. 한국어는 `item_other`만 있으면 되고 `item_one`이 없는 것은 누락이 아니라 정상입니다. 러시아어는 영어가 쓰지 않는 `item_few`가 필요하고, 그것은 남는 키가 아닙니다.
+
+이름이 붙은 복수형 범주로 끝나는 키에만, 그리고 표에 있는 언어에만 적용됩니다. 나머지는 이전과 똑같이 비교합니다.
 
 ## 키 형태 검사
 

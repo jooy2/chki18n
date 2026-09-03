@@ -20,6 +20,7 @@ The command line and the JavaScript API take the same options. Every CLI flag is
 | `interpolationSuffix` | `--interpolation-suffix` | `string` | `'}'` |
 | `exclude` | `--exclude` | `string[]` or a comma separated string | see below |
 | `source` | `--source` | `string` | — |
+| `translateFunctions` | `--translate-functions` | `string[]` or a comma separated string | see below |
 | `keyCase` | `--key-case` | `'kebab' \| 'camel' \| 'snake'` | — |
 | `maxKeyDepth` | `--max-key-depth` | `number` | — |
 | `lengthRatio` | `--length-ratio` | `number` | — |
@@ -103,6 +104,24 @@ npx chki18n ./locales --target en --source ./src
 ```
 
 Only text files are read, anything over 5MB is skipped, and `exclude` applies here as well. The project's own translation files are never searched.
+
+The same directory answers [`UNDEFINED_KEY`](./checks#undefined-key), which asks the opposite question: which keys the source calls for that no language file defines.
+
+### `translateFunctions`
+
+The names a translation call goes by, which is how `UNDEFINED_KEY` finds the keys the source asks for. **Replaces** the default list rather than adding to it:
+
+```text
+t  $t  translate
+```
+
+Those three cover i18next, react-i18next and vue-i18n between them, including `i18n.t` and a `t` bound by `useTranslation`, because a call is matched wherever its name ends. The `i18nKey` attribute a `<Trans>` component takes is always read.
+
+```bash
+npx chki18n ./locales --source ./src --translate-functions t,trans,__
+```
+
+The default list is exported as `TRANSLATION_FUNCTIONS` if you would rather extend it than replace it.
 
 ## Key and value limits
 

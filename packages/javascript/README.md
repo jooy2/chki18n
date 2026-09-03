@@ -12,7 +12,7 @@ Every check, every option and every example. This README is just the quick start
 
 **chki18n** checks that your i18n translation files agree with each other. Point it at a folder of JSON, name the language everything is compared against, and it reports what is missing, what was never translated and what quietly broke.
 
-- **Twenty-three checks** — missing keys, a language file nobody created, keys defined twice, empty values, untranslated strings, mismatched interpolation placeholders, dropped markup, changed numbers, invisible characters, drifting terminology, and keys nothing in your source references.
+- **Twenty-five checks** — missing keys, a language file nobody created, keys defined twice, empty values, untranslated strings, mismatched interpolation placeholders, dropped markup, changed numbers, invisible characters, drifting terminology, missing plural forms, and — pointed at your sources — keys nothing references and keys nothing defines.
 - **Every layout** — one file per locale, one folder per locale, or one file holding them all.
 - **CLI and library** share one set of checks and one set of options.
 - **A report you can act on** — grouped by language, check, file or nothing; rendered for a terminal, for `grep`, as JSON, as Markdown or as GitHub Actions annotations; saved to a file on request.

@@ -20,6 +20,7 @@ title: 옵션
 | `interpolationSuffix` | `--interpolation-suffix` | `string` | `'}'` |
 | `exclude` | `--exclude` | `string[]` 또는 쉼표로 구분된 문자열 | 아래 참고 |
 | `source` | `--source` | `string` | — |
+| `translateFunctions` | `--translate-functions` | `string[]` 또는 쉼표로 구분된 문자열 | 아래 참고 |
 | `keyCase` | `--key-case` | `'kebab' \| 'camel' \| 'snake'` | — |
 | `maxKeyDepth` | `--max-key-depth` | `number` | — |
 | `lengthRatio` | `--length-ratio` | `number` | — |
@@ -103,6 +104,24 @@ npx chki18n ./locales --target en --source ./src
 ```
 
 텍스트 파일만 읽고 5MB를 넘는 파일은 건너뛰며, `exclude`도 함께 적용됩니다. 프로젝트 자신의 번역 파일은 검색하지 않습니다.
+
+같은 디렉토리를 [`UNDEFINED_KEY`](./checks#undefined-key)도 씁니다. 반대 질문을 하는 검사입니다. 소스가 부르는데 어느 언어 파일에도 없는 키를 찾습니다.
+
+### `translateFunctions`
+
+번역 호출의 이름 목록이며, `UNDEFINED_KEY`가 이 이름으로 소스가 부르는 키를 찾습니다. 기본 목록에 더하는 것이 아니라 **대체**합니다.
+
+```text
+t  $t  translate
+```
+
+이 셋이 i18next, react-i18next, vue-i18n을 함께 덮습니다. 이름이 끝나는 자리에서 호출을 찾으므로 `i18n.t`와 `useTranslation`이 넘겨준 `t`도 포함됩니다. `<Trans>` 컴포넌트의 `i18nKey` 속성은 항상 읽습니다.
+
+```bash
+npx chki18n ./locales --source ./src --translate-functions t,trans,__
+```
+
+기본 목록은 `TRANSLATION_FUNCTIONS`로 export되어 있습니다. 대체하는 대신 확장하고 싶다면 쓰면 됩니다.
 
 ## 키와 값의 기준
 

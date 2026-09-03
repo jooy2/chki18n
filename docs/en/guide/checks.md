@@ -31,6 +31,8 @@ Every problem chki18n reports has a check code, a severity and a sentence descri
 | Warning | `KEY_NAMING` | A key not written in the case `keyCase` asks for |
 | Warning | `KEY_DEPTH` | A key nested deeper than `maxKeyDepth` allows |
 | Info | `SUSPICIOUS_LENGTH` | A value far longer or shorter than the target language's |
+| Warning | `UNDEFINED_KEY` | A key the source asks for that no language file defines |
+| Warning | `NO_PLURAL_FORM` | A plural form a language needs and the file does not have |
 
 The last three are off until an option says what the project wants: `keyCase`, `maxKeyDepth` and `lengthRatio`. None of them has a right answer on its own.
 
@@ -266,6 +268,53 @@ If you already know the answer — an editor that has scanned the project itself
 ```javascript
 analyzeTranslations({ locales, unusedKeys: ['desc.orphan'] }, { target: 'en' });
 ```
+
+### `UNDEFINED_KEY`
+
+The reverse of `UNUSED_KEY`, and the more serious of the two: the source calls for a key and no language file defines it. Depending on the runtime the user sees the raw key, an empty string, or nothing at all.
+
+```javascript
+t('attr.missing'); // no language file has it
+```
+
+```text
+[UNDEFINED_KEY] 'attr.missing' The scanned source asks for `attr.missing` and no language file defines it.
+```
+
+It needs the same `source` directory `UNUSED_KEY` does, and reads the calls it finds there. `translateFunctions` says which names a call goes by; the default covers `t`, `$t` and `translate`, which between them cover i18next, react-i18next and vue-i18n, including `i18n.t` and a `t` bound by `useTranslation`. The `i18nKey` attribute a `<Trans>` component takes is read as well.
+
+Three shapes are deliberately let through, on the same reasoning that makes `UNUSED_KEY` search for the leaf: a check that cries wolf on working code is worse than one that misses something.
+
+- A key built at run time — ``t(`error.${code}`)`` — because the key is not known until it runs.
+- A key reached through a prefix — `t('folder')` where the file defines `attr.folder` — because a bound `keyPrefix` or namespace resolves it.
+- A plural key asked for by its base — `t('item')` where the file defines `item_one` and `item_other` — because the runtime picks the form.
+
+A namespace written in front of the key, as in `t('common:attr.folder')`, is read and set aside; the key after it is what is looked up.
+
+## Plural checks
+
+### `NO_PLURAL_FORM`
+
+A key written with plural suffixes, missing a form the language needs. Which forms a language needs is a fact about the language rather than about the original: English writes two, Russian four, Korean one.
+
+```json
+// ru.json — Russian needs one, few, many and other
+{ "item_one": "{count} элемент", "item_other": "{count} элементов" }
+```
+
+```text
+[NO_PLURAL_FORM] ru -> 'item' `ru` needs `item_few` and `item_many` and the file does not define them.
+```
+
+Only the named categories are read: `_zero`, `_one`, `_two`, `_few`, `_many` and `_other`. The older i18next pairing of a bare key with `_plural` is left as ordinary keys, because which of the two forms is which depends on the language.
+
+A language the table does not cover is never judged. The table is deliberately conservative: recent CLDR releases added a `many` category to several languages for compact decimals, and a project on an older runtime does not write it.
+
+### What this changes for `NO_KEY` and `DUMMY_KEY`
+
+A plural form belongs to one language's grammar, so the two key checks stopped asking every language for every form. Korean needs only `item_other`, and `item_one` being absent from it is correct rather than missing; Russian needs an `item_few` that English never writes, and that is not a stray key.
+
+This applies only to keys ending in a named plural category, and only to languages the table covers. Everything else is compared exactly as before.
 
 ## Key shape checks
 
