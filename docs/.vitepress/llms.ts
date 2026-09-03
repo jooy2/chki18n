@@ -9,9 +9,11 @@
  * generated from the folder tree — so adding a page adds it here too, and there
  * is nothing to remember.
  *
- * Both files are **English**. Not a shortcut: llms.txt has no notion of locales,
- * and this site's Korean pages are translations of these ones rather than
- * different documents.
+ * Both files are **English and JavaScript**. Not a shortcut: llms.txt has no
+ * notion of locales, and this site's Korean pages are translations of these
+ * ones rather than different documents. The `::: lang` blocks are flattened the
+ * same way, so what is left is the reference implementation's half, with the
+ * mapping to the other packages stated once in the preamble.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -25,7 +27,8 @@ export interface LlmsOptions {
 	/** The site's own origin, with no trailing slash. */
 	siteUrl: string;
 	repoUrl: string;
-	npmUrl: string;
+	/** Every registry the library is published to, in the order the site lists them. */
+	packages: { registry: string; url: string }[];
 	/** The site description, used as the file's one-line summary. */
 	description: string;
 	/** A page's first paragraph of prose — the same one the `<meta>` tags use. */
@@ -82,11 +85,18 @@ function flatten(markdown: string): string {
 const PREAMBLE = [
 	'chki18n compares a set of i18n translation files against one target language and reports what',
 	'is wrong with them: keys one locale is missing, values left empty, strings still identical to',
-	'the original, interpolation placeholders that do not match, and seven more checks.',
+	'the original, interpolation placeholders that do not match, and twenty more checks.',
 	'',
-	'It runs from the command line and from JavaScript, and both share one definition of every check',
-	'and every option. The comparison itself does no file system work, so it also runs in a browser',
-	'or an editor: `chki18n/core` is the same engine with the directory scanner left out.',
+	'It runs from the command line and from code, and both share one definition of every check and',
+	'every option. The comparison itself does no file system work, so it also runs where there is no',
+	'file system: `chki18n/core` in JavaScript, `package:chki18n/core.dart` in Dart and',
+	'`chki18n.core` in Python are the same engine with the directory scanner left out.',
+	'',
+	'The library ships for **JavaScript, Dart and Python**. The code below is the JavaScript one.',
+	'The other two are the same functions under their own spelling: `checkTranslationFiles` is',
+	'`check_translation_files` in Python, and an option named `interpolationPrefix` is',
+	'`interpolation_prefix` there. Dart keeps the JavaScript spelling and takes its options as one',
+	'`Chki18nOptions` object with named parameters.',
 	'',
 	'Every page below also exists in Korean at the same path under `/ko/`.'
 ].join('\n');
@@ -125,7 +135,7 @@ function sectionsOf(entries: SidebarEntry[], prefix = ''): [string, SidebarEntry
 }
 
 export async function writeLlmsFiles(options: LlmsOptions): Promise<void> {
-	const { outDir, srcDir, siteUrl, repoUrl, npmUrl, description, summaryOf } = options;
+	const { outDir, srcDir, siteUrl, repoUrl, packages, description, summaryOf } = options;
 
 	const index: string[] = ['# chki18n', '', `> ${description}`, '', PREAMBLE, ''];
 	const full: string[] = [
@@ -167,7 +177,7 @@ export async function writeLlmsFiles(options: LlmsOptions): Promise<void> {
 		'',
 		`- [Full documentation as one file](${siteUrl}/llms-full.txt): every page above, concatenated.`,
 		`- [Source repository](${repoUrl}): the packages and this site.`,
-		`- [npm](${npmUrl}): the published JavaScript package.`,
+		...packages.map(({ registry, url }) => `- [${registry}](${url}): the published package.`),
 		''
 	);
 

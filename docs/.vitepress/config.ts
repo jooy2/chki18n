@@ -2,9 +2,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import container from 'markdown-it-container';
 import {
 	defineConfig,
 	type HeadConfig,
+	type MarkdownRenderer,
 	type SiteData,
 	type TransformContext,
 	type UserConfig
@@ -13,6 +15,7 @@ import { withI18n } from 'vitepress-i18n';
 import type { VitePressI18nOptions } from 'vitepress-i18n/types';
 import { generateSidebar } from 'vitepress-sidebar';
 import type { VitePressSidebarOptions } from 'vitepress-sidebar/types';
+import { CODE_LANGUAGE_HEAD_SCRIPT, CODE_LANGUAGE_IDS } from './data/languages';
 import { writeLlmsFiles } from './llms';
 
 const vitePressDir = dirname(fileURLToPath(import.meta.url));
@@ -33,11 +36,40 @@ const npmPackage = JSON.parse(
 	readFileSync(resolve(rootDir, 'packages/javascript/package.json'), 'utf8')
 ) as { name: string; version: string; homepage: string; repository: { url: string } };
 
+/** The other two names, read off their own manifests for the same reason. */
+const pubName =
+	readFileSync(resolve(rootDir, 'packages/dart/pubspec.yaml'), 'utf8').match(
+		/^name:\s*(\S+)/m
+	)?.[1] ?? npmPackage.name;
+
+const pypiName =
+	readFileSync(resolve(rootDir, 'packages/python/pyproject.toml'), 'utf8').match(
+		/^name\s*=\s*"([^"]+)"/m
+	)?.[1] ?? npmPackage.name;
+
 const siteUrl = npmPackage.homepage.replace(/\/+$/, '');
 const repoUrl = npmPackage.repository.url.replace(/\.git$/, '');
 const npmUrl = `https://www.npmjs.com/package/${npmPackage.name}`;
+const pubUrl = `https://pub.dev/packages/${pubName}`;
+const pypiUrl = `https://pypi.org/project/${pypiName}/`;
 const editLinkPattern = `${repoUrl}/edit/main/docs/:path`;
 const socialImage = `${siteUrl}/512x512.png`;
+
+/**
+ * Where each package is published, in the order the language switch lists them.
+ *
+ * The navbar renders these as one **Packages** dropdown rather than as three
+ * social-link icons beside GitHub: a registry is one destination, and four icons
+ * in a row read as a toolbar rather than as the places this site actually sends
+ * a reader. `mark` is the logo the row is labelled with — the registry's own,
+ * not the language's, because npm is not JavaScript — and `id` is the code
+ * language it publishes. See `PackageLinks.vue`.
+ */
+const packageLinks = [
+	{ id: 'js', registry: 'npm', mark: 'npm', url: npmUrl },
+	{ id: 'dart', registry: 'pub.dev', mark: 'pubdev', url: pubUrl },
+	{ id: 'py', registry: 'PyPI', mark: 'pypi', url: pypiUrl }
+];
 
 /** `/` for the default locale, `/{lang}/` for every other one. */
 const localeBase = (lang: string): string => (lang === defaultLocale ? '/' : `/${lang}/`);
@@ -123,13 +155,17 @@ function withUrlLinks(entries: SidebarEntry[], base: string): SidebarEntry[] {
 const sidebarFor = (lang: string): SidebarEntry[] =>
 	withUrlLinks(generateSidebar(sidebarOptionsFor(lang)) as SidebarEntry[], localeBase(lang));
 
-const navFor = (lang: string, labels: { guide: string; reference: string }) => {
+const navFor = (lang: string, labels: { guide: string; reference: string; packages: string }) => {
 	const base = localeBase(lang);
 
 	return [
 		{ text: labels.guide, link: `${base}guide/` },
 		{ text: 'API', link: `${base}api/` },
-		{ text: labels.reference, link: `${base}reference/` }
+		{ text: labels.reference, link: `${base}reference/` },
+		{
+			text: labels.packages,
+			items: [{ component: 'PackageLinks', props: { links: packageLinks } }]
+		}
 	];
 };
 
@@ -150,11 +186,11 @@ const vitePressI18nConfig: VitePressI18nOptions = {
 	},
 	themeConfig: {
 		en: {
-			nav: navFor('en', { guide: 'Guide', reference: 'Reference' }),
+			nav: navFor('en', { guide: 'Guide', reference: 'Reference', packages: 'Packages' }),
 			sidebar: { '/': { items: sidebarFor('en') } }
 		},
 		ko: {
-			nav: navFor('ko', { guide: '가이드', reference: '레퍼런스' }),
+			nav: navFor('ko', { guide: '가이드', reference: '레퍼런스', packages: '패키지' }),
 			sidebar: { '/ko/': { items: sidebarFor('ko') } }
 		}
 	}
@@ -382,7 +418,10 @@ const vitePressConfig: UserConfig = {
 		// `summary` and not `summary_large_image`: the image is a square mark, and a
 		// wide card would letterbox it into a strip of background.
 		['meta', { name: 'twitter:card', content: 'summary' }],
-		['meta', { name: 'twitter:image', content: socialImage }]
+		['meta', { name: 'twitter:image', content: socialImage }],
+		// Which package's third of every page is displayed, applied to `<html>`
+		// before the first paint. See `data/languages.ts`.
+		['script', {}, CODE_LANGUAGE_HEAD_SCRIPT]
 	],
 	sitemap: {
 		hostname: siteUrl
@@ -406,7 +445,7 @@ const vitePressConfig: UserConfig = {
 			srcDir,
 			siteUrl,
 			repoUrl,
-			npmUrl,
+			packages: packageLinks.map(({ registry, url }) => ({ registry, url })),
 			description: siteDescription,
 			summaryOf,
 			sidebar: sidebarFor(defaultLocale),
@@ -425,6 +464,39 @@ const vitePressConfig: UserConfig = {
 		}
 	},
 	transformHead,
+	/**
+	 * `::: lang js` … `:::` — the block that only one package sees.
+	 *
+	 * Every package's block is in the document and CSS displays one of them,
+	 * which is what makes the switch instant and what keeps the three halves from
+	 * being three pages that drift apart. It also means the search index carries
+	 * all of them, so a reader looking up `check_translation_files` finds the page
+	 * whichever package they had selected.
+	 */
+	markdown: {
+		config(md: MarkdownRenderer) {
+			md.use(container, 'lang', {
+				validate: (params: string) => /^lang(\s+\S+)+$/.test(params.trim()),
+				render(tokens: { nesting: number; info: string }[], index: number) {
+					const token = tokens[index];
+
+					if (token.nesting !== 1) {
+						return '</div>\n';
+					}
+
+					// `::: lang dart`, and `::: lang js dart` for a block two of them
+					// want but the third would not.
+					const wanted = token.info
+						.trim()
+						.split(/\s+/)
+						.slice(1)
+						.filter((id) => CODE_LANGUAGE_IDS.includes(id));
+
+					return `<div class="chki18n-lang" data-lang="${wanted.join(' ')}">\n`;
+				}
+			});
+		}
+	},
 	themeConfig: {
 		logo: { src: '/logo-32.png', width: 24, height: 24 },
 		/**
@@ -436,10 +508,14 @@ const vitePressConfig: UserConfig = {
 		editLink: {
 			pattern: editLinkPattern
 		},
-		socialLinks: [
-			{ icon: 'github', link: repoUrl },
-			{ icon: 'npm', link: npmUrl }
-		],
+		/*
+		 * The source, and only the source. npm used to sit here too, and with three
+		 * registries to name it would have been three more icons in a corner that
+		 * already holds the locale switch and the appearance toggle — they are in
+		 * the navbar's Packages menu now, where each one gets a name instead of
+		 * being a logo the reader has to recognise.
+		 */
+		socialLinks: [{ icon: 'github', link: repoUrl }],
 		footer: {
 			message: 'Released under the MIT License',
 			copyright: '© <a href="https://cdget.com">CDGet</a>'

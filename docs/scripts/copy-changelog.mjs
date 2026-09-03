@@ -20,11 +20,18 @@ const rootDir = resolve(docsDir, '..');
 const LOCALES = ['en', 'ko'];
 
 /**
- * Every package whose changelog belongs on the page. One today; when the
- * library ships for another language, its package is added here and the page
- * grows a section rather than a second page.
+ * Every package whose changelog belongs on the page.
+ *
+ * Each one is wrapped in the `::: lang` block for the language it is written
+ * in, so a reader sees the changelog of the package they picked rather than
+ * three of them stacked. `lang` is the id `docs/.vitepress/data/languages.ts`
+ * gives that language.
  */
-const PACKAGES = [{ dir: 'packages/javascript', registry: 'npm', name: 'chki18n' }];
+const PACKAGES = [
+	{ dir: 'packages/javascript', lang: 'js', registry: 'npm', name: 'chki18n' },
+	{ dir: 'packages/dart', lang: 'dart', registry: 'pub.dev', name: 'chki18n' },
+	{ dir: 'packages/python', lang: 'py', registry: 'PyPI', name: 'chki18n' }
+];
 
 const STRINGS = {
 	en: {
@@ -54,7 +61,8 @@ async function main() {
 	for (const locale of LOCALES) {
 		const strings = STRINGS[locale];
 		const sections = PACKAGES.map(
-			(pkg, index) => `${strings.source(pkg.registry, pkg.name)}\n\n${bodies[index]}`
+			(pkg, index) =>
+				`::: lang ${pkg.lang}\n${strings.source(pkg.registry, pkg.name)}\n\n${bodies[index]}\n:::`
 		);
 
 		const page = [
