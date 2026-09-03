@@ -18,17 +18,24 @@
 - `chki18n/core`, a subpath that exports the comparison engine on its own. It imports no Node built-in, so it bundles for a browser or an editor's renderer process
 - `checks`, `ignoreChecks`, `levels`, `format`, `exclude` and the interpolation delimiter options, available both as CLI flags and as JavaScript options
 - `--help` and `--version`
+- `reporter`, which decides the shape of the report: `pretty` for a terminal, `list` for one line per issue, `json` for another program to read, and `markdown` for a table. Everything but `pretty` prints the report alone, with no banner, so it can be piped straight into something else
+- `groupBy`, the axis the report groups its issues by: `locale` (the default), `code`, `group`, `file` or `none`
+- `color`, and `--no-color` with it. A file written by `output` is never coloured
+- `formatResult` and `groupIssues` are exported, so an application can render a result the way the CLI does, along with `displayWidth`, `padTo` and `truncate` for laying out columns of its own
 
 ### Changed
 
 - The result now carries every issue, whether the run passed or failed, as a flat `issues` list plus `issuesByCode` and a `summary` with per-level, per-code, per-locale and per-group counts. Each issue has its own `level`, `message` and originating `file`
 - `CHECK_META` describes each check's severity and wording, so a user interface does not have to hard-code them
+- The CLI report was rebuilt around what the reader is looking for: a heading block naming what was scanned, one section per language with its own tally, each check's meaning printed once above its findings, and a summary that counts the axis the sections did not use. Columns are laid out by display width, so a Korean, Japanese or Chinese value no longer pushes the ones beside it out of line
+- `--no-info` drops the heading block and the summary rather than only the progress lines, and `--debug` writes to standard error so a report piped out of standard output stays parseable
 - The CLI moved to its own entry point (`dist/cli.js`). Importing the module has no side effect and never writes to the console or exits the process
 - The package now publishes `types`, so TypeScript consumers get the result shape
 - Analysis is linear in the number of keys rather than quadratic: comparing 5,000 keys across 5 locales went from about 10.8s to about 26ms
 
 ### Fixed
 
+- `--no-warn` hid the heading of a warning but still printed the lines under it. A suppressed issue is now left out entirely, and the report says how many it hid
 - `EMPTY_VALUE` and `DUMMY_KEY` were written so their conditions could never be true, and never reported anything
 - A missing target language file threw instead of being reported
 - A relative path was joined as if it were absolute, so a scan rooted at one found nothing. Paths now resolve against the working directory

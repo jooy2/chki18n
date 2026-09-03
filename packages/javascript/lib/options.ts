@@ -2,19 +2,25 @@ import {
 	ANALYZE_CHECK_CODES,
 	CHECK_CODE,
 	DEFAULT_EXCLUDE_DIRS,
+	DEFAULT_GROUP_BY,
 	DEFAULT_INTERPOLATION_PREFIX,
 	DEFAULT_INTERPOLATION_SUFFIX,
+	DEFAULT_REPORTER,
 	DEFAULT_TARGET_LOCALE,
-	FILE_FORMAT
+	FILE_FORMAT,
+	GROUP_BY,
+	REPORTER
 } from './constants.js';
 import { createIssue } from './core/issue.js';
 import type {
 	AnyValueObject,
 	Chki18nCheckCode,
 	Chki18nFileFormat,
+	Chki18nGroupBy,
 	Chki18nIssue,
 	Chki18nLevel,
 	Chki18nOptions,
+	Chki18nReporter,
 	Chki18nResolvedOptions
 } from './_types/global.js';
 
@@ -104,6 +110,26 @@ export const OPTION_DEFINITIONS: {
 		description: 'Search this directory of source files for key usages (enables `UNUSED_KEY`)'
 	},
 	{
+		flag: 'reporter',
+		option: 'reporter',
+		type: 'string',
+		valueName: '<name>',
+		description: `How to render the report: \`${Object.values(REPORTER).join('`, `')}\``
+	},
+	{
+		flag: 'group-by',
+		option: 'groupBy',
+		type: 'string',
+		valueName: '<axis>',
+		description: `Group the reported issues by \`${Object.values(GROUP_BY).join('`, `')}\``
+	},
+	{
+		flag: 'no-color',
+		option: 'color',
+		type: 'boolean',
+		description: 'Do not colour the output'
+	},
+	{
 		flag: 'no-info',
 		option: 'info',
 		type: 'boolean',
@@ -144,6 +170,10 @@ const toList = (value: unknown): string[] => {
 const CHECK_CODE_VALUES = new Set<string>(Object.values(CHECK_CODE));
 
 const LEVEL_VALUES = new Set<string>(['error', 'warn', 'info']);
+
+const REPORTER_VALUES = new Set<string>(Object.values(REPORTER));
+
+const GROUP_BY_VALUES = new Set<string>(Object.values(GROUP_BY));
 
 /**
  * Read raw CLI arguments (as produced by minimist) into the option shape shared
@@ -294,6 +324,35 @@ export function resolveOptions(
 
 	const excludeList = toList(raw.exclude);
 
+	/** Reads one of the closed value sets, falling back rather than failing. */
+	const readChoice = <T extends string>(
+		value: unknown,
+		allowed: Set<string>,
+		fallback: T,
+		optionName: string
+	): T => {
+		if (value === undefined || value === null || value === '') {
+			return fallback;
+		}
+
+		const choice = String(value).trim().toLowerCase();
+
+		if (!allowed.has(choice)) {
+			invalid(`Unknown \`${optionName}\` value \`${value}\`. Defaulting to \`${fallback}\`.`);
+
+			return fallback;
+		}
+
+		return choice as T;
+	};
+
+	const reporter = readChoice<Chki18nReporter>(
+		raw.reporter,
+		REPORTER_VALUES,
+		DEFAULT_REPORTER,
+		'reporter'
+	);
+
 	return {
 		options: {
 			path: raw.path || null,
@@ -305,6 +364,14 @@ export function resolveOptions(
 			interpolationSuffix,
 			exclude: new Set(excludeList.length > 0 ? excludeList : DEFAULT_EXCLUDE_DIRS),
 			source: raw.source || null,
+			reporter,
+			groupBy: readChoice<Chki18nGroupBy>(
+				raw.groupBy,
+				GROUP_BY_VALUES,
+				DEFAULT_GROUP_BY,
+				'groupBy'
+			),
+			color: raw.color !== false,
 			flattened: raw.flattened === true,
 			verbose: raw.verbose === true,
 			info: raw.info !== false,

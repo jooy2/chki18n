@@ -235,3 +235,39 @@ export const SOURCE_EXTENSIONS = [
 
 /** Files above this size are skipped by the unused-key scan. */
 export const SOURCE_MAX_FILE_BYTES = 5 * 1024 * 1024;
+
+/**
+ * How a finished result is rendered. The checks and the counts are the same
+ * whichever one is chosen; only the shape of the text changes.
+ */
+export const REPORTER = {
+	/** Grouped, coloured sections, meant to be read in a terminal. */
+	PRETTY: 'pretty',
+	/** One line per issue, for grepping and for editor integrations. */
+	LIST: 'list',
+	/** The whole result object, for another tool to parse. */
+	JSON: 'json',
+	/** Tables, for pasting into a pull request or a report. */
+	MARKDOWN: 'markdown'
+} as const;
+
+export const DEFAULT_REPORTER = REPORTER.PRETTY;
+
+/** The axis a report groups its issues by. */
+export const GROUP_BY = {
+	/** One section per language. What a translator works through. */
+	LOCALE: 'locale',
+	/** One section per check code. What a maintainer fixes in one pass. */
+	CODE: 'code',
+	/** One section per comparable set of files. */
+	GROUP: 'group',
+	/** One section per translation file on disk. */
+	FILE: 'file',
+	/** No sections at all. */
+	NONE: 'none'
+} as const;
+
+export const DEFAULT_GROUP_BY = GROUP_BY.LOCALE;
+
+/** Width a report is laid out at when the terminal does not report its own. */
+export const DEFAULT_REPORT_WIDTH = 96;

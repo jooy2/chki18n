@@ -1,4 +1,4 @@
-import type { CHECK_CODE, FILE_FORMAT } from '../constants.js';
+import type { CHECK_CODE, FILE_FORMAT, GROUP_BY, REPORTER } from '../constants.js';
 
 export type AnyValueObject = { [key: string]: any };
 
@@ -10,6 +10,12 @@ export type Chki18nLevel = 'error' | 'warn' | 'info';
 
 /** On-disk layout of the translation files (see `FILE_FORMAT`). */
 export type Chki18nFileFormat = (typeof FILE_FORMAT)[keyof typeof FILE_FORMAT];
+
+/** Shape a finished result is rendered in (see `REPORTER`). */
+export type Chki18nReporter = (typeof REPORTER)[keyof typeof REPORTER];
+
+/** Axis a report groups its issues by (see `GROUP_BY`). */
+export type Chki18nGroupBy = (typeof GROUP_BY)[keyof typeof GROUP_BY];
 
 /**
  * Translation strings of one locale. Accepts both the nested shape read from a
@@ -116,6 +122,12 @@ export type Chki18nOptions = {
 	source?: string;
 	/** Treat the input as already flattened and skip the flatten pass. */
 	flattened?: boolean;
+	/** Shape the report is rendered in. Default `pretty`. */
+	reporter?: Chki18nReporter;
+	/** Axis the report groups its issues by. Default `locale`. */
+	groupBy?: Chki18nGroupBy;
+	/** Colour the console report. Default `true` where the terminal allows it. */
+	color?: boolean;
 	/** Print progress and results to the console. Default `false`. */
 	verbose?: boolean;
 	/** Print info level log lines. Only meaningful with `verbose`. */
@@ -138,6 +150,9 @@ export type Chki18nResolvedOptions = {
 	interpolationSuffix: string;
 	exclude: Set<string>;
 	source: string | null;
+	reporter: Chki18nReporter;
+	groupBy: Chki18nGroupBy;
+	color: boolean;
 	flattened: boolean;
 	verbose: boolean;
 	info: boolean;

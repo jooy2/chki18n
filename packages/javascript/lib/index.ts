@@ -7,7 +7,7 @@ import { createSession, type Chki18nSession } from './core/session.js';
 import { scanTranslationDirectory } from './loader/scan.js';
 import { findUnusedKeys } from './loader/unusedKeys.js';
 import { createLogger } from './logger.js';
-import { reportResult } from './reporter.js';
+import { formatResult } from './reporter/index.js';
 import { CHECK_CODE as CODES } from './constants.js';
 import type { Chki18nOptions, Chki18nResult, TranslationGroups } from './_types/global.js';
 
@@ -130,30 +130,21 @@ export async function checkTranslationFiles(
 			exclude: [...session.options.exclude]
 		})}`
 	);
+	logger.debug(`Detected file format: ${session.fileFormat}`);
 
-	if (!session.path) {
-		logger.error('No `path` argument is specified.');
-	} else {
-		logger.info(`Process to check specified translation files... (Current path: ${session.path})`);
-		logger.debug(`Detected file format: ${session.fileFormat}`);
-
-		for (const file of session.skipped) {
-			logger.debug(`Skipped '${file}': it does not belong to a known locale.`);
-		}
-
-		logger.info(`This comparison is based on the following language: ${session.options.target}`);
+	for (const file of session.skipped) {
+		logger.debug(`Skipped '${file}': it does not belong to a known locale.`);
 	}
 
 	// The session times its own comparison; this call also paid for the scan.
 	const result = { ...session.analyze(), elapsedMs: Date.now() - startedAt };
 
-	reportResult(result, logger);
-
-	if (result.success) {
-		logger.pass('The scan is complete. No critical issues were found.');
-	} else {
-		logger.error(
-			'The scan is complete. There is a critical issue with the translation file. Please review the results above.'
+	if (session.options.verbose) {
+		console.log(
+			formatResult(result, session.options, {
+				width: process.stdout.columns,
+				cwd: process.cwd()
+			})
 		);
 	}
 
@@ -163,6 +154,14 @@ export async function checkTranslationFiles(
 // The comparison engine is also published on its own as `chki18n/core`, for
 // callers that must not pull in the Node built-ins the scanner needs.
 export * from './core/index.js';
+// The reporters, so an application can render a result the way the CLI does
+// without reimplementing the grouping and the wording.
+export { displayWidth, formatResult, groupIssues, padTo, truncate } from './reporter/index.js';
+export type {
+	Chki18nIssueGroup,
+	Chki18nReportContext,
+	Chki18nReportInit
+} from './reporter/index.js';
 export type { Chki18nScanResult } from './loader/scan.js';
 export { scanTranslationDirectory } from './loader/scan.js';
 export { findUnusedKeys, leafOfKey } from './loader/unusedKeys.js';
