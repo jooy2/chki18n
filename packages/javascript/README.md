@@ -15,6 +15,7 @@ Every check, every option and every example. This README is just the quick start
 - **Thirteen checks** — missing keys, keys defined twice, empty values, untranslated strings, mismatched interpolation placeholders, stray whitespace, and keys nothing in your source references.
 - **Every layout** — one file per locale, one folder per locale, or one file holding them all.
 - **CLI and library** share one set of checks and one set of options.
+- **A report you can act on** — grouped by language, check, file or nothing; rendered for a terminal, for `grep`, as JSON, as Markdown or as GitHub Actions annotations; saved to a file on request.
 - **ESM, typed, and fast** — an in-memory comparison of 5,000 keys across 5 locales takes about 17ms.
 
 ## Install
@@ -32,13 +33,38 @@ npx chki18n ./locales --target en
 ```
 
 ```text
- Chki18n  ERROR  [NO_KEY] Some translation files did not include the following keys (1):
- - ko -> 'attr.folder' (en: "Folder")
+  Path     ./locales
+  Target   en
+  Locales  en, ko
+  Layout   single, 1 group, 10 keys
 
- Chki18n  INFO  Compared 10 keys across 2 locales in 1 group. (3ms)
+ ko ──────────────────────────────────────────────────────────────────────── 1 error · 1 warning
+
+  ERROR  NO_KEY (1)
+         The key exists in the target language but is missing here.
+    attr.folder  en: "Folder"
+
+  WARN   NOT_TRANSLATED_VALUE (1)
+         The value is identical to the target language, so the translation may be incomplete.
+    desc.no-str  en: "12345"
+
+ Summary ───────────────────────────────────────────────────────────────────────────────────────
+
+  Compared 10 keys across 2 locales in 1 group. (3ms)
+  1 error · 1 warning
+  Clean: en
+
+  FAIL  1 error must be fixed before this passes.
 ```
 
 Exits with `1` when an error level issue was found, so a CI job fails on it. `npx chki18n --help` lists every flag.
+
+`--group-by` decides what a section is (`locale`, `code`, `group`, `file` or `none`), `--reporter` decides the shape (`pretty`, `list`, `json`, `markdown` or `github`), and `--output` keeps a copy:
+
+```bash
+npx chki18n ./locales --target en --reporter json > report.json
+npx chki18n ./locales --target en --output translation-report.md
+```
 
 ## From JavaScript
 

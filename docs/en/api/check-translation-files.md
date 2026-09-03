@@ -57,6 +57,20 @@ Turn the output on when you want the CLI's report from your own script:
 await checkTranslationFiles('./locales', { target: 'en', verbose: true });
 ```
 
+`reporter` and `groupBy` shape that report exactly as they shape the CLI's. `output` writes it to a file, and that happens whether or not `verbose` is set: a file is something you asked for rather than something printed at you.
+
+```javascript
+await checkTranslationFiles('./locales', { target: 'en', output: 'report.md' });
+```
+
+To render a result without printing or saving it, call `formatResult` yourself:
+
+```javascript
+import { formatResult, resolveOptions } from 'chki18n';
+
+formatResult(result, resolveOptions({ target: 'en', reporter: 'markdown' }).options);
+```
+
 ## Failing a build
 
 ```javascript

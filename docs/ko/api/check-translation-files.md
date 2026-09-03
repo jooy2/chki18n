@@ -57,6 +57,20 @@ await checkTranslationFiles(undefined, { path: './locales', target: 'en' });
 await checkTranslationFiles('./locales', { target: 'en', verbose: true });
 ```
 
+`reporter`와 `groupBy`는 CLI에서와 똑같이 리포트의 모양을 정합니다. `output`은 리포트를 파일로 쓰며, `verbose` 여부와 무관하게 동작합니다. 파일은 요청해서 받는 것이지 일방적으로 출력되는 것이 아니기 때문입니다.
+
+```javascript
+await checkTranslationFiles('./locales', { target: 'en', output: 'report.md' });
+```
+
+출력도 저장도 하지 않고 문자열만 얻고 싶다면 `formatResult`를 직접 부르세요.
+
+```javascript
+import { formatResult, resolveOptions } from 'chki18n';
+
+formatResult(result, resolveOptions({ target: 'en', reporter: 'markdown' }).options);
+```
+
 ## 빌드 실패시키기
 
 ```javascript

@@ -20,6 +20,11 @@ title: 옵션
 | `interpolationSuffix` | `--interpolation-suffix` | `string` | `'}'` |
 | `exclude` | `--exclude` | `string[]` 또는 쉼표로 구분된 문자열 | 아래 참고 |
 | `source` | `--source` | `string` | — |
+| `reporter` | `--reporter` | `'pretty' \| 'list' \| 'json' \| 'markdown' \| 'github'` | `'pretty'` |
+| `groupBy` | `--group-by` | `'locale' \| 'code' \| 'group' \| 'file' \| 'none'` | `'locale'` |
+| `output` | `--output` | `string` | — |
+| `color` | `--no-color` | `boolean` | `true` |
+| `width` | `--width` | `number` | 터미널 너비 |
 | `info` | `--no-info` | `boolean` | `true` |
 | `warn` | `--no-warn` | `boolean` | `true` |
 | `debug` | `--debug` | `boolean` | `false` |
@@ -148,15 +153,77 @@ npx chki18n ./locales --interpolation-prefix "{{" --interpolation-suffix "}}"
 
 ## 출력
 
+### `reporter`
+
+보고서의 모양입니다. 터미널용 `pretty`, 이슈 한 건에 한 줄인 `list`, 다른 프로그램에 넘기는 `json`, 표로 만드는 `markdown`, 그리고 GitHub Actions가 파일에 주석으로 다는 워크플로 명령을 내보내는 `github` 중 하나입니다. 어떤 리포터든 같은 이슈를 같은 순서로 담습니다.
+
+```bash
+npx chki18n ./locales --reporter json > report.json
+```
+
+```javascript
+import { formatResult, resolveOptions } from 'chki18n';
+
+const { options } = resolveOptions({ target: 'en', reporter: 'markdown' });
+
+formatResult(result, options); // 보고서 문자열
+```
+
+`pretty`가 아닌 형식은 배너도 진행 상황 줄도 없이 보고서만 출력하므로 다른 프로그램으로 그대로 넘길 수 있습니다. 모르는 이름을 주면 `INVALID_OPTIONS` 이슈로 알리고 `pretty`로 돌아갑니다.
+
+### `groupBy`
+
+보고서의 구획을 무엇으로 나눌지 정합니다. `locale`(기본값), `code`, `group`, `file`, `none` 중 하나입니다. 언어로 나누면 번역가의 작업 단위와 맞고, 검사로 나누면 관리자가 한 번에 고치는 단위와 맞습니다.
+
+```bash
+npx chki18n ./locales --group-by code
+```
+
+오류가 있는 구획이 먼저 오고 그다음이 경고만 있는 구획입니다. 파일이 같으면 순서도 같으므로, 같은 번역을 두 번 검사한 보고서를 줄 단위로 비교할 수 있습니다.
+
+직접 묶고 싶다면 `groupIssues`가 export되어 있습니다.
+
+```javascript
+import { groupIssues } from 'chki18n';
+
+groupIssues(result.issues, 'locale'); // [{ id, label, issues, counts }, ...]
+```
+
+### `output`
+
+터미널에 더해 보고서를 쓸 파일입니다. 형식은 확장자가 정하며, `.json`과 `.md`는 각자의 형식이 있고 나머지는 평문입니다. 둘 다 주면 `reporter`가 이깁니다.
+
+```bash
+npx chki18n ./locales --output report.md
+```
+
+없는 디렉토리는 만들어 주고, 색상 코드는 쓰지 않으며, 터미널 너비 대신 고정 너비로 배치합니다. 어디서 실행하든 같은 파일이 나옵니다. 쓰기에 실패하면 오류로 보고하고 실행도 실패합니다.
+
+### `color`
+
+터미널 보고서에 색을 입힐지 여부입니다. 터미널이 지원하면 기본으로 켜지고 `--no-color`로 끕니다. `output`으로 쓰는 파일은 이 값과 상관없이 색이 들어가지 않습니다.
+
+### `width`
+
+보고서를 배치할 칸 수입니다. 지정하지 않으면 터미널 너비, 그다음 `COLUMNS`, 그다음 96을 씁니다. 잰 너비는 120칸에서 자릅니다. 그보다 벌어지면 라벨과 집계가 한 줄로 읽히지 않기 때문입니다. `width`로 직접 준 값에는 상한이 없습니다.
+
+```bash
+npx chki18n ./locales --width 72
+```
+
+설명은 잘리지 않고 다음 줄로 넘어가므로 좁은 보고서에서도 문장이 사라지지 않습니다. `output`으로 쓰는 파일은 터미널을 보지 않고 고정 기본값을 쓰며, `width`를 주면 그 값을 씁니다. 어디서 실행하든 같은 파일이 나옵니다.
+
 ### `info`, `warn`, `debug`
 
-CLI가 무엇을 출력할지 결정합니다. `--no-info`는 진행 상황 줄을, `--no-warn`은 경고 수준 출력을 없애고, `--debug`는 해석된 옵션과 감지된 구조, 건너뛴 파일을 추가로 보여줍니다.
+CLI가 무엇을 출력할지 결정합니다. `--no-info`는 머리말 블록과 요약을, `--no-warn`은 경고 수준 이슈를 없애고, `--debug`는 해석된 옵션과 감지된 구조, 건너뛴 파일을 추가로 보여줍니다.
 
 ```bash
 npx chki18n ./locales --no-info
 ```
 
-출력에만 영향을 줍니다. 숨겨진 경고도 `result.issues`에 그대로 있고 `result.summary`에도 집계됩니다.
+출력에만 영향을 줍니다. 숨겨진 경고도 `result.issues`에 그대로 있고 `result.summary`에도 집계되며, 결과를 그대로 담는 `json` 보고서에도 남습니다. 무언가를 감췄다면 보고서가 몇 건인지 알려줍니다.
+
+`--debug`는 표준 오류로 나가므로, 표준 출력으로 넘긴 보고서에 섞이지 않습니다.
 
 ### `verbose`
 

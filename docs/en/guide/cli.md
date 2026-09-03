@@ -35,6 +35,11 @@ npx chki18n --path ./locales --target en
   --interpolation-suffix <str>    Closing delimiter of an interpolation key (default: `}`)
   --exclude <dirs>                Comma separated directory names to skip while scanning
   --source <dir>                  Search this directory of source files for key usages (enables `UNUSED_KEY`)
+  --reporter <name>               How to render the report: `pretty`, `list`, `json`, `markdown`, `github`
+  --group-by <axis>               Group the reported issues by `locale`, `code`, `group`, `file`, `none`
+  --output <file>                 Also write the report to this file, in the format its extension implies
+  --width <columns>               Lay the report out to this many columns instead of measuring the terminal
+  --no-color                      Do not colour the output
   --no-info                       Do not show info messages
   --no-warn                       Do not show warning messages
   --debug                         Show debug messages
@@ -47,21 +52,123 @@ Every flag is also an API option with the same name in camelCase — `--ignore-c
 ## Reading the output
 
 ```text
- Chki18n  INFO  Process to check specified translation files... (Current path: /project/locales)
- Chki18n  INFO  This comparison is based on the following language: en
+  Path     ./locales
+  Target   en
+  Locales  en, ja, ko
+  Layout   single, 1 group, 5 keys
 
- Chki18n  ERROR  [NO_KEY] Some translation files did not include the following keys (2):
- - ko -> 'attr.folder' (en: "Folder")
- - ja @common.json -> 'attr.open' (en: "Open")
+ ko ─────────────────────────────────────────────────────────────────────── 2 errors · 1 warning
 
- Chki18n  WARN  [DUPLICATE_VALUE] Some keys have duplicate values (1):
- - ko -> 'dup-b' (en: "Beta") The key `dup-a` in the same locale already uses this value.
+  ERROR  NO_KEY (1)
+         The key exists in the target language but is missing here.
+    attr.folder  en: "Folder"
 
- Chki18n  INFO  Compared 11 keys across 3 locales in 2 groups. (4ms)
- Chki18n  INFO  Found 2 errors and 1 warning.
+  ERROR  NO_INTERPOLATION_KEY (1)
+    greeting     en: "Hello {name}"
+      The interpolation key `{name}` of the target language is missing from this value.
+
+  WARN   DUPLICATE_VALUE (1)
+    dup-b        en: "Beta"
+      The key `dup-a` in the same locale already uses this value.
+
+ Summary ───────────────────────────────────────────────────────────────────────────────────────
+
+  Compared 5 keys across 3 locales in 1 group. (3ms)
+  2 errors · 3 warnings
+
+  By check
+    NO_INTERPOLATION_KEY  1 error
+    NO_KEY                1 error
+    DUPLICATE_VALUE       3 warnings
+
+  FAIL  2 errors must be fixed before this passes.
 ```
 
-Issues are grouped by check code, with the number of occurrences in the heading. Each line names the locale, the key and — when the project has more than one group of files — the group it belongs to, after an `@`. In brackets is the target language's own wording, which is what the translation is being compared against. A check that produced a specific explanation adds it at the end of the line.
+One section per language, because that is the unit a translator works in. Inside it the findings are grouped by check, worst first, with the number of occurrences after the code and the check's meaning under it. Each line names the key and, beside it, the target language's own wording — what the translation is being compared against. A finding with something specific to add puts it on the line below. When a project has more than one comparable set of files, the group follows the key after an `@`.
+
+The summary answers the question the grouping left open: sections are per language, so the tally is per check. Group by check and the two swap places.
+
+## Choosing a format
+
+`--reporter` decides the shape of the report. Every one of them reports the same issues in the same order; only the text around them changes.
+
+| Reporter   | What it is for                                                        |
+| ---------- | --------------------------------------------------------------------- |
+| `pretty`   | Reading in a terminal. Sections, colour and a summary. The default.   |
+| `list`     | One line per issue, for `grep`, an editor or a CI log.                |
+| `json`     | The whole result object, for another tool to read.                    |
+| `markdown` | Tables, for a pull request comment or a report kept with the project. |
+| `github`   | Workflow commands, so GitHub Actions annotates the files themselves.  |
+
+```bash
+npx chki18n ./locales --target en --reporter list
+```
+
+```text
+ko  error  NO_KEY                attr.folder  en: "Folder"
+ko  error  NO_INTERPOLATION_KEY  greeting     en: "Hello {name}"  The interpolation key `{name}` of the target language is missing from this value.
+ko  warn   DUPLICATE_VALUE       dup-b        en: "Beta"  The key `dup-a` in the same locale already uses this value.
+
+Found 2 errors, 3 warnings. Compared 5 keys across 3 locales in 1 group. (3ms)
+```
+
+Anything other than `pretty` prints the report and nothing else — no banner and no progress lines — so it can be piped straight into another program:
+
+```bash
+npx chki18n ./locales --target en --reporter json > report.json
+```
+
+`--debug` writes to standard error rather than standard output, so it never lands in a piped report.
+
+## Fitting the terminal
+
+The report is laid out to the terminal's own width, or to what `COLUMNS` says when there is no terminal to measure — which is how a CI runner usually reports its log width. A measured width is capped at 120 columns, because further apart than that the counts stop reading as part of the same line as their label.
+
+`--width` overrides all of it, and is not capped:
+
+```bash
+npx chki18n ./locales --width 72
+```
+
+Descriptions wrap rather than being cut short, so a narrow terminal loses no wording. A file written by `--output` ignores the terminal entirely and uses a fixed width, unless `--width` says otherwise.
+
+## Grouping the issues
+
+`--group-by` decides what a section is. The default is `locale`.
+
+| Axis     | One section per                                   |
+| -------- | ------------------------------------------------- |
+| `locale` | Language. What a translator fixes in one sitting. |
+| `code`   | Check. What a maintainer fixes in one pass.       |
+| `group`  | Comparable set of files, e.g. `common.json`.      |
+| `file`   | Translation file on disk.                         |
+| `none`   | Nothing. One list.                                |
+
+```bash
+npx chki18n ./locales --target en --group-by code
+```
+
+Sections are ordered worst first: those with an error, then those with only warnings, then the rest. Within a section the same order applies, then the check order, then the key. Two runs over unchanged files print the same lines in the same places, which is what makes a saved report worth diffing.
+
+`list`, `json` and `markdown` follow the grouping too — `list` only in its ordering, since it has no sections.
+
+## Saving a report
+
+`--output` writes the report to a file as well as to the terminal. The extension picks the format: `.json` and `.md` have one of their own, and anything else is written as plain text.
+
+```bash
+npx chki18n ./locales --target en --output translation-report.md
+```
+
+Missing directories are created. The file never contains colour codes, and it is laid out to a fixed width rather than to the terminal's, so the same run produces the same file anywhere.
+
+`--reporter` wins when both are given, which is how you keep one format on screen and another on disk — or force a format the extension does not imply:
+
+```bash
+npx chki18n ./locales --target en --output report.txt --reporter list
+```
+
+A report that could not be written is an error like any other, so the run fails rather than reporting a file that is not there.
 
 ## Exit code
 
@@ -99,6 +206,39 @@ Or the other way round — everything except the noisy one:
   run: npx chki18n ./locales --target en --ignore-checks DUPLICATE_VALUE
 ```
 
+`--reporter github` turns each finding into a workflow command, which GitHub shows as an annotation on the translation file itself rather than as a line in a log:
+
+```yaml
+- name: Check translations
+  run: npx chki18n ./locales --target en --reporter github
+```
+
+```text
+::error file=locales/ko.json,title=chki18n NO_KEY::ko attr.folder The key exists in the target language but is missing here. (en: "Folder")
+::warning file=locales/ko.json,title=chki18n EMPTY_VALUE::ko attr.open The key is defined but its value is an empty string. (en: "Open")
+```
+
+An `error` becomes an error annotation, a `warn` a warning and an `info` a notice. There is no line number to give — the checks work on parsed translations, and the commonest finding of all is a key that is not in the file to begin with — so an annotation points at the file.
+
+The Markdown report is what a job summary wants:
+
+```yaml
+- name: Check translations
+  run: npx chki18n ./locales --target en --output "$GITHUB_STEP_SUMMARY" --reporter markdown
+```
+
+To keep the result after the job is gone, write it out and upload it:
+
+```yaml
+- name: Check translations
+  run: npx chki18n ./locales --target en --output translation-report.md
+- uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: translation-report
+    path: translation-report.md
+```
+
 ## In a pre-commit hook
 
 ```bash
@@ -106,7 +246,7 @@ Or the other way round — everything except the noisy one:
 npx chki18n ./locales --target en --no-info || exit 1
 ```
 
-`--no-info` drops the progress lines and leaves the issues, which is what you want in a hook that should be quiet when everything passes.
+`--no-info` drops the heading block and the summary and leaves the issues, which is what you want in a hook that should be quiet when everything passes. `--no-warn` goes further and leaves only what fails the run; the report says how many issues it hid.
 
 ## Debugging a scan that finds nothing
 

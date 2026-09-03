@@ -59,14 +59,28 @@ npx chki18n ./locales --target en
 ```
 
 ```text
- Chki18n  ERROR  [NO_KEY] Some translation files did not include the following keys (1):
- - ko -> 'attr.folder' (en: "Folder")
+  Path     ./locales
+  Target   en
+  Locales  en, ko
+  Layout   single, 1 group, 10 keys
 
- Chki18n  WARN  [NOT_TRANSLATED_VALUE] Some keys have the same value as the target language (1):
- - ko -> 'desc.no-str' (en: "12345")
+ ko ──────────────────────────────────────────────────────────────────────── 1 error · 1 warning
 
- Chki18n  INFO  Compared 10 keys across 2 locales in 1 group. (3ms)
- Chki18n  INFO  Found 1 error and 1 warning.
+  ERROR  NO_KEY (1)
+         The key exists in the target language but is missing here.
+    attr.folder  en: "Folder"
+
+  WARN   NOT_TRANSLATED_VALUE (1)
+         The value is identical to the target language, so the translation may be incomplete.
+    desc.no-str  en: "12345"
+
+ Summary ───────────────────────────────────────────────────────────────────────────────────────
+
+  Compared 10 keys across 2 locales in 1 group. (3ms)
+  1 error · 1 warning
+  Clean: en
+
+  FAIL  1 error must be fixed before this passes.
 ```
 
 오류 수준의 이슈가 있으면 종료 코드 `1`로 끝나므로, CI 작업이 여기서 실패합니다.

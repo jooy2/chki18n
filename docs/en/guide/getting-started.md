@@ -64,17 +64,32 @@ npx chki18n ./locales --target en
 ```
 
 ```text
- Chki18n  INFO  Process to check specified translation files... (Current path: /project/locales)
- Chki18n  INFO  This comparison is based on the following language: en
+  Path     ./locales
+  Target   en
+  Locales  en, ko
+  Layout   single, 1 group, 3 keys
 
- Chki18n  ERROR  [NO_INTERPOLATION_KEY] The interpolation key does not match the target language (1):
- - ko -> 'desc.hello' (en: "Hello {name}") The interpolation key `{name}` of the target language is missing from this value.
+ ko ─────────────────────────────────────────────────────────────────────────────────── 2 errors
 
- Chki18n  ERROR  [NO_KEY] Some translation files did not include the following keys (1):
- - ko -> 'attr.folder' (en: "Folder")
+  ERROR  NO_KEY (1)
+         The key exists in the target language but is missing here.
+    attr.folder  en: "Folder"
 
- Chki18n  INFO  Compared 3 keys across 2 locales in 1 group. (2ms)
- Chki18n  INFO  Found 2 errors and 0 warnings.
+  ERROR  NO_INTERPOLATION_KEY (1)
+    desc.hello   en: "Hello {name}"
+      The interpolation key `{name}` of the target language is missing from this value.
+
+ Summary ───────────────────────────────────────────────────────────────────────────────────────
+
+  Compared 3 keys across 2 locales in 1 group. (2ms)
+  2 errors
+  Clean: en
+
+  By check
+    NO_INTERPOLATION_KEY  1 error
+    NO_KEY                1 error
+
+  FAIL  2 errors must be fixed before this passes.
 ```
 
 Two real problems: the Korean translation dropped the `{name}` placeholder, and it is missing a key entirely. The command exits with `1`, so a CI job fails here.

@@ -16,6 +16,7 @@ Every check, every option and every example. This README is the map; each packag
 - **Every layout.** One file per locale (`en.json`), one folder per locale (`en/common.json`), or one file holding them all. Files that share keys are compared as a group, so a key missing from `errors.json` is never confused with one missing from `common.json`.
 - **From the command line or from code.** The same checks and the same options either way — a CLI flag and its API option are one definition, so the two can never disagree.
 - **Fast enough to run on every keystroke.** Comparing 5,000 keys across 5 locales takes about 17ms, and re-checking a single edited key takes about 2µs. An editor can lint as the user types.
+- **A report you can act on.** Grouped by language, by check, by file or not at all; rendered for a terminal, for `grep`, as JSON, as Markdown or as GitHub Actions annotations; and written to a file when you want to keep it.
 - **No configuration file.** Nothing to set up: a path and a target language are the whole contract.
 
 ## Packages
@@ -37,10 +38,28 @@ npx chki18n ./locales --target en
 ```
 
 ```text
- Chki18n  ERROR  [NO_KEY] Some translation files did not include the following keys (1):
- - ko -> 'attr.folder' (en: "Folder")
+  Path     ./locales
+  Target   en
+  Locales  en, ko
+  Layout   single, 1 group, 10 keys
 
- Chki18n  INFO  Compared 10 keys across 2 locales in 1 group. (3ms)
+ ko ──────────────────────────────────────────────────────────────────────── 1 error · 1 warning
+
+  ERROR  NO_KEY (1)
+         The key exists in the target language but is missing here.
+    attr.folder  en: "Folder"
+
+  WARN   NOT_TRANSLATED_VALUE (1)
+         The value is identical to the target language, so the translation may be incomplete.
+    desc.no-str  en: "12345"
+
+ Summary ───────────────────────────────────────────────────────────────────────────────────────
+
+  Compared 10 keys across 2 locales in 1 group. (3ms)
+  1 error · 1 warning
+  Clean: en
+
+  FAIL  1 error must be fixed before this passes.
 ```
 
 It exits with `1` when something is wrong, so a CI job fails on it.
