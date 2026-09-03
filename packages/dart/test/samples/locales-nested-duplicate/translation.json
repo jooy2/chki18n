@@ -1,0 +1,9 @@
+{
+	"en": {
+		"greeting": "Hello",
+		"greeting": "Hi"
+	},
+	"ko": {
+		"greeting": "안녕하세요"
+	}
+}
