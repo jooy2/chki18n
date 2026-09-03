@@ -2,7 +2,15 @@
 
 ## vNext
 
-> The check logic no longer depends on the file system, so the module can also validate translations an application already holds in memory.
+> The first stable release. The checks no longer depend on the file system, so they run against translations an application already holds in memory as well as against a folder of files; the report was rebuilt around what a reader is looking for, and can be written as JSON, Markdown or GitHub annotations; and the comparison grew to twenty-five checks.
+
+### Breaking changes
+
+- A project that passed on `0.3.0` can fail on this release. Four of the checks added report at `error` — `NO_LOCALE`, `DUPLICATE_KEY`, `EXTRA_INTERPOLATION_KEY` and `INTERPOLATION_COUNT` — and `EMPTY_VALUE` and `DUMMY_KEY` were fixed to report at all. Everything else added reports at `warn` or `info`, which never fails a run. Switch off what a project does not want with `ignoreChecks`, or `--ignore-checks` on the command line
+- The CLI report was rebuilt around what the reader is looking for: a heading block naming what was scanned, one section per language with its own tally, each check's meaning printed once above its findings, and a summary that counts the axis the sections did not use. Columns are laid out by display width, so a Korean, Japanese or Chinese value no longer pushes the ones beside it out of line. Nothing should read the text of that report — anything that used to parse standard output wants `--reporter json`
+- `--no-info` drops the heading block and the summary rather than only the progress lines, and `--debug` writes to standard error so a report piped out of standard output stays parseable
+- The CLI moved to its own entry point (`dist/cli.js`), which the `chki18n` binary points at. Importing the module has no side effect and never writes to the console or exits the process, so an import that ran the CLI has to call `checkTranslationFiles` instead
+- The result now carries every issue, whether the run passed or failed, as a flat `issues` list plus `issuesByCode` and a `summary` with per-level, per-code, per-locale and per-group counts. Each issue has its own `level`, `message` and originating `file`. Code that read the old shape has to move to these fields
 
 ### Added
 
@@ -43,14 +51,10 @@
 
 ### Changed
 
-- The result now carries every issue, whether the run passed or failed, as a flat `issues` list plus `issuesByCode` and a `summary` with per-level, per-code, per-locale and per-group counts. Each issue has its own `level`, `message` and originating `file`
 - `CHECK_META` describes each check's severity and wording, so a user interface does not have to hard-code them
-- The CLI report was rebuilt around what the reader is looking for: a heading block naming what was scanned, one section per language with its own tally, each check's meaning printed once above its findings, and a summary that counts the axis the sections did not use. Columns are laid out by display width, so a Korean, Japanese or Chinese value no longer pushes the ones beside it out of line
-- `--no-info` drops the heading block and the summary rather than only the progress lines, and `--debug` writes to standard error so a report piped out of standard output stays parseable
 - A description that does not fit the width wraps onto the next line instead of being cut short, so a narrow terminal loses no wording
 - `NO_KEY` and `DUMMY_KEY` no longer ask every language for every plural form. Korean needs only `item_other`, so `item_one` being absent from it was reported as missing and is not; Russian needs an `item_few` that English never writes, and that was reported as a stray key. Applies only to keys ending in a named plural category, and only to the languages the plural table covers
 - `UNUSED_KEY` searches for a plural key by its base. No source file writes `item_one`, so every plural key in a project was reported as unused
-- The CLI moved to its own entry point (`dist/cli.js`). Importing the module has no side effect and never writes to the console or exits the process
 - The package now publishes `types`, so TypeScript consumers get the result shape
 - Analysis is linear in the number of keys rather than quadratic: comparing 5,000 keys across 5 locales went from about 10.8s to about 26ms
 - The twelve checks added since cost about a third as much again as the original twelve over the same 5,000 keys, and a check that is switched off costs nothing at all. `lengthRatio` is the exception worth knowing: measuring every value in display columns more than doubles the run, which is part of why it stays off until it is asked for
