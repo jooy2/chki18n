@@ -16,6 +16,7 @@
 - `UNTRANSLATED_SCRIPT`, for a value holding no character of the script its language is written in. `NOT_TRANSLATED_VALUE` only catches a translation identical to the original, so `Hello` becoming `Hello!` passed it
 - `INVISIBLE_CHARACTER`, for a zero width space, a byte order mark, a bidirectional control or a non-breaking space
 - `NUMBER_MISMATCH`, for a number the translation changed rather than dropped. `MISSING_NUMBER` only asks whether any digits survived
+- `INCONSISTENT_VALUE`, for two keys sharing one target language string that a locale translates two different ways. `DUPLICATE_VALUE` asks whether one locale repeats itself; this asks the opposite
 - `extractTags`, `extractNumbers`, `findInvisibleCharacter`, `scriptOfLocale` and `hasTranslatableText` are exported, so an editor can run the same measurements on a value it is holding
 - `DUPLICATE_KEY`, which catches a key defined twice — both the literal kind (`{"a": 1, "a": 2}`, which `JSON.parse` resolves silently) and the kind where a nested key and a dotted one flatten onto each other
 - `UNUSED_KEY`, reported at `info`, for keys nothing in a `source` directory appears to reference. An application that has already worked this out can pass its own answer as `unusedKeys` instead

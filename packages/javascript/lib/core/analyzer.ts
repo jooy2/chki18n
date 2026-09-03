@@ -113,6 +113,7 @@ type CheckFlags = {
 	notTranslatedValue: boolean;
 	untranslatedScript: boolean;
 	duplicateValue: boolean;
+	inconsistentValue: boolean;
 	surroundingWhitespace: boolean;
 	invisibleCharacter: boolean;
 	missingNumber: boolean;
@@ -136,6 +137,7 @@ const buildCheckFlags = (enabled: Set<Chki18nCheckCode>): CheckFlags => ({
 	notTranslatedValue: enabled.has(CHECK_CODE.NOT_TRANSLATED_VALUE),
 	untranslatedScript: enabled.has(CHECK_CODE.UNTRANSLATED_SCRIPT),
 	duplicateValue: enabled.has(CHECK_CODE.DUPLICATE_VALUE),
+	inconsistentValue: enabled.has(CHECK_CODE.INCONSISTENT_VALUE),
 	surroundingWhitespace: enabled.has(CHECK_CODE.SURROUNDING_WHITESPACE),
 	invisibleCharacter: enabled.has(CHECK_CODE.INVISIBLE_CHARACTER),
 	missingNumber: enabled.has(CHECK_CODE.MISSING_NUMBER),
@@ -500,6 +502,91 @@ function checkDuplicateValues(
 	}
 }
 
+/**
+ * Report keys that share one target language string but are translated two
+ * different ways. `DUPLICATE_VALUE` asks whether one locale repeats itself;
+ * this asks the opposite question, and catches the terminology drift that turns
+ * one `Save` button into two different words on two screens.
+ */
+function checkInconsistentValues(
+	issues: Chki18nIssue[],
+	group: string,
+	localeNames: string[],
+	maps: TranslationMap[],
+	targetIndex: number,
+	target: string,
+	fileOf: FileLookup
+): void {
+	const targetMap = maps[targetIndex];
+	const keysOfValue = new Map<string, string[]>();
+
+	for (const key of Object.keys(targetMap)) {
+		const value = targetMap[key];
+
+		if (typeof value !== 'string' || value.length < 1) {
+			continue;
+		}
+
+		const keys = keysOfValue.get(value);
+
+		if (keys) {
+			keys.push(key);
+			continue;
+		}
+
+		keysOfValue.set(value, [key]);
+	}
+
+	for (const [targetValue, keys] of keysOfValue) {
+		if (keys.length < 2) {
+			continue;
+		}
+
+		for (let index = 0; index < localeNames.length; index += 1) {
+			if (index === targetIndex) {
+				continue;
+			}
+
+			const map = maps[index];
+			let firstKey = '';
+			let firstValue = '';
+
+			for (const key of keys) {
+				const value = map[key];
+
+				// A key this locale does not have, or has not filled in, is
+				// somebody else's finding.
+				if (typeof value !== 'string' || value.length < 1) {
+					continue;
+				}
+
+				if (!firstKey) {
+					firstKey = key;
+					firstValue = value;
+					continue;
+				}
+
+				if (value === firstValue) {
+					continue;
+				}
+
+				issues.push(
+					createIssue(CHECK_CODE.INCONSISTENT_VALUE, {
+						locale: localeNames[index],
+						key,
+						group,
+						value,
+						targetValue,
+						relatedKey: firstKey,
+						file: fileOf ? fileOf(group, localeNames[index]) : undefined,
+						message: `The key \`${firstKey}\` has the same ${target} value but is translated as "${firstValue}".`
+					})
+				);
+			}
+		}
+	}
+}
+
 /** Keys of every locale, target language first so reports follow its order. */
 export const collectKeys = (maps: TranslationMap[], targetIndex: number): string[] => {
 	const keys: string[] = [];
@@ -720,6 +807,18 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 
 			if (flags.duplicateValue) {
 				checkDuplicateValues(issues, group, localeNames, maps, targetIndex, fileOf);
+			}
+
+			if (flags.inconsistentValue) {
+				checkInconsistentValues(
+					issues,
+					group,
+					localeNames,
+					maps,
+					targetIndex,
+					resolved.options.target,
+					fileOf
+				);
 			}
 		}
 

@@ -18,6 +18,7 @@ export const CHECK_CODE = {
 	NOT_TRANSLATED_VALUE: 'NOT_TRANSLATED_VALUE',
 	UNTRANSLATED_SCRIPT: 'UNTRANSLATED_SCRIPT',
 	DUPLICATE_VALUE: 'DUPLICATE_VALUE',
+	INCONSISTENT_VALUE: 'INCONSISTENT_VALUE',
 	SURROUNDING_WHITESPACE: 'SURROUNDING_WHITESPACE',
 	INVISIBLE_CHARACTER: 'INVISIBLE_CHARACTER',
 	MISSING_NUMBER: 'MISSING_NUMBER',
@@ -120,6 +121,11 @@ export const CHECK_META: Record<
 		summary: 'Some keys have duplicate values',
 		description: 'Another key in the same locale already uses this value.'
 	},
+	[CHECK_CODE.INCONSISTENT_VALUE]: {
+		level: 'warn',
+		summary: 'Some keys with one shared original are translated differently',
+		description: 'Another key with the same target language value is translated differently here.'
+	},
 	[CHECK_CODE.SURROUNDING_WHITESPACE]: {
 		level: 'warn',
 		summary: 'Some values begin or end with whitespace',
@@ -162,6 +168,7 @@ export const ANALYZE_CHECK_CODES: Chki18nCheckCode[] = [
 	CHECK_CODE.NOT_TRANSLATED_VALUE,
 	CHECK_CODE.UNTRANSLATED_SCRIPT,
 	CHECK_CODE.DUPLICATE_VALUE,
+	CHECK_CODE.INCONSISTENT_VALUE,
 	CHECK_CODE.SURROUNDING_WHITESPACE,
 	CHECK_CODE.INVISIBLE_CHARACTER,
 	CHECK_CODE.MISSING_NUMBER,
@@ -174,7 +181,9 @@ export const ANALYZE_CHECK_CODES: Chki18nCheckCode[] = [
  */
 export const CROSS_KEY_CHECK_CODES: Chki18nCheckCode[] = [
 	CHECK_CODE.DUPLICATE_VALUE,
-	// A language missing from a group is a fact about the whole group.
+	// Two keys have to be seen together for one to be the other's disagreement,
+	// and a language missing from a group is a fact about the whole group.
+	CHECK_CODE.INCONSISTENT_VALUE,
 	CHECK_CODE.NO_LOCALE,
 	// A key can only be seen twice by looking at the whole file, and whether one
 	// is referenced is a fact about the source tree rather than about the key.
