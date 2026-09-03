@@ -18,7 +18,7 @@
 - `chki18n/core`, a subpath that exports the comparison engine on its own. It imports no Node built-in, so it bundles for a browser or an editor's renderer process
 - `checks`, `ignoreChecks`, `levels`, `format`, `exclude` and the interpolation delimiter options, available both as CLI flags and as JavaScript options
 - `--help` and `--version`
-- `reporter`, which decides the shape of the report: `pretty` for a terminal, `list` for one line per issue, `json` for another program to read, and `markdown` for a table. Everything but `pretty` prints the report alone, with no banner, so it can be piped straight into something else
+- `reporter`, which decides the shape of the report: `pretty` for a terminal, `list` for one line per issue, `json` for another program to read, `markdown` for a table, and `github` for the workflow commands GitHub Actions turns into annotations on the translation files themselves. Everything but `pretty` prints the report alone, with no banner, so it can be piped straight into something else
 - `groupBy`, the axis the report groups its issues by: `locale` (the default), `code`, `group`, `file` or `none`
 - `output`, a file the report is written to as well as the terminal. The extension picks the format, an explicit `reporter` overrides it, missing directories are created, and a write that fails is reported as an error and fails the run
 - `color`, and `--no-color` with it. A file written by `output` is never coloured

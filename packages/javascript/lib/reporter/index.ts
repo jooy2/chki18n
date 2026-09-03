@@ -1,5 +1,6 @@
 import { REPORTER } from '../constants.js';
 import { buildReportContext, type Chki18nReportInit } from './context.js';
+import { formatGitHub } from './github.js';
 import { formatList } from './list.js';
 import { formatMarkdown } from './markdown.js';
 import { formatPretty } from './pretty.js';
@@ -39,6 +40,10 @@ export function formatResult(
 
 	if (reporter === REPORTER.MARKDOWN) {
 		return formatMarkdown(context);
+	}
+
+	if (reporter === REPORTER.GITHUB) {
+		return formatGitHub(context);
 	}
 
 	return formatPretty(context);

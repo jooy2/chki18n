@@ -248,7 +248,9 @@ export const REPORTER = {
 	/** The whole result object, for another tool to parse. */
 	JSON: 'json',
 	/** Tables, for pasting into a pull request or a report. */
-	MARKDOWN: 'markdown'
+	MARKDOWN: 'markdown',
+	/** Workflow commands, so GitHub Actions annotates the files themselves. */
+	GITHUB: 'github'
 } as const;
 
 export const DEFAULT_REPORTER = REPORTER.PRETTY;
