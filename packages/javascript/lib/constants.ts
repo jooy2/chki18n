@@ -10,6 +10,7 @@ export const CHECK_CODE = {
 	DUMMY_KEY: 'DUMMY_KEY',
 	DUPLICATE_KEY: 'DUPLICATE_KEY',
 	UNUSED_KEY: 'UNUSED_KEY',
+	UNDEFINED_KEY: 'UNDEFINED_KEY',
 	NO_PLURAL_FORM: 'NO_PLURAL_FORM',
 	KEY_NAMING: 'KEY_NAMING',
 	KEY_DEPTH: 'KEY_DEPTH',
@@ -92,6 +93,11 @@ export const CHECK_META: Record<
 		level: 'warn',
 		summary: 'Some keys are nested deeper than the project allows',
 		description: 'The key has more levels than `maxKeyDepth` allows.'
+	},
+	[CHECK_CODE.UNDEFINED_KEY]: {
+		level: 'warn',
+		summary: 'The scanned source files ask for keys nothing defines',
+		description: 'The source calls for this key and no language file defines it.'
 	},
 	[CHECK_CODE.NO_PLURAL_FORM]: {
 		level: 'warn',
@@ -184,6 +190,7 @@ export const ANALYZE_CHECK_CODES: Chki18nCheckCode[] = [
 	CHECK_CODE.DUMMY_KEY,
 	CHECK_CODE.DUPLICATE_KEY,
 	CHECK_CODE.UNUSED_KEY,
+	CHECK_CODE.UNDEFINED_KEY,
 	CHECK_CODE.NO_PLURAL_FORM,
 	CHECK_CODE.KEY_NAMING,
 	CHECK_CODE.KEY_DEPTH,
@@ -217,7 +224,9 @@ export const CROSS_KEY_CHECK_CODES: Chki18nCheckCode[] = [
 	// is referenced is a fact about the source tree rather than about the key.
 	CHECK_CODE.DUPLICATE_KEY,
 	CHECK_CODE.UNUSED_KEY,
-	// A language needs every form of a plural key before any of them is right.
+	// Whether the source asks for a key is a fact about the source tree, and a
+	// language needs every form of a plural key before any of them is right.
+	CHECK_CODE.UNDEFINED_KEY,
 	CHECK_CODE.NO_PLURAL_FORM
 ];
 
@@ -326,6 +335,13 @@ export const SOURCE_EXTENSIONS = [
 	'mdx',
 	'txt'
 ];
+
+/**
+ * Names a translation call goes by, for the `UNDEFINED_KEY` scan. `t('key')`
+ * covers i18next, react-i18next and vue-i18n, including `i18n.t` and a `t`
+ * bound by `useTranslation`, since a call is matched wherever the name ends.
+ */
+export const TRANSLATION_FUNCTIONS = ['t', '$t', 'translate'];
 
 /** Files above this size are skipped by the unused-key scan. */
 export const SOURCE_MAX_FILE_BYTES = 5 * 1024 * 1024;

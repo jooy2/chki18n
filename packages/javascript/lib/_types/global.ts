@@ -8,6 +8,9 @@ export type Chki18nCheckCode = (typeof CHECK_CODE)[keyof typeof CHECK_CODE];
 /** A plural form a language may need (see `PLURAL_CATEGORIES`). */
 export type Chki18nPluralCategory = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
 
+/** A key the source asks for, and the file that asks for it. */
+export type Chki18nKeyUsage = { key: string; file?: string };
+
 /** Severity of a reported issue. `info` issues never fail a run. */
 export type Chki18nLevel = 'error' | 'warn' | 'info';
 
@@ -122,10 +125,16 @@ export type Chki18nOptions = {
 	/** Directory names skipped while scanning. Replaces the default list. */
 	exclude?: string[] | string;
 	/**
-	 * Directory of source files to search for key usages. Without it the
-	 * `UNUSED_KEY` check has nothing to go on and reports nothing.
+	 * Directory of source files to search for key usages. Without it neither
+	 * `UNUSED_KEY` nor `UNDEFINED_KEY` has anything to go on.
 	 */
 	source?: string;
+	/**
+	 * Names a translation call goes by, which is how `UNDEFINED_KEY` finds the
+	 * keys the source asks for. Replaces the default list rather than adding to
+	 * it. Defaults to `TRANSLATION_FUNCTIONS`.
+	 */
+	translateFunctions?: string[] | string;
 	/**
 	 * Case every segment of a key has to be written in, which is what the
 	 * `KEY_NAMING` check compares against. Unset, that check reports nothing.
@@ -183,6 +192,7 @@ export type Chki18nResolvedOptions = {
 	interpolationSuffix: string;
 	exclude: Set<string>;
 	source: string | null;
+	translateFunctions: string[];
 	keyCase: Chki18nKeyCase | null;
 	maxKeyDepth: number | null;
 	lengthRatio: number | null;
@@ -225,6 +235,12 @@ export type Chki18nInput = {
 	 * application that already knows can pass its own answer.
 	 */
 	unusedKeys?: string[];
+	/**
+	 * Keys the scanned source asks for that no language file defines, as
+	 * `UNDEFINED_KEY` issues. Supplied for the same reason as `unusedKeys`: it is
+	 * a fact about the source tree rather than about the translations.
+	 */
+	undefinedKeys?: Chki18nKeyUsage[];
 };
 
 /** One key of one group, as fed to the incremental `checkEntry`. */

@@ -114,6 +114,7 @@ type CheckFlags = {
 	dummyKey: boolean;
 	duplicateKey: boolean;
 	unusedKey: boolean;
+	undefinedKey: boolean;
 	noPluralForm: boolean;
 	emptyValue: boolean;
 	noInterpolationKey: boolean;
@@ -140,6 +141,7 @@ const buildCheckFlags = (enabled: Set<Chki18nCheckCode>): CheckFlags => ({
 	dummyKey: enabled.has(CHECK_CODE.DUMMY_KEY),
 	duplicateKey: enabled.has(CHECK_CODE.DUPLICATE_KEY),
 	unusedKey: enabled.has(CHECK_CODE.UNUSED_KEY),
+	undefinedKey: enabled.has(CHECK_CODE.UNDEFINED_KEY),
 	noPluralForm: enabled.has(CHECK_CODE.NO_PLURAL_FORM),
 	emptyValue: enabled.has(CHECK_CODE.EMPTY_VALUE),
 	noInterpolationKey: enabled.has(CHECK_CODE.NO_INTERPOLATION_KEY),
@@ -833,6 +835,18 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 		// about the source tree, which the comparison never sees.
 		const unusedKeys =
 			flags.unusedKey && input?.unusedKeys?.length ? new Set(input.unusedKeys) : null;
+
+		if (flags.undefinedKey) {
+			for (const usage of input?.undefinedKeys ?? []) {
+				issues.push(
+					createIssue(CHECK_CODE.UNDEFINED_KEY, {
+						key: usage.key,
+						file: usage.file,
+						message: `The scanned source asks for \`${usage.key}\` and no language file defines it.`
+					})
+				);
+			}
+		}
 		let keyCount = 0;
 
 		for (const group of groupNames) {

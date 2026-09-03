@@ -8,6 +8,7 @@ import {
 	DEFAULT_REPORTER,
 	DEFAULT_TARGET_LOCALE,
 	FILE_FORMAT,
+	TRANSLATION_FUNCTIONS,
 	GROUP_BY,
 	KEY_CASE,
 	REPORTER,
@@ -110,7 +111,14 @@ export const OPTION_DEFINITIONS: {
 		option: 'source',
 		type: 'string',
 		valueName: '<dir>',
-		description: 'Search this directory of source files for key usages (enables `UNUSED_KEY`)'
+		description: 'Source files to read for key usages (enables `UNUSED_KEY` and `UNDEFINED_KEY`)'
+	},
+	{
+		flag: 'translate-functions',
+		option: 'translateFunctions',
+		type: 'list',
+		valueName: '<names>',
+		description: `Comma separated names a translation call goes by (default: \`${TRANSLATION_FUNCTIONS.join('`, `')}\`)`
 	},
 	{
 		flag: 'key-case',
@@ -374,6 +382,7 @@ export function resolveOptions(
 	const interpolationSuffix = raw.interpolationSuffix || DEFAULT_INTERPOLATION_SUFFIX;
 
 	const excludeList = toList(raw.exclude);
+	const translateFunctionList = toList(raw.translateFunctions);
 	const output = raw.output || null;
 
 	/** Reads one of the closed value sets, falling back rather than failing. */
@@ -458,6 +467,8 @@ export function resolveOptions(
 			interpolationSuffix,
 			exclude: new Set(excludeList.length > 0 ? excludeList : DEFAULT_EXCLUDE_DIRS),
 			source: raw.source || null,
+			translateFunctions:
+				translateFunctionList.length > 0 ? translateFunctionList : TRANSLATION_FUNCTIONS,
 			keyCase,
 			maxKeyDepth,
 			lengthRatio,

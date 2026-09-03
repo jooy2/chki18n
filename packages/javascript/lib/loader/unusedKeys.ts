@@ -1,5 +1,6 @@
 /**
- * Which translation keys nothing in the source tree appears to reference.
+ * What the source tree says about the translation keys: which ones nothing
+ * references, and which ones it asks for that nothing defines.
  *
  * The search is for a key's **leaf segment** — `desc.hello` is looked up as
  * `hello` — because code very often resolves a nested key by its last segment
@@ -13,9 +14,9 @@
 
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { SOURCE_EXTENSIONS, SOURCE_MAX_FILE_BYTES } from '../constants.js';
+import { CHECK_CODE, SOURCE_EXTENSIONS, SOURCE_MAX_FILE_BYTES } from '../constants.js';
 import { pluralBaseOf } from '../core/plural.js';
-import type { Chki18nResolvedOptions } from '../_types/global.js';
+import type { Chki18nKeyUsage, Chki18nResolvedOptions } from '../_types/global.js';
 
 const EXTENSIONS = new Set(SOURCE_EXTENSIONS);
 
@@ -42,9 +43,84 @@ const isScannableName = (name: string): boolean => {
 export type Chki18nUsageScan = {
 	/** Keys whose leaf segment was found in no scanned file. */
 	unusedKeys: string[];
+	/** Keys the source asks for that no translation file defines. */
+	undefinedKeys: Chki18nKeyUsage[];
 	/** How many files were actually read. */
 	scannedFileCount: number;
 };
+
+/** A key written as the first argument of a translation call, or as `i18nKey`. */
+const CALL_PATTERNS = (names: string[]): RegExp[] => [
+	new RegExp(
+		`(?:${names.map((name) => `${/^\w/.test(name) ? '\\b' : ''}${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).join('|')})\\s*\\(\\s*(['"\`])([^'"\`\\r\\n]*)\\1`,
+		'g'
+	),
+	/\bi18nKey\s*=\s*\{?\s*(['"`])([^'"`\r\n]*)\1/g
+];
+
+/**
+ * Keys a file asks a translation function for. A template literal holding an
+ * expression is skipped: the key is only known at run time, and guessing at it
+ * would report a working call as broken.
+ */
+function callsIn(content: string, patterns: RegExp[]): Set<string> {
+	const keys = new Set<string>();
+
+	for (const pattern of patterns) {
+		pattern.lastIndex = 0;
+
+		let found = pattern.exec(content);
+
+		while (found) {
+			const key = found[2];
+
+			if (key.length > 0 && !key.includes('${')) {
+				// `t('common:attr.folder')` names a namespace this comparison does
+				// not have, and the key it wants is the part after it.
+				keys.add(key.slice(key.indexOf(':') + 1));
+			}
+
+			found = pattern.exec(content);
+		}
+	}
+
+	return keys;
+}
+
+/**
+ * Every way a defined key can be addressed: in full, by its plural base, and by
+ * any run of segments that ends either. A `t` bound with a `keyPrefix`, or a namespace loaded higher up,
+ * asks for `folder` rather than `attr.folder`, and reporting that as undefined
+ * would cry wolf on working code — the same trade the unused scan makes.
+ */
+function addressesOf(keys: string[]): Set<string> {
+	const addresses = new Set<string>();
+
+	const add = (key: string) => {
+		addresses.add(key);
+
+		let separator = key.indexOf('.');
+
+		while (separator !== -1) {
+			addresses.add(key.slice(separator + 1));
+			separator = key.indexOf('.', separator + 1);
+		}
+	};
+
+	for (const key of keys) {
+		add(key);
+
+		// The source asks for `item`, never for `item_one`: the runtime picks the
+		// form, so the base is an address of the key as much as the key is.
+		const base = pluralBaseOf(key);
+
+		if (base) {
+			add(base);
+		}
+	}
+
+	return addresses;
+}
 
 /**
  * Search `sourcePath` for each key, and report the ones never found.
@@ -77,8 +153,16 @@ export async function findUnusedKeys(
 		}
 	}
 
-	if (keysByLeaf.size < 1) {
-		return { unusedKeys: [], scannedFileCount: 0 };
+	// Only worth reading every file for; the unused scan can stop as soon as the
+	// last leaf turns up, and this one cannot.
+	const wantsUndefined = options.enabledChecks.has(CHECK_CODE.UNDEFINED_KEY);
+	const addresses = wantsUndefined ? addressesOf(keys) : null;
+	const patterns = wantsUndefined ? CALL_PATTERNS(options.translateFunctions) : [];
+	const undefinedKeys: Chki18nKeyUsage[] = [];
+	const reported = new Set<string>();
+
+	if (keysByLeaf.size < 1 && !wantsUndefined) {
+		return { unusedKeys: [], undefinedKeys, scannedFileCount: 0 };
 	}
 
 	// Shrinks as leaves turn up. Searching only what is still missing is what
@@ -89,7 +173,7 @@ export async function findUnusedKeys(
 	let scannedFileCount = 0;
 
 	const walk = async (directory: string): Promise<void> => {
-		if (remaining.size < 1) {
+		if (remaining.size < 1 && !wantsUndefined) {
 			return;
 		}
 
@@ -103,7 +187,7 @@ export async function findUnusedKeys(
 		}
 
 		for (const entry of entries) {
-			if (remaining.size < 1) {
+			if (remaining.size < 1 && !wantsUndefined) {
 				return;
 			}
 
@@ -141,6 +225,19 @@ export async function findUnusedKeys(
 					remaining.delete(leaf);
 				}
 			}
+
+			if (!addresses) {
+				continue;
+			}
+
+			for (const key of callsIn(content, patterns)) {
+				if (addresses.has(key) || reported.has(key)) {
+					continue;
+				}
+
+				reported.add(key);
+				undefinedKeys.push({ key, file: path });
+			}
 		}
 	};
 
@@ -153,5 +250,5 @@ export async function findUnusedKeys(
 		unusedKeys.push(...(keysByLeaf.get(leaf) ?? []));
 	}
 
-	return { unusedKeys, scannedFileCount };
+	return { unusedKeys, undefinedKeys, scannedFileCount };
 }

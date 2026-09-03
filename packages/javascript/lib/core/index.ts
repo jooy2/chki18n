@@ -65,6 +65,7 @@ export type {
 	Chki18nInput,
 	Chki18nIssue,
 	Chki18nKeyCase,
+	Chki18nKeyUsage,
 	Chki18nPluralCategory,
 	Chki18nLevel,
 	Chki18nLevelCount,

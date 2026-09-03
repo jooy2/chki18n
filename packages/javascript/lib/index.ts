@@ -50,14 +50,19 @@ export async function loadTranslations(
 	let skipped: string[] = [];
 
 	/**
-	 * The keys nothing in `source` refers to, or none when no source directory
+	 * What the source tree says about the keys: the ones nothing refers to, and
+	 * the ones it asks for that nothing defines. Empty when no source directory
 	 * was given. The project's own translation files are excluded from the
 	 * search: a key appears verbatim in the file that defines it, which would
 	 * mark every key used.
 	 */
-	const unusedKeysOf = async (groups: TranslationGroups, files: { path: string }[]) => {
-		if (!session.options.source || !session.options.enabledChecks.has(CODES.UNUSED_KEY)) {
-			return [];
+	const usageOf = async (groups: TranslationGroups, files: { path: string }[]) => {
+		const wanted =
+			session.options.enabledChecks.has(CODES.UNUSED_KEY) ||
+			session.options.enabledChecks.has(CODES.UNDEFINED_KEY);
+
+		if (!session.options.source || !wanted) {
+			return { unusedKeys: [], undefinedKeys: [] };
 		}
 
 		const keys = new Set<string>();
@@ -75,7 +80,7 @@ export async function loadTranslations(
 			files.map((file) => file.path)
 		);
 
-		return scan.unusedKeys;
+		return { unusedKeys: scan.unusedKeys, undefinedKeys: scan.undefinedKeys };
 	};
 
 	const reload = async (): Promise<void> => {
@@ -93,6 +98,7 @@ export async function loadTranslations(
 		}
 
 		const scan = await scanTranslationDirectory(scanPath, session.options);
+		const usage = await usageOf(scan.groups, scan.files);
 
 		skipped = scan.skipped;
 		session.reset({
@@ -100,7 +106,8 @@ export async function loadTranslations(
 			files: scan.files,
 			issues: scan.issues,
 			fileFormat: scan.fileFormat,
-			unusedKeys: await unusedKeysOf(scan.groups, scan.files)
+			unusedKeys: usage.unusedKeys,
+			undefinedKeys: usage.undefinedKeys
 		});
 	};
 

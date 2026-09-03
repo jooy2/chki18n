@@ -1,0 +1,6 @@
+{
+	"desc": { "hello": "Hello" },
+	"attr": { "folder": "Folder" },
+	"item_one": "{count} item",
+	"item_other": "{count} items"
+}

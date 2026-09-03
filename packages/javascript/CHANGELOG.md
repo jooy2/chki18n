@@ -19,6 +19,8 @@
 - `INCONSISTENT_VALUE`, for two keys sharing one target language string that a locale translates two different ways. `DUPLICATE_VALUE` asks whether one locale repeats itself; this asks the opposite
 - `KEY_NAMING` and `KEY_DEPTH`, for the shape of a key rather than what it translates to. Both wait for `keyCase` and `maxKeyDepth` to say what the project wants, and are judged once per key rather than once per locale
 - `keyCase` and `maxKeyDepth`, the options those two compare against. `keyCase` accepts the plural and context suffixes an i18n library appends, whatever case the project uses
+- `UNDEFINED_KEY`, the reverse of `UNUSED_KEY` and the more serious of the two: the scanned source calls for a key and no language file defines it. Reads the calls it finds under `source`, and lets through a key built at run time, one reached through a bound prefix, and a plural key asked for by its base
+- `translateFunctions`, the names a translation call goes by. The default covers i18next, react-i18next and vue-i18n
 - `NO_PLURAL_FORM`, for a plural key missing a form its language needs. Which forms a language needs is a fact about the language rather than about the original: English writes two, Russian four, Korean one. The older i18next pairing of a bare key with `_plural` is left as ordinary keys, and a language the table does not cover is never judged
 - `SUSPICIOUS_LENGTH`, reported at `info`, for a value far longer or shorter than the one it translates. Waits for `lengthRatio`, and measures columns rather than characters so a Korean or Japanese value is not short by default
 - `lengthRatio`, the option it compares against

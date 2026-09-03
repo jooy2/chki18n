@@ -1,0 +1,5 @@
+{
+	"desc": { "hello": "안녕하세요" },
+	"attr": { "folder": "폴더" },
+	"item_other": "{count}개"
+}

@@ -4,6 +4,7 @@ import type {
 	Chki18nFileFormat,
 	Chki18nInput,
 	Chki18nIssue,
+	Chki18nKeyUsage,
 	Chki18nOptions,
 	Chki18nResolvedOptions,
 	Chki18nResult,
@@ -64,6 +65,7 @@ export function createSession(input: Chki18nInput, options?: Chki18nOptions): Ch
 	let fileFormat: Chki18nFileFormat | null = null;
 	let sourceIssues: Chki18nIssue[] = [];
 	let unusedKeys: string[] = [];
+	let undefinedKeys: Chki18nKeyUsage[] = [];
 
 	const reset = (next: Chki18nInput): void => {
 		const loadIssues: Chki18nIssue[] = [];
@@ -74,6 +76,7 @@ export function createSession(input: Chki18nInput, options?: Chki18nOptions): Ch
 		fileFormat = next?.fileFormat ?? null;
 		sourceIssues = [...(next?.issues ?? []), ...loadIssues];
 		unusedKeys = next?.unusedKeys ?? [];
+		undefinedKeys = next?.undefinedKeys ?? [];
 
 		const locales = new Set<string>();
 
@@ -188,6 +191,7 @@ export function createSession(input: Chki18nInput, options?: Chki18nOptions): Ch
 				files,
 				issues: sourceIssues,
 				unusedKeys,
+				undefinedKeys,
 				fileFormat: fileFormat ?? undefined
 			}),
 		reset
