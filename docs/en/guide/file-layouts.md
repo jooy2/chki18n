@@ -75,12 +75,35 @@ A locale code is recognised by its base language subtag, so `en`, `en-US`, `pt_B
 Force the answer when you need to:
 
 ```bash
-npx chki18n ./locales --format folder
+chki18n ./locales --format folder
 ```
+
+::: lang js
 
 ```javascript
 await checkTranslationFiles('./locales', { format: 'folder' });
 ```
+
+:::
+
+::: lang dart
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(format: Chki18nFileFormat.folder),
+);
+```
+
+:::
+
+::: lang py
+
+```python
+check_translation_files("./locales", Options(format="folder"))
+```
+
+:::
 
 If a forced layout matches no file, that is reported as an `INVALID_FILE` error rather than passing quietly with nothing checked.
 
@@ -112,12 +135,35 @@ node_modules  dist  build  out  coverage
 Replace that list with your own when the defaults do not fit:
 
 ```bash
-npx chki18n ./locales --exclude tmp,vendor
+chki18n ./locales --exclude tmp,vendor
 ```
+
+::: lang js
 
 ```javascript
 await checkTranslationFiles('./locales', { exclude: ['tmp', 'vendor'] });
 ```
+
+:::
+
+::: lang dart
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(exclude: ['tmp', 'vendor']),
+);
+```
+
+:::
+
+::: lang py
+
+```python
+check_translation_files("./locales", Options(exclude=["tmp", "vendor"]))
+```
+
+:::
 
 Note that `exclude` **replaces** the default list rather than adding to it, so include the defaults you still want.
 

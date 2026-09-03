@@ -3,12 +3,12 @@ layout: home
 
 title: chki18n
 titleTemplate: Check and verify your i18n translation files
-description: Find the missing keys, the empty values and the broken interpolation in your i18n translation files. One check engine for the command line, for CI and for your own JavaScript — fast enough to lint as you type.
+description: Find the missing keys, the empty values and the broken interpolation in your i18n translation files. One check engine for the command line, for CI and for your own code — in JavaScript, Dart or Python, fast enough to lint as you type.
 
 hero:
   name: chki18n
   text: Your translation files, checked
-  tagline: Missing keys, empty values, strings never translated, interpolation that no longer matches. Twenty-five checks over every i18n JSON layout, from the command line or from your own code.
+  tagline: Missing keys, empty values, strings never translated, interpolation that no longer matches. Twenty-five checks over every i18n JSON layout, from the command line or from your own code — in JavaScript, Dart or Python.
   actions:
     - theme: brand
       text: Get started
@@ -32,31 +32,53 @@ features:
     details: One file per locale, one folder per locale, or a single file holding them all. Files that share keys are compared as a group, so errors.json is never confused with common.json.
     link: /guide/file-layouts
     linkText: File layouts
+  - title: Three languages, one library
+    details: JavaScript, Dart and Python packages that run the same checks in the same order and print the same report, byte for byte. Pick the one your project already speaks.
+    link: /guide/getting-started
+    linkText: Getting started
   - title: The CLI and the API are one thing
     details: Every command-line flag is an API option and the other way round, resolved from a single definition. What passes in CI passes in your build script.
     link: /guide/options
     linkText: Options
-  - title: Fast enough to lint as you type
-    details: 5,000 keys across 5 locales compare in about 17ms, and re-checking one edited key takes about 2µs. An editor can validate on every keystroke.
-    link: /api/create-analyzer
-    linkText: createAnalyzer
   - title: Results you can render
     details: Every issue carries its level, its key, its locale and a sentence describing it, so a dashboard or a translation editor can show a result without hard-coding a single string.
     link: /reference/result
     linkText: The result object
   - title: Runs where your app runs
-    details: The comparison engine imports no Node built-in and is published on its own as chki18n/core, so it bundles for a browser or an editor's renderer process.
+    details: The comparison engine reaches no file system and is published on its own, so it bundles for a browser, a Flutter web build or a sandbox with no disk.
     link: /api/core
-    linkText: chki18n/core
+    linkText: The core entry point
 ---
 
 ## What it looks like
 
 Point it at a folder and name the language everything is compared against:
 
+::: lang js
+
 ```bash
 npx chki18n ./locales --target en
 ```
+
+:::
+
+::: lang dart
+
+```bash
+dart pub global activate chki18n
+chki18n ./locales --target en
+```
+
+:::
+
+::: lang py
+
+```bash
+pip install chki18n
+chki18n ./locales --target en
+```
+
+:::
 
 ```text
   Path     ./locales
@@ -83,9 +105,11 @@ npx chki18n ./locales --target en
   FAIL  1 error must be fixed before this passes.
 ```
 
-It exits with `1` when an error level issue was found, so a CI job fails on it.
+It exits with `1` when an error level issue was found, so a CI job fails on it. Every package prints that report, to the column, whichever one you install.
 
-The same run from JavaScript, where the result is an object rather than a page of text:
+The same run from code, where the result is an object rather than a page of text:
+
+::: lang js
 
 ```javascript
 import { checkTranslationFiles } from 'chki18n';
@@ -106,5 +130,58 @@ result.issues[0];
 //   message: 'The key exists in the target language but is missing here.'
 // }
 ```
+
+:::
+
+::: lang dart
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+final result = await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(target: 'en'),
+);
+
+result.success; // false
+result.summary.error; // 1
+result.issues.first;
+// Chki18nIssue(
+//   code: Chki18nCheckCode.noKey,
+//   level: Chki18nLevel.error,
+//   locale: 'ko',
+//   key: 'attr.folder',
+//   group: '',
+//   targetValue: 'Folder',
+//   file: '/project/locales/ko.json',
+//   message: 'The key exists in the target language but is missing here.',
+// )
+```
+
+:::
+
+::: lang py
+
+```python
+from chki18n import Options, check_translation_files
+
+result = check_translation_files("./locales", Options(target="en"))
+
+result.success  # False
+result.summary.error  # 1
+result.issues[0]
+# Issue(
+#     code="NO_KEY",
+#     level="error",
+#     locale="ko",
+#     key="attr.folder",
+#     group="",
+#     target_value="Folder",
+#     file="/project/locales/ko.json",
+#     message="The key exists in the target language but is missing here.",
+# )
+```
+
+:::
 
 Installing it is one page, [Getting started](./guide/getting-started). What each check looks for is on [Checks](./guide/checks), and every option is on [Options](./guide/options).

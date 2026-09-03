@@ -4,7 +4,7 @@ title: API
 
 # API
 
-chki18n has four entry points, and which one you want depends on who owns the translations and how often you check them. They share one comparison engine, one option set and one result shape, so moving between them changes how the data arrives and nothing else.
+chki18n has four entry points, and which one you want depends on who owns the translations and how often you check them. They share one comparison engine, one option set and one result shape, so moving between them changes how the data arrives and nothing else. Every package has all four.
 
 ## Which entry point
 
@@ -15,7 +15,9 @@ chki18n has four entry points, and which one you want depends on who owns the tr
 | Read a directory once, then check it repeatedly | [`loadTranslations`](./load-translations) | once |
 | Your own application owns the values and needs only a verdict | [`createAnalyzer`](./create-analyzer) | no |
 
-The two that do no file system work are also published as [`chki18n/core`](./core), which imports no Node built-in and bundles for a browser or an editor's renderer process.
+The two that do no file system work are also published on their own as <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />, which reaches no file system at all — see [The core entry point](./core).
+
+Every name below is written in its JavaScript spelling. Dart uses the same one; Python is snake_case, so `analyzeTranslations` is `analyze_translations`. [Getting started](/guide/getting-started#how-the-names-map) states that mapping once.
 
 ## Who owns the values
 
@@ -29,11 +31,30 @@ When chki18n _is_ the owner — a script, a watcher, a CI step that checks the s
 
 Beyond the four entry points:
 
-- **Check metadata** — `CHECK_CODE`, `CHECK_META`, `ANALYZE_CHECK_CODES`, `CROSS_KEY_CHECK_CODES`. See [Checks](/guide/checks).
+- **Check metadata** — <Lang js="CHECK_CODE" dart="Chki18nCheckCode" py="CHECK_CODES" code />, `CHECK_META`, `ANALYZE_CHECK_CODES`, `CROSS_KEY_CHECK_CODES`. See [Checks](/guide/checks).
 - **Result helpers** — `groupIssuesByCode`, `summarizeIssues`, `createIssue`, `buildResult`. See [The result object](/reference/result).
-- **Options** — `resolveOptions`, `argsToOptions`, `buildUsageText`, `OPTION_DEFINITIONS`. See [Options](/guide/options).
-- **Defaults** — `DEFAULT_TARGET_LOCALE`, `DEFAULT_EXCLUDE_DIRS`, `DEFAULT_INTERPOLATION_PREFIX`, `DEFAULT_INTERPOLATION_SUFFIX`, `FILE_FORMAT`.
+- **Options** — `resolveOptions`, <Lang js="argsToOptions" dart="optionsFromArgs" py="options_from_args" code />, `buildUsageText`, `OPTION_DEFINITIONS`. See [Options](/guide/options).
+- **Defaults** — `DEFAULT_TARGET_LOCALE`, `DEFAULT_EXCLUDE_DIRS`, `DEFAULT_INTERPOLATION_PREFIX`, `DEFAULT_INTERPOLATION_SUFFIX`, <Lang js="FILE_FORMAT" dart="Chki18nFileFormat" py="FILE_FORMATS" code />.
+- **Reporting** — `formatResult`, `groupIssues`, `displayWidth`, `padTo`, `truncate`. See [Options](/guide/options#reporter).
 - **Utilities** — `isLocaleCode`, `extractInterpolationKeys`, `scanTranslationDirectory`.
 - **Sessions** — `createSession`, for translations you pass in rather than a directory.
 
-Every type is exported too: `Chki18nOptions`, `Chki18nResult`, `Chki18nIssue`, `Chki18nSummary`, `Chki18nEntry`, `Chki18nSession` and the rest.
+Every type is exported too.
+
+::: lang js
+
+`Chki18nOptions`, `Chki18nResult`, `Chki18nIssue`, `Chki18nSummary`, `Chki18nEntry`, `Chki18nSession` and the rest.
+
+:::
+
+::: lang dart
+
+`Chki18nOptions`, `Chki18nResult`, `Chki18nIssue`, `Chki18nSummary`, `Chki18nEntry`, `Chki18nSession` and the rest. Dart prefixes every public type, so a name never collides with something in the importing library.
+
+:::
+
+::: lang py
+
+`Options`, `Result`, `Issue`, `Summary`, `Entry`, `Session` and the rest. Python does not prefix them, because `chki18n.Result` already says which library it belongs to.
+
+:::

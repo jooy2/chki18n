@@ -6,20 +6,60 @@ title: Command line
 
 The `chki18n` command checks a folder of translation files and prints what is wrong with them. It exits with `1` when it finds an error level issue, which is what makes it useful in a CI job or a pre-commit hook.
 
+Every package ships the same command, with the same flags and the same output. Only getting it onto your path differs.
+
+::: lang js
+
+```bash
+# Run it without installing anything, which is what CI usually wants.
+npx chki18n ./locales --target en
+
+# Or install it, and the command is `chki18n`.
+npm install chki18n
+```
+
+:::
+
+::: lang dart
+
+```bash
+# Install the command once and it is on your path.
+dart pub global activate chki18n
+
+# Inside a project that already depends on it, without installing globally.
+dart run chki18n ./locales --target en
+```
+
+:::
+
+::: lang py
+
+```bash
+# Run it without installing anything, which is what CI usually wants.
+pipx run chki18n ./locales --target en
+
+# Or install it, and the command is `chki18n`.
+pip install chki18n
+```
+
+:::
+
+The rest of this page writes the command as `chki18n`.
+
 ## Usage
 
 ```bash
-npx chki18n [options] <targetDirectory>
+chki18n [options] <targetDirectory>
 ```
 
 The directory can be given as a bare argument or with `--path`; the two mean the same thing. A relative path is resolved against the current working directory.
 
 ```bash
-npx chki18n ./locales
+chki18n ./locales
 ```
 
 ```bash
-npx chki18n --path ./locales --target en
+chki18n --path ./locales --target en
 ```
 
 ## Flags
@@ -51,7 +91,7 @@ npx chki18n --path ./locales --target en
   --version                       Show the installed version
 ```
 
-Every flag is also an API option with the same name in camelCase — `--ignore-checks` is `ignoreChecks` — because both are resolved from one definition. [Options](./options) documents them once, for both sides.
+Every flag is also an API option with the same name — `--ignore-checks` is <Lang js="ignoreChecks" dart="ignoreChecks" py="ignore_checks" code /> — because both are resolved from one definition. [Options](./options) documents them once, for both sides.
 
 ## Reading the output
 
@@ -105,7 +145,7 @@ The summary answers the question the grouping left open: sections are per langua
 | `github`   | Workflow commands, so GitHub Actions annotates the files themselves.  |
 
 ```bash
-npx chki18n ./locales --target en --reporter list
+chki18n ./locales --target en --reporter list
 ```
 
 ```text
@@ -119,7 +159,7 @@ Found 2 errors, 3 warnings. Compared 5 keys across 3 locales in 1 group. (3ms)
 Anything other than `pretty` prints the report and nothing else — no banner and no progress lines — so it can be piped straight into another program:
 
 ```bash
-npx chki18n ./locales --target en --reporter json > report.json
+chki18n ./locales --target en --reporter json > report.json
 ```
 
 `--debug` writes to standard error rather than standard output, so it never lands in a piped report.
@@ -131,7 +171,7 @@ The report is laid out to the terminal's own width, or to what `COLUMNS` says wh
 `--width` overrides all of it, and is not capped:
 
 ```bash
-npx chki18n ./locales --width 72
+chki18n ./locales --width 72
 ```
 
 Descriptions wrap rather than being cut short, so a narrow terminal loses no wording. A file written by `--output` ignores the terminal entirely and uses a fixed width, unless `--width` says otherwise.
@@ -149,7 +189,7 @@ Descriptions wrap rather than being cut short, so a narrow terminal loses no wor
 | `none`   | Nothing. One list.                                |
 
 ```bash
-npx chki18n ./locales --target en --group-by code
+chki18n ./locales --target en --group-by code
 ```
 
 Sections are ordered worst first: those with an error, then those with only warnings, then the rest. Within a section the same order applies, then the check order, then the key. Two runs over unchanged files print the same lines in the same places, which is what makes a saved report worth diffing.
@@ -161,7 +201,7 @@ Sections are ordered worst first: those with an error, then those with only warn
 `--output` writes the report to a file as well as to the terminal. The extension picks the format: `.json` and `.md` have one of their own, and anything else is written as plain text.
 
 ```bash
-npx chki18n ./locales --target en --output translation-report.md
+chki18n ./locales --target en --output translation-report.md
 ```
 
 Missing directories are created. The file never contains colour codes, and it is laid out to a fixed width rather than to the terminal's, so the same run produces the same file anywhere.
@@ -169,7 +209,7 @@ Missing directories are created. The file never contains colour codes, and it is
 `--reporter` wins when both are given, which is how you keep one format on screen and another on disk — or force a format the extension does not imply:
 
 ```bash
-npx chki18n ./locales --target en --output report.txt --reporter list
+chki18n ./locales --target en --output report.txt --reporter list
 ```
 
 A report that could not be written is an error like any other, so the run fails rather than reporting a file that is not there.
@@ -184,37 +224,62 @@ A report that could not be written is an error like any other, so the run fails 
 Warnings never fail the run. If your project treats one of them as a blocker, promote it with `--levels`:
 
 ```bash
-npx chki18n ./locales --target en --levels EMPTY_VALUE=error
+chki18n ./locales --target en --levels EMPTY_VALUE=error
 ```
 
 ## In CI
 
 A GitHub Actions step is one line:
 
+::: lang js
+
 ```yaml
 - name: Check translations
   run: npx chki18n ./locales --target en
 ```
 
-To keep the job green while you work through the warnings, narrow it to the checks you have already fixed:
+:::
+
+::: lang dart
 
 ```yaml
+- uses: dart-lang/setup-dart@v1
 - name: Check translations
-  run: npx chki18n ./locales --target en --checks NO_KEY,NO_INTERPOLATION_KEY
+  run: |
+    dart pub global activate chki18n
+    chki18n ./locales --target en
+```
+
+:::
+
+::: lang py
+
+```yaml
+- uses: actions/setup-python@v5
+- name: Check translations
+  run: |
+    pip install chki18n
+    chki18n ./locales --target en
+```
+
+:::
+
+To keep the job green while you work through the warnings, narrow it to the checks you have already fixed:
+
+```bash
+chki18n ./locales --target en --checks NO_KEY,NO_INTERPOLATION_KEY
 ```
 
 Or the other way round — everything except the noisy one:
 
-```yaml
-- name: Check translations
-  run: npx chki18n ./locales --target en --ignore-checks DUPLICATE_VALUE
+```bash
+chki18n ./locales --target en --ignore-checks DUPLICATE_VALUE
 ```
 
 `--reporter github` turns each finding into a workflow command, which GitHub shows as an annotation on the translation file itself rather than as a line in a log:
 
-```yaml
-- name: Check translations
-  run: npx chki18n ./locales --target en --reporter github
+```bash
+chki18n ./locales --target en --reporter github
 ```
 
 ```text
@@ -226,16 +291,15 @@ An `error` becomes an error annotation, a `warn` a warning and an `info` a notic
 
 The Markdown report is what a job summary wants:
 
-```yaml
-- name: Check translations
-  run: npx chki18n ./locales --target en --output "$GITHUB_STEP_SUMMARY" --reporter markdown
+```bash
+chki18n ./locales --target en --output "$GITHUB_STEP_SUMMARY" --reporter markdown
 ```
 
 To keep the result after the job is gone, write it out and upload it:
 
 ```yaml
 - name: Check translations
-  run: npx chki18n ./locales --target en --output translation-report.md
+  run: chki18n ./locales --target en --output translation-report.md
 - uses: actions/upload-artifact@v4
   if: always()
   with:
@@ -247,7 +311,7 @@ To keep the result after the job is gone, write it out and upload it:
 
 ```bash
 #!/bin/sh
-npx chki18n ./locales --target en --no-info || exit 1
+chki18n ./locales --target en --no-info || exit 1
 ```
 
 `--no-info` drops the heading block and the summary and leaves the issues, which is what you want in a hook that should be quiet when everything passes. `--no-warn` goes further and leaves only what fails the run; the report says how many issues it hid.
@@ -257,7 +321,7 @@ npx chki18n ./locales --target en --no-info || exit 1
 `--debug` prints the resolved options, the layout that was detected, and every file that was read but did not belong to a locale:
 
 ```bash
-npx chki18n ./locales --debug
+chki18n ./locales --debug
 ```
 
 If the answer is that no file matched, the layout is usually the reason — see [File layouts](./file-layouts), and force one with `--format`.

@@ -115,7 +115,7 @@ A file that could not be read, was empty, did not parse as JSON, or — when a l
 The key is defined but its value is `""`. Often a placeholder someone left for later, which is exactly the thing that ships by accident. It is a warning by default; promote it if your project treats an empty string as a missing translation:
 
 ```bash
-npx chki18n ./locales --levels EMPTY_VALUE=error
+chki18n ./locales --levels EMPTY_VALUE=error
 ```
 
 ### `NOT_TRANSLATED_VALUE`
@@ -132,7 +132,7 @@ The value is byte-for-byte identical to the target language's. Either the transl
 If your project has many legitimately identical strings, switching it off is reasonable:
 
 ```bash
-npx chki18n ./locales --ignore-checks NOT_TRANSLATED_VALUE
+chki18n ./locales --ignore-checks NOT_TRANSLATED_VALUE
 ```
 
 ### `SURROUNDING_WHITESPACE`
@@ -238,7 +238,7 @@ A zero width space, a byte order mark, a bidirectional control, or a non-breakin
 A value far longer or shorter than the one it translates, which is what a truncated string or a pasted paragraph looks like. `lengthRatio` says how far is too far: `4` reports anything under a quarter or over four times the original.
 
 ```bash
-npx chki18n ./locales --length-ratio 3
+chki18n ./locales --length-ratio 3
 ```
 
 Lengths are counted in columns rather than characters, so Korean and Japanese are not short by default. Originals under eight columns are skipped, because a ratio says nothing about `OK`. Reported at `info`: languages differ in length honestly, and this is a prompt to look rather than a defect.
@@ -250,12 +250,35 @@ Lengths are counted in columns rather than characters, so Korean and Japanese ar
 Nothing in your source files appears to reference this key. Off unless you point chki18n at the sources to search:
 
 ```bash
-npx chki18n ./locales --target en --source ./src
+chki18n ./locales --target en --source ./src
 ```
+
+::: lang js
 
 ```javascript
 await checkTranslationFiles('./locales', { target: 'en', source: './src' });
 ```
+
+:::
+
+::: lang dart
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(target: 'en', source: './src'),
+);
+```
+
+:::
+
+::: lang py
+
+```python
+check_translation_files("./locales", Options(target="en", source="./src"))
+```
+
+:::
 
 The search is for a key's **leaf segment** — `desc.hello` is looked up as `hello` — because code so often resolves a nested key by its last segment alone, through a scoped `t('hello')` or a namespace bound higher up. Matching the whole dotted key would report working code as unused, which is the worse mistake of the two.
 
@@ -265,9 +288,34 @@ The project's own translation files are never searched — a key appears verbati
 
 If you already know the answer — an editor that has scanned the project itself — hand it over instead of having it worked out again:
 
+::: lang js
+
 ```javascript
 analyzeTranslations({ locales, unusedKeys: ['desc.orphan'] }, { target: 'en' });
 ```
+
+:::
+
+::: lang dart
+
+```dart
+analyzeTranslations(
+  Chki18nInput(locales: locales, unusedKeys: const ['desc.orphan']),
+  options: const Chki18nOptions(target: 'en'),
+);
+```
+
+:::
+
+::: lang py
+
+```python
+analyze_translations(
+    Input(locales=locales, unused_keys=["desc.orphan"]), Options(target="en")
+)
+```
+
+:::
 
 ### `UNDEFINED_KEY`
 
@@ -325,7 +373,7 @@ Both are off until you say what the project wants, because a key's shape has no 
 `keyCase` names the case every segment of a key has to be written in: `kebab`, `camel` or `snake`.
 
 ```bash
-npx chki18n ./locales --key-case kebab
+chki18n ./locales --key-case kebab
 ```
 
 ```text
@@ -341,7 +389,7 @@ A key is reported once however many of its parts are wrong. Naming the second on
 `maxKeyDepth` is how many levels a key may be nested. `2` allows `attr.folder` and reports `attr.folder.name`.
 
 ```bash
-npx chki18n ./locales --max-key-depth 2
+chki18n ./locales --max-key-depth 2
 ```
 
 ```text
@@ -396,8 +444,10 @@ A placeholder that is missing outright, or that the target language does not hav
 The default delimiters are `{` and `}`. If your project uses `{{ }}`, say so — otherwise every placeholder goes unrecognised and both interpolation checks silently pass:
 
 ```bash
-npx chki18n ./locales --interpolation-prefix "{{" --interpolation-suffix "}}"
+chki18n ./locales --interpolation-prefix "{{" --interpolation-suffix "}}"
 ```
+
+::: lang js
 
 ```javascript
 await checkTranslationFiles('./locales', {
@@ -406,18 +456,41 @@ await checkTranslationFiles('./locales', {
 });
 ```
 
+:::
+
+::: lang dart
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(interpolationPrefix: '{{', interpolationSuffix: '}}'),
+);
+```
+
+:::
+
+::: lang py
+
+```python
+check_translation_files(
+    "./locales", Options(interpolation_prefix="{{", interpolation_suffix="}}")
+)
+```
+
+:::
+
 ## Choosing which checks run
 
 Run only some of them:
 
 ```bash
-npx chki18n ./locales --checks NO_KEY,NO_INTERPOLATION_KEY
+chki18n ./locales --checks NO_KEY,NO_INTERPOLATION_KEY
 ```
 
 Or everything except some:
 
 ```bash
-npx chki18n ./locales --ignore-checks DUPLICATE_VALUE,MISSING_NUMBER
+chki18n ./locales --ignore-checks DUPLICATE_VALUE,MISSING_NUMBER
 ```
 
 The two cannot be combined — `checks` wins and `ignoreChecks` is reported as ignored. `INVALID_FILE` and `INVALID_OPTIONS` are not in either list: they report how the run itself went and cannot be switched off.
@@ -427,8 +500,10 @@ The two cannot be combined — `checks` wins and `ignoreChecks` is reported as i
 Every comparison check can be re-graded, which is how a project decides for itself what blocks a build:
 
 ```bash
-npx chki18n ./locales --levels EMPTY_VALUE=error,DUPLICATE_VALUE=info
+chki18n ./locales --levels EMPTY_VALUE=error,DUPLICATE_VALUE=info
 ```
+
+::: lang js
 
 ```javascript
 await checkTranslationFiles('./locales', {
@@ -436,11 +511,42 @@ await checkTranslationFiles('./locales', {
 });
 ```
 
+:::
+
+::: lang dart
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(
+    levels: {
+      Chki18nCheckCode.emptyValue: Chki18nLevel.error,
+      Chki18nCheckCode.duplicateValue: Chki18nLevel.info,
+    },
+  ),
+);
+```
+
+:::
+
+::: lang py
+
+```python
+check_translation_files(
+    "./locales",
+    Options(levels={"EMPTY_VALUE": "error", "DUPLICATE_VALUE": "info"}),
+)
+```
+
+:::
+
 Levels are `error`, `warn` and `info`. Only `error` fails a run, so demoting a check to `info` keeps it in the report without blocking anything. `INVALID_FILE` and `INVALID_OPTIONS` cannot be re-graded.
 
 ## Reading the codes from code
 
 The codes and their metadata are exported, so a user interface never has to hard-code a string:
+
+::: lang js
 
 ```javascript
 import { ANALYZE_CHECK_CODES, CHECK_CODE, CHECK_META } from 'chki18n';
@@ -454,5 +560,41 @@ CHECK_META[CHECK_CODE.NO_KEY];
 
 ANALYZE_CHECK_CODES; // every code that compares translations, in report order
 ```
+
+:::
+
+::: lang dart
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+checkMeta[Chki18nCheckCode.noKey];
+// Chki18nCheckMeta(
+//   level: Chki18nLevel.error,
+//   summary: 'Some translation files did not include the following keys',
+//   description: 'The key exists in the target language but is missing here.',
+// )
+
+analyzeCheckCodes; // every code that compares translations, in report order
+```
+
+:::
+
+::: lang py
+
+```python
+from chki18n import ANALYZE_CHECK_CODES, CHECK_META
+
+CHECK_META["NO_KEY"]
+# CheckMeta(
+#     level="error",
+#     summary="Some translation files did not include the following keys",
+#     description="The key exists in the target language but is missing here.",
+# )
+
+ANALYZE_CHECK_CODES  # every code that compares translations, in report order
+```
+
+:::
 
 `summary` is the heading for a list of occurrences; `description` describes one. See [The result object](/reference/result) for how they fit together.
