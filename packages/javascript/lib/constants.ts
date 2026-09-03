@@ -1,4 +1,4 @@
-import type { Chki18nCheckCode, Chki18nLevel } from './_types/global.js';
+import type { Chki18nCheckCode, Chki18nLevel, Chki18nReporter } from './_types/global.js';
 
 export const CHECK_CODE = {
 	UNKNOWN: 'UNKNOWN',
@@ -268,6 +268,16 @@ export const GROUP_BY = {
 } as const;
 
 export const DEFAULT_GROUP_BY = GROUP_BY.LOCALE;
+
+/**
+ * The reporter an `output` file name implies. Anything not listed here is
+ * treated as plain text and gets the default reporter without its colours.
+ */
+export const REPORTER_BY_EXTENSION: Record<string, Chki18nReporter> = {
+	json: REPORTER.JSON,
+	md: REPORTER.MARKDOWN,
+	markdown: REPORTER.MARKDOWN
+};
 
 /** Width a report is laid out at when the terminal does not report its own. */
 export const DEFAULT_REPORT_WIDTH = 96;

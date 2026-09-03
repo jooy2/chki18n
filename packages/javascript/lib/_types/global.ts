@@ -126,6 +126,12 @@ export type Chki18nOptions = {
 	reporter?: Chki18nReporter;
 	/** Axis the report groups its issues by. Default `locale`. */
 	groupBy?: Chki18nGroupBy;
+	/**
+	 * Also write the report to this file. The extension picks the reporter —
+	 * `.json` and `.md` have one of their own, anything else gets plain text —
+	 * unless `reporter` names one, which always wins.
+	 */
+	output?: string;
 	/** Colour the console report. Default `true` where the terminal allows it. */
 	color?: boolean;
 	/** Print progress and results to the console. Default `false`. */
@@ -152,6 +158,9 @@ export type Chki18nResolvedOptions = {
 	source: string | null;
 	reporter: Chki18nReporter;
 	groupBy: Chki18nGroupBy;
+	output: string | null;
+	/** Reporter the `output` file gets. `null` when nothing is written. */
+	outputReporter: Chki18nReporter | null;
 	color: boolean;
 	flattened: boolean;
 	verbose: boolean;

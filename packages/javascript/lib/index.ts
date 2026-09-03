@@ -1,15 +1,23 @@
-import { resolve } from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { objToPrettyStr } from 'qsu';
 import { CHECK_CODE } from './constants.js';
 import { collectFlatKeys } from './core/duplicate.js';
 import { createIssue } from './core/issue.js';
+import { buildResult } from './core/result.js';
 import { createSession, type Chki18nSession } from './core/session.js';
 import { scanTranslationDirectory } from './loader/scan.js';
 import { findUnusedKeys } from './loader/unusedKeys.js';
 import { createLogger } from './logger.js';
 import { formatResult } from './reporter/index.js';
 import { CHECK_CODE as CODES } from './constants.js';
-import type { Chki18nOptions, Chki18nResult, TranslationGroups } from './_types/global.js';
+import type {
+	Chki18nIssue,
+	Chki18nOptions,
+	Chki18nResolvedOptions,
+	Chki18nResult,
+	TranslationGroups
+} from './_types/global.js';
 
 export type Chki18nFileSession = Chki18nSession & {
 	/** Absolute path the translations were read from. */
@@ -108,6 +116,42 @@ export async function loadTranslations(
 }
 
 /**
+ * Write the report to the file `output` names, creating the directory it sits
+ * in when it is not there yet. A write that fails comes back as an issue rather
+ * than as an exception, so a report that never reached the disk cannot be
+ * mistaken for one that did.
+ */
+async function writeReport(
+	result: Chki18nResult,
+	options: Chki18nResolvedOptions
+): Promise<Chki18nIssue | null> {
+	if (!options.output || !options.outputReporter) {
+		return null;
+	}
+
+	const file = resolve(options.output);
+	// A saved report is read later, by someone who no longer has the terminal
+	// that produced it: no escape codes, and a fixed width.
+	const text = formatResult(result, options, {
+		reporter: options.outputReporter,
+		color: false,
+		cwd: process.cwd()
+	});
+
+	try {
+		await mkdir(dirname(file), { recursive: true });
+		await writeFile(file, `${text}\n`, { encoding: 'utf-8' });
+	} catch (error) {
+		return createIssue(CHECK_CODE.INVALID_OPTIONS, {
+			level: 'error',
+			message: `The report could not be written to \`${options.output}\`: ${(error as Error).message}`
+		});
+	}
+
+	return null;
+}
+
+/**
  * Read a directory of translation files and compare every language against the
  * target language, in one call.
  *
@@ -137,7 +181,13 @@ export async function checkTranslationFiles(
 	}
 
 	// The session times its own comparison; this call also paid for the scan.
-	const result = { ...session.analyze(), elapsedMs: Date.now() - startedAt };
+	const analysis = { ...session.analyze(), elapsedMs: Date.now() - startedAt };
+	const failedWrite = await writeReport(analysis, session.options);
+	// A report that could not be saved is a failure of the run, so it joins the
+	// issues instead of being mentioned once and forgotten.
+	const result = failedWrite
+		? buildResult([...analysis.issues, failedWrite], session.options, analysis)
+		: analysis;
 
 	if (session.options.verbose) {
 		console.log(

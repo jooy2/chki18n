@@ -21,7 +21,8 @@ export {
 	DEFAULT_TARGET_LOCALE,
 	FILE_FORMAT,
 	GROUP_BY,
-	REPORTER
+	REPORTER,
+	REPORTER_BY_EXTENSION
 } from '../constants.js';
 export { analyzeTranslations, createAnalyzer } from './analyzer.js';
 export type { Chki18nAnalyzer } from './analyzer.js';
@@ -32,7 +33,13 @@ export { buildResult } from './result.js';
 export { createSession } from './session.js';
 export type { Chki18nSession } from './session.js';
 export { isLocaleCode } from './locale.js';
-export { argsToOptions, buildUsageText, OPTION_DEFINITIONS, resolveOptions } from '../options.js';
+export {
+	argsToOptions,
+	buildUsageText,
+	OPTION_DEFINITIONS,
+	reporterOfFileName,
+	resolveOptions
+} from '../options.js';
 export type {
 	Chki18nCheckCode,
 	Chki18nEntry,

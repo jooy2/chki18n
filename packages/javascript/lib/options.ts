@@ -9,7 +9,8 @@ import {
 	DEFAULT_TARGET_LOCALE,
 	FILE_FORMAT,
 	GROUP_BY,
-	REPORTER
+	REPORTER,
+	REPORTER_BY_EXTENSION
 } from './constants.js';
 import { createIssue } from './core/issue.js';
 import type {
@@ -124,6 +125,13 @@ export const OPTION_DEFINITIONS: {
 		description: `Group the reported issues by \`${Object.values(GROUP_BY).join('`, `')}\``
 	},
 	{
+		flag: 'output',
+		option: 'output',
+		type: 'string',
+		valueName: '<file>',
+		description: 'Also write the report to this file, in the format its extension implies'
+	},
+	{
 		flag: 'no-color',
 		option: 'color',
 		type: 'boolean',
@@ -174,6 +182,17 @@ const LEVEL_VALUES = new Set<string>(['error', 'warn', 'info']);
 const REPORTER_VALUES = new Set<string>(Object.values(REPORTER));
 
 const GROUP_BY_VALUES = new Set<string>(Object.values(GROUP_BY));
+
+/**
+ * The reporter a file name asks for. A `.json` or a `.md` report has a shape of
+ * its own; anything else is read as plain text and gets the default reporter
+ * without its colours.
+ */
+export function reporterOfFileName(fileName: string): Chki18nReporter {
+	const extension = fileName.split('.').pop()?.toLowerCase() ?? '';
+
+	return REPORTER_BY_EXTENSION[extension] ?? DEFAULT_REPORTER;
+}
 
 /**
  * Read raw CLI arguments (as produced by minimist) into the option shape shared
@@ -323,6 +342,7 @@ export function resolveOptions(
 	const interpolationSuffix = raw.interpolationSuffix || DEFAULT_INTERPOLATION_SUFFIX;
 
 	const excludeList = toList(raw.exclude);
+	const output = raw.output || null;
 
 	/** Reads one of the closed value sets, falling back rather than failing. */
 	const readChoice = <T extends string>(
@@ -371,6 +391,11 @@ export function resolveOptions(
 				DEFAULT_GROUP_BY,
 				'groupBy'
 			),
+			output,
+			// An explicit `reporter` always wins, so `--reporter list --output
+			// out.txt` writes a list. Without one the file name decides, which is
+			// what makes `--output report.json` do the obvious thing on its own.
+			outputReporter: output ? (raw.reporter ? reporter : reporterOfFileName(output)) : null,
 			color: raw.color !== false,
 			flattened: raw.flattened === true,
 			verbose: raw.verbose === true,
