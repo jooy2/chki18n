@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { objToPrettyStr } from 'qsu';
-import { CHECK_CODE } from './constants.js';
+import { CHECK_CODE, MAX_MEASURED_REPORT_WIDTH } from './constants.js';
 import { collectFlatKeys } from './core/duplicate.js';
 import { createIssue } from './core/issue.js';
 import { buildResult } from './core/result.js';
@@ -116,6 +116,25 @@ export async function loadTranslations(
 }
 
 /**
+ * Columns the console report lays itself out to: what `width` asked for, else
+ * the terminal's own width, else what `COLUMNS` says — a CI runner often sets
+ * that where there is no terminal to measure. A measured width is capped, since
+ * a very wide terminal would put the counts too far from the labels for the two
+ * to read as one line. `undefined` leaves the reporter on its own default.
+ */
+function consoleWidth(options: Chki18nResolvedOptions): number | undefined {
+	if (options.width) {
+		return options.width;
+	}
+
+	const measured = process.stdout.columns || Number(process.env.COLUMNS);
+
+	return Number.isFinite(measured) && measured > 0
+		? Math.min(measured, MAX_MEASURED_REPORT_WIDTH)
+		: undefined;
+}
+
+/**
  * Write the report to the file `output` names, creating the directory it sits
  * in when it is not there yet. A write that fails comes back as an issue rather
  * than as an exception, so a report that never reached the disk cannot be
@@ -135,6 +154,9 @@ async function writeReport(
 	const text = formatResult(result, options, {
 		reporter: options.outputReporter,
 		color: false,
+		// Not the terminal's width: the same run has to produce the same file
+		// wherever it is run from.
+		width: options.width ?? undefined,
 		cwd: process.cwd()
 	});
 
@@ -192,7 +214,7 @@ export async function checkTranslationFiles(
 	if (session.options.verbose) {
 		console.log(
 			formatResult(result, session.options, {
-				width: process.stdout.columns,
+				width: consoleWidth(session.options),
 				cwd: process.cwd()
 			})
 		);

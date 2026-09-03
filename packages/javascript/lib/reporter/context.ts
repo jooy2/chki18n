@@ -42,9 +42,13 @@ export type Chki18nReportInit = {
 	cwd?: string;
 };
 
-const MIN_WIDTH = 48;
+/**
+ * Sanity bounds only. The caller decides the width; these keep a wrong answer
+ * from producing a report with no room for a key or one nothing can display.
+ */
+const MIN_WIDTH = 40;
 
-const MAX_WIDTH = 120;
+const MAX_WIDTH = 400;
 
 export function buildReportContext(
 	result: Chki18nResult,

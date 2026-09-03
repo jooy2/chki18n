@@ -13,7 +13,8 @@ import {
 	scopeSentence,
 	truncate,
 	truncateStart,
-	widestOf
+	widestOf,
+	wrap
 } from './text.js';
 import type { Chki18nReportContext } from './context.js';
 import type { Chki18nIssue, Chki18nLevelCount } from '../_types/global.js';
@@ -100,7 +101,11 @@ function itemLines(
 		if (!row.key) {
 			// A bad option or an unreadable file has no key to name; the message is
 			// the whole finding.
-			lines.push(`${INDENT_ITEM}${paint.value(truncate(row.issue.message, width - 4))}`);
+			lines.push(
+				...wrap(row.issue.message, width - INDENT_ITEM.length).map(
+					(line) => `${INDENT_ITEM}${paint.value(line)}`
+				)
+			);
 			continue;
 		}
 
@@ -115,7 +120,9 @@ function itemLines(
 
 		if (row.detail) {
 			lines.push(
-				`${INDENT_DETAIL}${paint.dim(truncate(row.detail, Math.max(24, width - INDENT_DETAIL.length)))}`
+				...wrap(row.detail, width - INDENT_DETAIL.length).map(
+					(line) => `${INDENT_DETAIL}${paint.dim(line)}`
+				)
 			);
 		}
 	}
@@ -138,7 +145,9 @@ function descriptionLine(
 		return [];
 	}
 
-	return [`${indent}${context.paint.dim(description)}`];
+	return wrap(description, context.width - indent.length).map(
+		(line) => `${indent}${context.paint.dim(line)}`
+	);
 }
 
 /** The column every key in a section lines up to, however it is sub-grouped. */

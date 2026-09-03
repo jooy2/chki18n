@@ -134,6 +134,11 @@ export type Chki18nOptions = {
 	output?: string;
 	/** Colour the console report. Default `true` where the terminal allows it. */
 	color?: boolean;
+	/**
+	 * Columns to lay the report out to. Defaults to the terminal's own width,
+	 * then to `COLUMNS`, then to `DEFAULT_REPORT_WIDTH`.
+	 */
+	width?: number | string;
 	/** Print progress and results to the console. Default `false`. */
 	verbose?: boolean;
 	/** Print info level log lines. Only meaningful with `verbose`. */
@@ -162,6 +167,8 @@ export type Chki18nResolvedOptions = {
 	/** Reporter the `output` file gets. `null` when nothing is written. */
 	outputReporter: Chki18nReporter | null;
 	color: boolean;
+	/** Columns asked for, or `null` to measure the terminal instead. */
+	width: number | null;
 	flattened: boolean;
 	verbose: boolean;
 	info: boolean;

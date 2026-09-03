@@ -132,6 +132,13 @@ export const OPTION_DEFINITIONS: {
 		description: 'Also write the report to this file, in the format its extension implies'
 	},
 	{
+		flag: 'width',
+		option: 'width',
+		type: 'string',
+		valueName: '<columns>',
+		description: 'Lay the report out to this many columns instead of measuring the terminal'
+	},
+	{
 		flag: 'no-color',
 		option: 'color',
 		type: 'boolean',
@@ -373,6 +380,18 @@ export function resolveOptions(
 		'reporter'
 	);
 
+	let width: number | null = null;
+
+	if (raw.width !== undefined && raw.width !== null && raw.width !== '') {
+		const columns = Number(raw.width);
+
+		if (!Number.isFinite(columns) || columns < 1) {
+			invalid(`\`${raw.width}\` is not a column count. Measuring the terminal instead.`);
+		} else {
+			width = Math.floor(columns);
+		}
+	}
+
 	return {
 		options: {
 			path: raw.path || null,
@@ -397,6 +416,7 @@ export function resolveOptions(
 			// what makes `--output report.json` do the obvious thing on its own.
 			outputReporter: output ? (raw.reporter ? reporter : reporterOfFileName(output)) : null,
 			color: raw.color !== false,
+			width,
 			flattened: raw.flattened === true,
 			verbose: raw.verbose === true,
 			info: raw.info !== false,

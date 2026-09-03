@@ -22,6 +22,7 @@
 - `groupBy`, the axis the report groups its issues by: `locale` (the default), `code`, `group`, `file` or `none`
 - `output`, a file the report is written to as well as the terminal. The extension picks the format, an explicit `reporter` overrides it, missing directories are created, and a write that fails is reported as an error and fails the run
 - `color`, and `--no-color` with it. A file written by `output` is never coloured
+- `width`, the column count the report is laid out to. Without it the terminal's own width is used, then `COLUMNS`, which is where a CI runner reports its log width
 - `formatResult` and `groupIssues` are exported, so an application can render a result the way the CLI does, along with `displayWidth`, `padTo` and `truncate` for laying out columns of its own
 
 ### Changed
@@ -30,6 +31,7 @@
 - `CHECK_META` describes each check's severity and wording, so a user interface does not have to hard-code them
 - The CLI report was rebuilt around what the reader is looking for: a heading block naming what was scanned, one section per language with its own tally, each check's meaning printed once above its findings, and a summary that counts the axis the sections did not use. Columns are laid out by display width, so a Korean, Japanese or Chinese value no longer pushes the ones beside it out of line
 - `--no-info` drops the heading block and the summary rather than only the progress lines, and `--debug` writes to standard error so a report piped out of standard output stays parseable
+- A description that does not fit the width wraps onto the next line instead of being cut short, so a narrow terminal loses no wording
 - The CLI moved to its own entry point (`dist/cli.js`). Importing the module has no side effect and never writes to the console or exits the process
 - The package now publishes `types`, so TypeScript consumers get the result shape
 - Analysis is linear in the number of keys rather than quadratic: comparing 5,000 keys across 5 locales went from about 10.8s to about 26ms

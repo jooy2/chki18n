@@ -283,3 +283,10 @@ export const REPORTER_BY_EXTENSION: Record<string, Chki18nReporter> = {
 
 /** Width a report is laid out at when the terminal does not report its own. */
 export const DEFAULT_REPORT_WIDTH = 96;
+
+/**
+ * Widest a report lays itself out to when the width was measured rather than
+ * asked for. A very wide terminal would otherwise put the counts so far from
+ * the labels that the two stop reading as one line. `width` overrides it.
+ */
+export const MAX_MEASURED_REPORT_WIDTH = 120;

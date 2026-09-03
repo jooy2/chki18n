@@ -110,6 +110,38 @@ export function truncate(text: string, max: number): string {
 }
 
 /**
+ * Breaks a sentence on its spaces so it fits a column count. Prose is wrapped
+ * rather than cut: a description that stops mid-word tells the reader less than
+ * one that runs onto a second line. A word wider than the column is left to
+ * overflow, since breaking it would only make it unreadable.
+ */
+export function wrap(text: string, width: number): string[] {
+	if (width < 8) {
+		return [text];
+	}
+
+	const lines: string[] = [];
+	let line = '';
+
+	for (const word of text.split(' ')) {
+		if (!line) {
+			line = word;
+		} else if (displayWidth(line) + 1 + displayWidth(word) > width) {
+			lines.push(line);
+			line = word;
+		} else {
+			line += ` ${word}`;
+		}
+	}
+
+	if (line) {
+		lines.push(line);
+	}
+
+	return lines;
+}
+
+/**
  * Cuts the front instead of the back. What tells two file paths apart is their
  * last few segments, so those are the ones a heading has to keep.
  */
