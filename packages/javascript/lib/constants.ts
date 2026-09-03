@@ -5,6 +5,7 @@ export const CHECK_CODE = {
 	INVALID_OPTIONS: 'INVALID_OPTIONS',
 	INVALID_FILE: 'INVALID_FILE',
 	INVALID_VALUE_TYPE: 'INVALID_VALUE_TYPE',
+	NO_LOCALE: 'NO_LOCALE',
 	NO_KEY: 'NO_KEY',
 	DUMMY_KEY: 'DUMMY_KEY',
 	DUPLICATE_KEY: 'DUPLICATE_KEY',
@@ -46,6 +47,11 @@ export const CHECK_META: Record<
 		level: 'warn',
 		summary: 'Some values are not translatable strings',
 		description: 'The value is not a string, so it cannot be compared or translated.'
+	},
+	[CHECK_CODE.NO_LOCALE]: {
+		level: 'error',
+		summary: 'Some languages have no file in a group at all',
+		description: 'This group holds no translations for the language, so none of its keys exist.'
 	},
 	[CHECK_CODE.NO_KEY]: {
 		level: 'error',
@@ -112,6 +118,7 @@ export const CHECK_META: Record<
  */
 export const ANALYZE_CHECK_CODES: Chki18nCheckCode[] = [
 	CHECK_CODE.INVALID_VALUE_TYPE,
+	CHECK_CODE.NO_LOCALE,
 	CHECK_CODE.NO_KEY,
 	CHECK_CODE.DUMMY_KEY,
 	CHECK_CODE.DUPLICATE_KEY,
@@ -131,6 +138,8 @@ export const ANALYZE_CHECK_CODES: Chki18nCheckCode[] = [
  */
 export const CROSS_KEY_CHECK_CODES: Chki18nCheckCode[] = [
 	CHECK_CODE.DUPLICATE_VALUE,
+	// A language missing from a group is a fact about the whole group.
+	CHECK_CODE.NO_LOCALE,
 	// A key can only be seen twice by looking at the whole file, and whether one
 	// is referenced is a fact about the source tree rather than about the key.
 	CHECK_CODE.DUPLICATE_KEY,

@@ -244,6 +244,12 @@ export function detailOf(issue: Chki18nIssue): string {
  * set of files, the group is part of the key's address and is shown with it.
  */
 export function keyLabelOf(issue: Chki18nIssue, showGroup: boolean): string {
+	if (!issue.key) {
+		// A finding about a whole group or file has no key to address it by, and
+		// a bare `@group` would read as one.
+		return '';
+	}
+
 	return showGroup && issue.group ? `${issue.key} @${issue.group}` : issue.key;
 }
 

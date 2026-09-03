@@ -10,6 +10,7 @@
 - `createAnalyzer` returns a reusable analyzer whose `checkEntry` re-checks a single key
 - `loadTranslations` reads a directory once and returns a session that holds the parsed translations: `analyze`, `checkKey`, `get`, `set`, `remove`, `keys`, `translations` and `reload` all work on what is already in memory. `createSession` is the same for translations passed in directly
 - `EXTRA_INTERPOLATION_KEY`, `SURROUNDING_WHITESPACE`, `MISSING_NUMBER` and `INVALID_VALUE_TYPE` checks
+- `NO_LOCALE`, for a group of files that holds nothing for a language the other groups have. Until now a translation file nobody created dropped out of the comparison entirely and the run passed
 - `DUPLICATE_KEY`, which catches a key defined twice — both the literal kind (`{"a": 1, "a": 2}`, which `JSON.parse` resolves silently) and the kind where a nested key and a dotted one flatten onto each other
 - `UNUSED_KEY`, reported at `info`, for keys nothing in a `source` directory appears to reference. An application that has already worked this out can pass its own answer as `unusedKeys` instead
 - `source`, the directory the unused-key scan searches

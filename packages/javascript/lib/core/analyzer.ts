@@ -30,6 +30,7 @@ const NO_KEYS: readonly string[] = Object.freeze([]);
  */
 type CheckFlags = {
 	invalidValueType: boolean;
+	noLocale: boolean;
 	noKey: boolean;
 	dummyKey: boolean;
 	duplicateKey: boolean;
@@ -47,6 +48,7 @@ type FileLookup = ((group: string, locale: string) => string | undefined) | null
 
 const buildCheckFlags = (enabled: Set<Chki18nCheckCode>): CheckFlags => ({
 	invalidValueType: enabled.has(CHECK_CODE.INVALID_VALUE_TYPE),
+	noLocale: enabled.has(CHECK_CODE.NO_LOCALE),
 	noKey: enabled.has(CHECK_CODE.NO_KEY),
 	dummyKey: enabled.has(CHECK_CODE.DUMMY_KEY),
 	duplicateKey: enabled.has(CHECK_CODE.DUPLICATE_KEY),
@@ -401,7 +403,16 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 		const issues: Chki18nIssue[] = [...(input?.issues ?? []), ...resolved.issues];
 		const groups = prepareGroups(input ?? {}, resolved.options, issues);
 		const groupNames = Object.keys(groups);
+		// Collected before the comparison rather than during it: a group can only
+		// be missing a language once every group has said which ones it has.
 		const allLocales = new Set<string>();
+
+		for (const group of groupNames) {
+			for (const locale of Object.keys(groups[group])) {
+				allLocales.add(locale);
+			}
+		}
+
 		const fileOf = buildFileLookup(input?.files);
 		// Supplied rather than worked out: whether a key is referenced is a fact
 		// about the source tree, which the comparison never sees.
@@ -413,8 +424,22 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 			const localeMaps = groups[group];
 			const localeNames = Object.keys(localeMaps);
 
-			for (const locale of localeNames) {
-				allLocales.add(locale);
+			// Only worth asking with more than one group: with a single one, every
+			// language that exists at all is in it by definition.
+			if (flags.noLocale && groupNames.length > 1) {
+				for (const locale of allLocales) {
+					if (Object.hasOwn(localeMaps, locale)) {
+						continue;
+					}
+
+					issues.push(
+						createIssue(CHECK_CODE.NO_LOCALE, {
+							locale,
+							group,
+							message: `\`${group}\` holds no translations for \`${locale}\`, so none of its keys exist there.`
+						})
+					);
+				}
 			}
 
 			const targetIndex = localeNames.indexOf(resolved.options.target);
