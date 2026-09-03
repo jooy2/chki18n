@@ -1,0 +1,27 @@
+name: chki18n
+description: >-
+  Checks that your i18n translation files agree with each other — missing keys,
+  untranslated values, broken placeholders. No dependencies, pure Dart.
+version: 1.0.0
+repository: https://github.com/jooy2/chki18n
+homepage: https://chki18n.cdget.com
+issue_tracker: https://github.com/jooy2/chki18n/issues
+topics:
+  - i18n
+  - internationalization
+  - translation
+  - validation
+  - cli
+
+environment:
+  # Nothing here needs a recent language feature. The floor is 3.7 because that
+  # is where the formatter this package is written against arrived, and where
+  # the `page_width` in `analysis_options.yaml` starts being read.
+  sdk: ^3.7.0
+
+executables:
+  chki18n:
+
+dev_dependencies:
+  lints: ^5.1.1
+  test: ^1.25.15
