@@ -9,6 +9,7 @@ import {
 	DEFAULT_TARGET_LOCALE,
 	FILE_FORMAT,
 	GROUP_BY,
+	KEY_CASE,
 	REPORTER,
 	REPORTER_BY_EXTENSION
 } from './constants.js';
@@ -19,6 +20,7 @@ import type {
 	Chki18nFileFormat,
 	Chki18nGroupBy,
 	Chki18nIssue,
+	Chki18nKeyCase,
 	Chki18nLevel,
 	Chki18nOptions,
 	Chki18nReporter,
@@ -111,6 +113,20 @@ export const OPTION_DEFINITIONS: {
 		description: 'Search this directory of source files for key usages (enables `UNUSED_KEY`)'
 	},
 	{
+		flag: 'key-case',
+		option: 'keyCase',
+		type: 'string',
+		valueName: '<case>',
+		description: `Case every key segment has to use: \`${Object.values(KEY_CASE).join('`, `')}\``
+	},
+	{
+		flag: 'max-key-depth',
+		option: 'maxKeyDepth',
+		type: 'string',
+		valueName: '<levels>',
+		description: 'How many levels a key may be nested, e.g. `2` for `attr.folder`'
+	},
+	{
 		flag: 'reporter',
 		option: 'reporter',
 		type: 'string',
@@ -189,6 +205,8 @@ const LEVEL_VALUES = new Set<string>(['error', 'warn', 'info']);
 const REPORTER_VALUES = new Set<string>(Object.values(REPORTER));
 
 const GROUP_BY_VALUES = new Set<string>(Object.values(GROUP_BY));
+
+const KEY_CASE_VALUES = new Set<string>(Object.values(KEY_CASE));
 
 /**
  * The reporter a file name asks for. A `.json` or a `.md` report has a shape of
@@ -380,15 +398,42 @@ export function resolveOptions(
 		'reporter'
 	);
 
-	let width: number | null = null;
+	/**
+	 * Reads a number an option needs, or `null` when there is none to read. An
+	 * unusable value is reported and dropped rather than guessed at: a check that
+	 * runs on a number nobody meant is worse than one that does not run.
+	 */
+	const readNumber = (
+		value: unknown,
+		optionName: string,
+		{ least, whole }: { least: number; whole?: boolean }
+	): number | null => {
+		if (value === undefined || value === null || value === '') {
+			return null;
+		}
 
-	if (raw.width !== undefined && raw.width !== null && raw.width !== '') {
-		const columns = Number(raw.width);
+		const parsed = Number(value);
 
-		if (!Number.isFinite(columns) || columns < 1) {
-			invalid(`\`${raw.width}\` is not a column count. Measuring the terminal instead.`);
+		if (!Number.isFinite(parsed) || parsed < least) {
+			invalid(`\`${value}\` is not a usable \`${optionName}\`. It was ignored.`);
+
+			return null;
+		}
+
+		return whole ? Math.floor(parsed) : parsed;
+	};
+
+	const width = readNumber(raw.width, 'width', { least: 1, whole: true });
+	const maxKeyDepth = readNumber(raw.maxKeyDepth, 'maxKeyDepth', { least: 1, whole: true });
+	let keyCase: Chki18nKeyCase | null = null;
+
+	if (raw.keyCase) {
+		const choice = String(raw.keyCase).trim().toLowerCase();
+
+		if (KEY_CASE_VALUES.has(choice)) {
+			keyCase = choice as Chki18nKeyCase;
 		} else {
-			width = Math.floor(columns);
+			invalid(`Unknown \`keyCase\` value \`${raw.keyCase}\`. Key names were not checked.`);
 		}
 	}
 
@@ -403,6 +448,8 @@ export function resolveOptions(
 			interpolationSuffix,
 			exclude: new Set(excludeList.length > 0 ? excludeList : DEFAULT_EXCLUDE_DIRS),
 			source: raw.source || null,
+			keyCase,
+			maxKeyDepth,
 			reporter,
 			groupBy: readChoice<Chki18nGroupBy>(
 				raw.groupBy,

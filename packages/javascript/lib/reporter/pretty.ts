@@ -110,9 +110,12 @@ function itemLines(
 		}
 
 		const locale = localeWidth > 0 ? `${padTo(row.locale, localeWidth)}  ` : '';
-		const key = padTo(truncate(row.key, keyWidth), keyWidth);
-		const room = width - INDENT_ITEM.length - displayWidth(locale) - displayWidth(key) - 2;
+		const room = width - INDENT_ITEM.length - displayWidth(locale) - keyWidth - 2;
 		const reference = row.reference ? truncate(row.reference, Math.max(16, room)) : '';
+		const cut = truncate(row.key, keyWidth);
+		// Padded only when something follows it, so a line that ends on the key
+		// does not end on the spaces that would have lined the next column up.
+		const key = reference ? padTo(cut, keyWidth) : cut;
 
 		lines.push(
 			`${INDENT_ITEM}${paint.dim(locale)}${paint.key(key)}${reference ? `  ${paint.value(reference)}` : ''}`

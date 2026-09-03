@@ -92,7 +92,7 @@ describe('reporter options', () => {
 			const { options, issues } = resolveOptions({ width: value });
 
 			assert.strictEqual(options.width, null);
-			assert.ok(issues.some((issue) => issue.message.includes('not a column count')));
+			assert.ok(issues.some((issue) => issue.message.includes('not a usable `width`')));
 		}
 	});
 

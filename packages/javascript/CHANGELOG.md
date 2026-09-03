@@ -17,6 +17,9 @@
 - `INVISIBLE_CHARACTER`, for a zero width space, a byte order mark, a bidirectional control or a non-breaking space
 - `NUMBER_MISMATCH`, for a number the translation changed rather than dropped. `MISSING_NUMBER` only asks whether any digits survived
 - `INCONSISTENT_VALUE`, for two keys sharing one target language string that a locale translates two different ways. `DUPLICATE_VALUE` asks whether one locale repeats itself; this asks the opposite
+- `KEY_NAMING` and `KEY_DEPTH`, for the shape of a key rather than what it translates to. Both wait for `keyCase` and `maxKeyDepth` to say what the project wants, and are judged once per key rather than once per locale
+- `keyCase` and `maxKeyDepth`, the options those two compare against. `keyCase` accepts the plural and context suffixes an i18n library appends, whatever case the project uses
+- `checkKeyShape` is exported, so an editor can judge a key the user is still typing
 - `extractTags`, `extractNumbers`, `findInvisibleCharacter`, `scriptOfLocale` and `hasTranslatableText` are exported, so an editor can run the same measurements on a value it is holding
 - `DUPLICATE_KEY`, which catches a key defined twice — both the literal kind (`{"a": 1, "a": 2}`, which `JSON.parse` resolves silently) and the kind where a nested key and a dotted one flatten onto each other
 - `UNUSED_KEY`, reported at `info`, for keys nothing in a `source` directory appears to reference. An application that has already worked this out can pass its own answer as `unusedKeys` instead

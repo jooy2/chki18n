@@ -1,4 +1,4 @@
-import type { CHECK_CODE, FILE_FORMAT, GROUP_BY, REPORTER } from '../constants.js';
+import type { CHECK_CODE, FILE_FORMAT, GROUP_BY, KEY_CASE, REPORTER } from '../constants.js';
 
 export type AnyValueObject = { [key: string]: any };
 
@@ -16,6 +16,9 @@ export type Chki18nReporter = (typeof REPORTER)[keyof typeof REPORTER];
 
 /** Axis a report groups its issues by (see `GROUP_BY`). */
 export type Chki18nGroupBy = (typeof GROUP_BY)[keyof typeof GROUP_BY];
+
+/** Case the segments of a translation key are written in (see `KEY_CASE`). */
+export type Chki18nKeyCase = (typeof KEY_CASE)[keyof typeof KEY_CASE];
 
 /**
  * Translation strings of one locale. Accepts both the nested shape read from a
@@ -120,6 +123,16 @@ export type Chki18nOptions = {
 	 * `UNUSED_KEY` check has nothing to go on and reports nothing.
 	 */
 	source?: string;
+	/**
+	 * Case every segment of a key has to be written in, which is what the
+	 * `KEY_NAMING` check compares against. Unset, that check reports nothing.
+	 */
+	keyCase?: Chki18nKeyCase;
+	/**
+	 * Levels a key may be nested, for the `KEY_DEPTH` check. `1` allows
+	 * `folder`, `2` allows `attr.folder`. Unset, that check reports nothing.
+	 */
+	maxKeyDepth?: number | string;
 	/** Treat the input as already flattened and skip the flatten pass. */
 	flattened?: boolean;
 	/** Shape the report is rendered in. Default `pretty`. */
@@ -161,6 +174,8 @@ export type Chki18nResolvedOptions = {
 	interpolationSuffix: string;
 	exclude: Set<string>;
 	source: string | null;
+	keyCase: Chki18nKeyCase | null;
+	maxKeyDepth: number | null;
 	reporter: Chki18nReporter;
 	groupBy: Chki18nGroupBy;
 	output: string | null;

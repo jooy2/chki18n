@@ -21,6 +21,7 @@ export {
 	DEFAULT_TARGET_LOCALE,
 	FILE_FORMAT,
 	GROUP_BY,
+	KEY_CASE,
 	REPORTER,
 	REPORTER_BY_EXTENSION
 } from '../constants.js';
@@ -28,6 +29,7 @@ export { analyzeTranslations, createAnalyzer } from './analyzer.js';
 export type { Chki18nAnalyzer } from './analyzer.js';
 export { collectFlatKeys, findDuplicateKeys } from './duplicate.js';
 export { extractInterpolationKeys } from './interpolation.js';
+export { checkKeyShape } from './key.js';
 export {
 	extractNumbers,
 	extractTags,
@@ -54,6 +56,7 @@ export type {
 	Chki18nGroupBy,
 	Chki18nInput,
 	Chki18nIssue,
+	Chki18nKeyCase,
 	Chki18nLevel,
 	Chki18nLevelCount,
 	Chki18nOptions,

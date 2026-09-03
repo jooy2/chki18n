@@ -10,6 +10,8 @@ export const CHECK_CODE = {
 	DUMMY_KEY: 'DUMMY_KEY',
 	DUPLICATE_KEY: 'DUPLICATE_KEY',
 	UNUSED_KEY: 'UNUSED_KEY',
+	KEY_NAMING: 'KEY_NAMING',
+	KEY_DEPTH: 'KEY_DEPTH',
 	EMPTY_VALUE: 'EMPTY_VALUE',
 	NO_INTERPOLATION_KEY: 'NO_INTERPOLATION_KEY',
 	EXTRA_INTERPOLATION_KEY: 'EXTRA_INTERPOLATION_KEY',
@@ -78,6 +80,16 @@ export const CHECK_META: Record<
 		level: 'info',
 		summary: 'The following keys were not found in the scanned source files',
 		description: 'Nothing in the scanned sources appears to reference this key.'
+	},
+	[CHECK_CODE.KEY_NAMING]: {
+		level: 'warn',
+		summary: 'Some keys are not named the way the project asked',
+		description: 'The key is not written in the case `keyCase` asks for.'
+	},
+	[CHECK_CODE.KEY_DEPTH]: {
+		level: 'warn',
+		summary: 'Some keys are nested deeper than the project allows',
+		description: 'The key has more levels than `maxKeyDepth` allows.'
 	},
 	[CHECK_CODE.EMPTY_VALUE]: {
 		level: 'warn',
@@ -160,6 +172,8 @@ export const ANALYZE_CHECK_CODES: Chki18nCheckCode[] = [
 	CHECK_CODE.DUMMY_KEY,
 	CHECK_CODE.DUPLICATE_KEY,
 	CHECK_CODE.UNUSED_KEY,
+	CHECK_CODE.KEY_NAMING,
+	CHECK_CODE.KEY_DEPTH,
 	CHECK_CODE.EMPTY_VALUE,
 	CHECK_CODE.NO_INTERPOLATION_KEY,
 	CHECK_CODE.EXTRA_INTERPOLATION_KEY,
@@ -201,6 +215,16 @@ export const FILE_FORMAT = {
 	FOLDER: 'folder',
 	/** One file holding every locale at the top level: `{ "en": {...} }`. */
 	NESTED: 'nested'
+} as const;
+
+/** Case a project writes the segments of its translation keys in. */
+export const KEY_CASE = {
+	/** `attr-folder`. */
+	KEBAB: 'kebab',
+	/** `attrFolder`. */
+	CAMEL: 'camel',
+	/** `attr_folder`. */
+	SNAKE: 'snake'
 } as const;
 
 export const DEFAULT_TARGET_LOCALE = 'en';

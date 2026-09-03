@@ -4,6 +4,7 @@ import { resolveOptions } from '../options.js';
 import { extractInterpolationKeys } from './interpolation.js';
 import { findDuplicateKeys } from './duplicate.js';
 import { applyLevelOverrides, createIssue } from './issue.js';
+import { checkKeyShape } from './key.js';
 import { buildResult } from './result.js';
 import {
 	extractNumbers,
@@ -778,6 +779,10 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 			keyCount += keys.length;
 
 			for (const key of keys) {
+				// The shape of a key is the same in every language, so it is judged
+				// once rather than once per locale.
+				checkKeyShape(issues, key, group, resolved.options);
+
 				for (let index = 0; index < maps.length; index += 1) {
 					const exists = Object.hasOwn(maps[index], key);
 
@@ -848,6 +853,7 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 			values[index] = exists ? entryValues[localeNames[index]] : undefined;
 		}
 
+		checkKeyShape(issues, entry?.key ?? '', entry?.group ?? '', resolved.options);
 		checkKeySlots(
 			issues,
 			entry?.key ?? '',
