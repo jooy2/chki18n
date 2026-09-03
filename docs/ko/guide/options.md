@@ -20,6 +20,9 @@ title: 옵션
 | `interpolationSuffix` | `--interpolation-suffix` | `string` | `'}'` |
 | `exclude` | `--exclude` | `string[]` 또는 쉼표로 구분된 문자열 | 아래 참고 |
 | `source` | `--source` | `string` | — |
+| `keyCase` | `--key-case` | `'kebab' \| 'camel' \| 'snake'` | — |
+| `maxKeyDepth` | `--max-key-depth` | `number` | — |
+| `lengthRatio` | `--length-ratio` | `number` | — |
 | `reporter` | `--reporter` | `'pretty' \| 'list' \| 'json' \| 'markdown' \| 'github'` | `'pretty'` |
 | `groupBy` | `--group-by` | `'locale' \| 'code' \| 'group' \| 'file' \| 'none'` | `'locale'` |
 | `output` | `--output` | `string` | — |
@@ -100,6 +103,38 @@ npx chki18n ./locales --target en --source ./src
 ```
 
 텍스트 파일만 읽고 5MB를 넘는 파일은 건너뛰며, `exclude`도 함께 적용됩니다. 프로젝트 자신의 번역 파일은 검색하지 않습니다.
+
+## 키와 값의 기준
+
+세 옵션은 검사에 비교 대상을 주기 위해서만 있습니다. 각각 값을 주기 전까지 꺼져 있습니다. 셋 다 정답이 따로 없고 프로젝트가 고른 기준만 있기 때문입니다.
+
+### `keyCase`
+
+키의 각 단계를 어떤 표기법으로 적을지 정하며, [`KEY_NAMING`](./checks#key-naming)이 이 값과 비교합니다. `kebab`, `camel`, `snake` 중 하나입니다.
+
+```bash
+npx chki18n ./locales --key-case kebab
+```
+
+i18n 라이브러리가 붙이는 복수형과 문맥 접미사는 어떤 표기법에서도 통과합니다. `item-count_one`이나 `greeting_male`이 그렇습니다.
+
+### `maxKeyDepth`
+
+키를 몇 단계까지 중첩할 수 있는지 정하며 [`KEY_DEPTH`](./checks#key-depth)가 씁니다. `2`를 주면 `attr.folder`는 통과하고 `attr.folder.name`은 보고합니다.
+
+```bash
+npx chki18n ./locales --max-key-depth 2
+```
+
+### `lengthRatio`
+
+값이 원문보다 몇 배까지 길거나 짧아도 되는지 정하며 [`SUSPICIOUS_LENGTH`](./checks#suspicious-length)가 씁니다. `4`를 주면 4분의 1에서 4배까지 허용합니다.
+
+```bash
+npx chki18n ./locales --length-ratio 4
+```
+
+길이는 글자 수가 아니라 칸 수로 셉니다. 한국어나 일본어 값이 그냥 짧게 나오지 않으며, 원문이 여덟 칸 미만이면 건너뜁니다.
 
 ## 검사 선택
 

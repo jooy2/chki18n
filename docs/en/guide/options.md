@@ -20,6 +20,9 @@ The command line and the JavaScript API take the same options. Every CLI flag is
 | `interpolationSuffix` | `--interpolation-suffix` | `string` | `'}'` |
 | `exclude` | `--exclude` | `string[]` or a comma separated string | see below |
 | `source` | `--source` | `string` | — |
+| `keyCase` | `--key-case` | `'kebab' \| 'camel' \| 'snake'` | — |
+| `maxKeyDepth` | `--max-key-depth` | `number` | — |
+| `lengthRatio` | `--length-ratio` | `number` | — |
 | `reporter` | `--reporter` | `'pretty' \| 'list' \| 'json' \| 'markdown' \| 'github'` | `'pretty'` |
 | `groupBy` | `--group-by` | `'locale' \| 'code' \| 'group' \| 'file' \| 'none'` | `'locale'` |
 | `output` | `--output` | `string` | — |
@@ -100,6 +103,38 @@ npx chki18n ./locales --target en --source ./src
 ```
 
 Only text files are read, anything over 5MB is skipped, and `exclude` applies here as well. The project's own translation files are never searched.
+
+## Key and value limits
+
+Three options exist only to give a check something to compare against. Each one is off until it is set, because none of them has a right answer of its own — only the one your project chose.
+
+### `keyCase`
+
+The case every segment of a key has to be written in, which is what [`KEY_NAMING`](./checks#key-naming) compares against: `kebab`, `camel` or `snake`.
+
+```bash
+npx chki18n ./locales --key-case kebab
+```
+
+The plural and context suffixes an i18n library appends — `item-count_one`, `greeting_male` — are accepted whatever case you chose.
+
+### `maxKeyDepth`
+
+How many levels a key may be nested, for [`KEY_DEPTH`](./checks#key-depth). `2` allows `attr.folder` and reports `attr.folder.name`.
+
+```bash
+npx chki18n ./locales --max-key-depth 2
+```
+
+### `lengthRatio`
+
+How many times longer or shorter than its original a value may be before [`SUSPICIOUS_LENGTH`](./checks#suspicious-length) reports it. `4` allows a quarter to four times.
+
+```bash
+npx chki18n ./locales --length-ratio 4
+```
+
+Lengths are counted in columns rather than characters, so a Korean or Japanese value is not short by default, and originals under eight columns are skipped.
 
 ## Choosing checks
 

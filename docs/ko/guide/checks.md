@@ -21,10 +21,38 @@ chki18n이 보고하는 모든 문제에는 검사 코드, 심각도, 그리고 
 | 경고   | `SURROUNDING_WHITESPACE`  | 앞이나 뒤에 공백이 있는 값                           |
 | 경고   | `MISSING_NUMBER`          | 기준 언어 값의 숫자가 번역에서 빠짐                  |
 | 경고   | `INVALID_VALUE_TYPE`      | 문자열이 아닌 값                                     |
+| 오류   | `NO_LOCALE`               | 다른 그룹에는 있는 언어의 파일이 이 그룹에는 없음    |
+| 오류   | `INTERPOLATION_COUNT`     | 자리표시자를 쓴 횟수가 기준 언어와 다름              |
+| 경고   | `TAG_MISMATCH`            | 기준 언어에는 있고 이 값에는 없는 마크업             |
+| 경고   | `UNTRANSLATED_SCRIPT`     | 그 언어의 문자가 하나도 없는 값                      |
+| 경고   | `INCONSISTENT_VALUE`      | 원문이 같은 두 키가 서로 다르게 번역됨               |
+| 경고   | `INVISIBLE_CHARACTER`     | 폭이 없는 문자, 양방향 제어문자, 줄바꿈 없는 공백    |
+| 경고   | `NUMBER_MISMATCH`         | 번역이 숫자를 빠뜨리지 않고 바꿈                     |
+| 경고   | `KEY_NAMING`              | `keyCase`가 정한 표기법을 따르지 않는 키             |
+| 경고   | `KEY_DEPTH`               | `maxKeyDepth`보다 깊게 중첩된 키                     |
+| 참고   | `SUSPICIOUS_LENGTH`       | 기준 언어보다 지나치게 길거나 짧은 값                |
+
+마지막 세 개는 옵션이 기준을 정해 주기 전까지 아무것도 보고하지 않습니다. `keyCase`, `maxKeyDepth`, `lengthRatio`입니다. 셋 다 정답이 하나로 정해지지 않고 프로젝트가 고르는 값이기 때문입니다.
 
 `INVALID_OPTIONS`도 결과에 나타나며, 상황에 맞는 수준을 갖습니다. 옵션이 단순히 기본값으로 대체되면 `info`, 기준 언어가 파일에 전혀 없어 비교 대상이 없으면 `error`입니다.
 
 ## 구조 검사
+
+### `NO_LOCALE`
+
+다른 그룹에는 있는 언어인데 이 그룹에는 파일이 없습니다. 파일 하나를 통째로 만들지 않았을 때 나오는 이슈입니다. `ja/common.json`은 있고 `ja/errors.json`은 만든 적이 없다면, 이 검사가 없을 때 그 파일에 있어야 할 키가 비교에서 전부 빠지고 검사는 통과합니다.
+
+```text
+locales/
+  en/common.json  en/errors.json
+  ja/common.json
+```
+
+```text
+[NO_LOCALE] ja @errors.json
+```
+
+그룹이 둘 이상일 때만 의미가 있습니다. 파일 묶음이 하나뿐이면 존재하는 언어는 모두 그 안에 있습니다.
 
 ### `NO_KEY`
 
@@ -131,6 +159,88 @@ npx chki18n ./locales --ignore-checks NOT_TRANSLATED_VALUE
 
 `DUPLICATE_KEY`, `UNUSED_KEY`와 마찬가지로 이 검사는 키 하나보다 넓은 범위를 봐야 하므로 [`checkEntry`](/ko/api/create-analyzer)에서는 **보고되지 않습니다**. 그런 성질을 가진 코드는 `CROSS_KEY_CHECK_CODES`에 정리되어 있습니다.
 
+### `NUMBER_MISMATCH`
+
+`MISSING_NUMBER`는 번역에 숫자가 남아 있는지를 봅니다. 이 검사는 같은 숫자가 남았는지를 봅니다. 원문이 셋인데 번역이 다섯이라고 말하는 쪽이 숫자를 아예 빼먹은 것보다 나쁘고, 다른 검사에는 전부 걸리지 않습니다.
+
+```json
+// en.json
+{ "count": "You have 3 items" }
+// ko.json
+{ "count": "5개 있습니다" }
+```
+
+번역이 숫자 순서를 바꾼 것은 문제 삼지 않습니다. `3 of 5`와 `5 중 3`은 같은 숫자를 담고 있습니다. 숫자를 글자로 풀어 쓴 번역은 `MISSING_NUMBER`가 맡습니다.
+
+### `TAG_MISMATCH`
+
+값에 들어 있는 마크업을 기준 언어와 비교합니다. `<b>`가 빠지면 굵게 표시되지 않고, `</b>`가 빠지면 그 뒤가 전부 굵어집니다. `<Trans>` 컴포넌트에서는 번역에 없는 태그가 끝내 렌더링되지 않는 자식이 됩니다.
+
+```json
+// en.json
+{ "hint": "Click <b>here</b> to continue" }
+// ko.json
+{ "hint": "계속하려면 여기를 누르세요" }
+```
+
+```text
+[TAG_MISMATCH] ko -> 'hint' The tags `<b>` and `</b>` of the target language are missing from this value.
+```
+
+있는지만 보는 것이 아니라 개수를 셉니다. 두 번 열고 한 번 닫은 값도 보고합니다. 태그 이름은 대소문자를 가리지 않고 읽으며, `a < b`처럼 숫자를 비교하는 문장은 마크업으로 착각하지 않습니다.
+
+오류가 아니라 경고인 이유는, 단축키 안내에 쓰는 `<Ctrl>`도 패턴만 보면 태그이기 때문입니다. 파일을 파악한 뒤 `--levels TAG_MISMATCH=error`로 올리면 됩니다.
+
+### `UNTRANSLATED_SCRIPT`
+
+그 언어를 적는 문자가 값에 하나도 없습니다. `NOT_TRANSLATED_VALUE`는 원문과 글자 하나까지 같을 때만 잡아내므로, 느낌표 하나만 붙여도 통과합니다.
+
+```json
+// en.json
+{ "greet": "Hello" }
+// ko.json
+{ "greet": "Hello!" }
+```
+
+문자가 단서가 되는 언어만 검사합니다. 한국어, 일본어, 중국어, 러시아어, 아랍어, 그리스어, 히브리어, 태국어 등입니다. 라틴 문자로 적는 언어는 대상이 아닙니다. 번역하지 않고 둔 영어와 구별할 방법이 없기 때문입니다. `sr-Latn`처럼 문자를 직접 밝힌 로케일도 건드리지 않습니다.
+
+자리표시자나 태그, 숫자뿐인 값은 건너뜁니다. 영어 그대로 두는 브랜드명은 건너뛰지 않으므로, 오탐이 나온다면 대개 그쪽입니다.
+
+### `INCONSISTENT_VALUE`
+
+`DUPLICATE_VALUE`는 한 로케일이 같은 값을 반복하는지를 봅니다. 이 검사는 반대를 봅니다. 기준 언어에서 문자열이 같은 두 키를 이 로케일이 서로 다르게 번역한 경우입니다.
+
+```json
+// en.json
+{ "save-a": "Save", "save-b": "Save" }
+// ko.json
+{ "save-a": "저장", "save-b": "보관" }
+```
+
+```text
+[INCONSISTENT_VALUE] ko -> 'save-b' The key `save-a` has the same en value but is translated as "저장".
+```
+
+한 버튼이 화면마다 다른 단어로 보이게 만드는 용어 흔들림입니다. 같은 영어 단어에 두 가지 번역이 필요한 경우도 있으므로 경고입니다.
+
+### `INVISIBLE_CHARACTER`
+
+폭이 없는 공백, 바이트 순서 표시, 양방향 제어문자, 그리고 보통 공백 자리에 들어간 줄바꿈 없는 공백입니다. 디자인 도구나 스프레드시트에서 복사할 때 딸려 오고, 문자열을 비교하는 조회를 깨뜨리며, 리뷰에서는 절대 보이지 않습니다.
+
+```text
+[INVISIBLE_CHARACTER] ko -> 'clean' The value holds a zero width space (U+200B), which nothing will draw.
+```
+
+### `SUSPICIOUS_LENGTH`
+
+원문보다 지나치게 길거나 짧은 값입니다. 잘린 문자열이나 통째로 붙여 넣은 문단이 이렇게 보입니다. 어디까지가 지나친지는 `lengthRatio`가 정합니다. `4`를 주면 원문의 4분의 1보다 짧거나 4배보다 긴 값을 보고합니다.
+
+```bash
+npx chki18n ./locales --length-ratio 3
+```
+
+길이는 글자 수가 아니라 칸 수로 셉니다. 한국어와 일본어가 그냥 짧게 나오지 않습니다. 원문이 여덟 칸 미만이면 건너뜁니다. `OK` 같은 값에 비율은 아무것도 말해 주지 않기 때문입니다. 언어마다 길이가 다른 것은 정상이므로 `info`로 보고하며, 결함이라기보다 한번 보라는 신호입니다.
+
 ## 사용 여부 검사
 
 ### `UNUSED_KEY`
@@ -157,6 +267,40 @@ await checkTranslationFiles('./locales', { target: 'en', source: './src' });
 analyzeTranslations({ locales, unusedKeys: ['desc.orphan'] }, { target: 'en' });
 ```
 
+## 키 형태 검사
+
+둘 다 프로젝트가 기준을 정해 주기 전까지 꺼져 있습니다. 키 형태에는 정답이 따로 없고 프로젝트가 고른 규칙만 있기 때문입니다. 로케일마다가 아니라 키마다 한 번씩 판단합니다. 키 이름은 어느 언어에서나 같습니다.
+
+### `KEY_NAMING`
+
+`keyCase`는 키의 각 단계를 어떤 표기법으로 적을지 정합니다. `kebab`, `camel`, `snake` 중 하나입니다.
+
+```bash
+npx chki18n ./locales --key-case kebab
+```
+
+```text
+[KEY_NAMING] 'attr.badName' The part `badName` is not written in kebab case.
+```
+
+i18n 라이브러리가 붙이는 복수형과 문맥 접미사는 어떤 표기법에서도 통과합니다. `item-count_one`이나 `greeting_male`의 밑줄은 작명이 아니라 라이브러리의 것이기 때문입니다.
+
+한 키에서 여러 단계가 어긋나도 한 번만 보고합니다. 두 번째를 알려 준다고 해야 할 일이 달라지지 않습니다.
+
+### `KEY_DEPTH`
+
+`maxKeyDepth`는 키를 몇 단계까지 중첩할 수 있는지 정합니다. `2`를 주면 `attr.folder`는 통과하고 `attr.folder.name`은 보고합니다.
+
+```bash
+npx chki18n ./locales --max-key-depth 2
+```
+
+```text
+[KEY_DEPTH] 'a.b.c.d' The key is 4 levels deep, and `maxKeyDepth` allows 2.
+```
+
+깊은 중첩은 키를 검색하기 어렵게 만들고 번역 파일을 병합하기 어렵게 만듭니다. 대개 한 단계 묶음이면 충분합니다.
+
 ## 보간 검사
 
 보간 키는 문자열 안의 자리표시자입니다. 기본값은 `{name}` 형태입니다. 비교 양쪽에서 자리표시자를 추출해 두 집합을 비교하므로, 문장과 함께 번역되어 버린 자리표시자를 잡아냅니다.
@@ -180,6 +324,23 @@ analyzeTranslations({ locales, unusedKeys: ['desc.orphan'] }, { target: 'en' });
 ### `EXTRA_INTERPOLATION_KEY`
 
 반대로, 기준 언어가 정의하지 않은 자리표시자가 이 값에 있는 경우입니다. 보통 오타(`{nmae}`)이거나 번역 중에 만들어진 자리표시자이며, 런타임에는 중괄호가 그대로 렌더링됩니다.
+
+### `INTERPOLATION_COUNT`
+
+위 두 검사는 값이 어떤 자리표시자를 쓰는지 봅니다. 이 검사는 각각을 몇 번 쓰는지 봅니다. 같은 자리표시자를 두 번 부르는 원문과 한 번만 부르는 번역은 집합으로는 같고 문장으로는 다릅니다.
+
+```json
+// en.json
+{ "invite": "{name} invited {name}" }
+// ko.json
+{ "invite": "{name}님이 초대했습니다" }
+```
+
+```text
+[INTERPOLATION_COUNT] ko -> 'invite' The interpolation key `{name}` is used 1 time here and 2 times in the target language.
+```
+
+자리표시자가 아예 없거나 기준 언어에 없는 경우는 위 두 검사가 맡습니다.
 
 ### 구분자 바꾸기
 

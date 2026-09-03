@@ -35,6 +35,9 @@ npx chki18n --path ./locales --target en
   --interpolation-suffix <str>    Closing delimiter of an interpolation key (default: `}`)
   --exclude <dirs>                Comma separated directory names to skip while scanning
   --source <dir>                  Search this directory of source files for key usages (enables `UNUSED_KEY`)
+  --key-case <case>               Case every key segment has to use: `kebab`, `camel`, `snake`
+  --max-key-depth <levels>        How many levels a key may be nested, e.g. `2` for `attr.folder`
+  --length-ratio <times>          Report a value more than this many times longer or shorter than the target
   --reporter <name>               How to render the report: `pretty`, `list`, `json`, `markdown`, `github`
   --group-by <axis>               Group the reported issues by `locale`, `code`, `group`, `file`, `none`
   --output <file>                 Also write the report to this file, in the format its extension implies
