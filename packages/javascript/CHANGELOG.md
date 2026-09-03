@@ -53,7 +53,7 @@
 - The CLI moved to its own entry point (`dist/cli.js`). Importing the module has no side effect and never writes to the console or exits the process
 - The package now publishes `types`, so TypeScript consumers get the result shape
 - Analysis is linear in the number of keys rather than quadratic: comparing 5,000 keys across 5 locales went from about 10.8s to about 26ms
-- The ten checks added since cost about half as much again as the original twelve over the same 5,000 keys, and a check that is switched off costs nothing at all
+- The twelve checks added since cost about a third as much again as the original twelve over the same 5,000 keys, and a check that is switched off costs nothing at all. `lengthRatio` is the exception worth knowing: measuring every value in display columns more than doubles the run, which is part of why it stays off until it is asked for
 
 ### Fixed
 
