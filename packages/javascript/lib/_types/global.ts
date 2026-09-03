@@ -133,6 +133,12 @@ export type Chki18nOptions = {
 	 * `folder`, `2` allows `attr.folder`. Unset, that check reports nothing.
 	 */
 	maxKeyDepth?: number | string;
+	/**
+	 * How many times longer or shorter than the target language a value may be
+	 * before `SUSPICIOUS_LENGTH` reports it. `4` allows a quarter to four times.
+	 * Unset, that check reports nothing.
+	 */
+	lengthRatio?: number | string;
 	/** Treat the input as already flattened and skip the flatten pass. */
 	flattened?: boolean;
 	/** Shape the report is rendered in. Default `pretty`. */
@@ -176,6 +182,7 @@ export type Chki18nResolvedOptions = {
 	source: string | null;
 	keyCase: Chki18nKeyCase | null;
 	maxKeyDepth: number | null;
+	lengthRatio: number | null;
 	reporter: Chki18nReporter;
 	groupBy: Chki18nGroupBy;
 	output: string | null;

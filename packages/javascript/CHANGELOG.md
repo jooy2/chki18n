@@ -19,7 +19,9 @@
 - `INCONSISTENT_VALUE`, for two keys sharing one target language string that a locale translates two different ways. `DUPLICATE_VALUE` asks whether one locale repeats itself; this asks the opposite
 - `KEY_NAMING` and `KEY_DEPTH`, for the shape of a key rather than what it translates to. Both wait for `keyCase` and `maxKeyDepth` to say what the project wants, and are judged once per key rather than once per locale
 - `keyCase` and `maxKeyDepth`, the options those two compare against. `keyCase` accepts the plural and context suffixes an i18n library appends, whatever case the project uses
-- `checkKeyShape` is exported, so an editor can judge a key the user is still typing
+- `SUSPICIOUS_LENGTH`, reported at `info`, for a value far longer or shorter than the one it translates. Waits for `lengthRatio`, and measures columns rather than characters so a Korean or Japanese value is not short by default
+- `lengthRatio`, the option it compares against
+- `checkKeyShape` and `displayWidth` are exported, so an editor can judge a key the user is still typing and lay a value out the way the report does
 - `extractTags`, `extractNumbers`, `findInvisibleCharacter`, `scriptOfLocale` and `hasTranslatableText` are exported, so an editor can run the same measurements on a value it is holding
 - `DUPLICATE_KEY`, which catches a key defined twice — both the literal kind (`{"a": 1, "a": 2}`, which `JSON.parse` resolves silently) and the kind where a nested key and a dotted one flatten onto each other
 - `UNUSED_KEY`, reported at `info`, for keys nothing in a `source` directory appears to reference. An application that has already worked this out can pass its own answer as `unusedKeys` instead
@@ -46,6 +48,7 @@
 - The CLI moved to its own entry point (`dist/cli.js`). Importing the module has no side effect and never writes to the console or exits the process
 - The package now publishes `types`, so TypeScript consumers get the result shape
 - Analysis is linear in the number of keys rather than quadratic: comparing 5,000 keys across 5 locales went from about 10.8s to about 26ms
+- The ten checks added since cost about half as much again as the original twelve over the same 5,000 keys, and a check that is switched off costs nothing at all
 
 ### Fixed
 

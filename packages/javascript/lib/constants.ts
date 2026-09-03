@@ -24,7 +24,8 @@ export const CHECK_CODE = {
 	SURROUNDING_WHITESPACE: 'SURROUNDING_WHITESPACE',
 	INVISIBLE_CHARACTER: 'INVISIBLE_CHARACTER',
 	MISSING_NUMBER: 'MISSING_NUMBER',
-	NUMBER_MISMATCH: 'NUMBER_MISMATCH'
+	NUMBER_MISMATCH: 'NUMBER_MISMATCH',
+	SUSPICIOUS_LENGTH: 'SUSPICIOUS_LENGTH'
 } as const;
 
 /**
@@ -157,6 +158,11 @@ export const CHECK_META: Record<
 		level: 'warn',
 		summary: 'Some values changed a number the target language has',
 		description: 'The numbers in this value are not the ones the target language uses.'
+	},
+	[CHECK_CODE.SUSPICIOUS_LENGTH]: {
+		level: 'info',
+		summary: 'Some values are far longer or shorter than the target language',
+		description: 'The value is further from the target language length than `lengthRatio` allows.'
 	}
 };
 
@@ -186,7 +192,8 @@ export const ANALYZE_CHECK_CODES: Chki18nCheckCode[] = [
 	CHECK_CODE.SURROUNDING_WHITESPACE,
 	CHECK_CODE.INVISIBLE_CHARACTER,
 	CHECK_CODE.MISSING_NUMBER,
-	CHECK_CODE.NUMBER_MISMATCH
+	CHECK_CODE.NUMBER_MISMATCH,
+	CHECK_CODE.SUSPICIOUS_LENGTH
 ];
 
 /**

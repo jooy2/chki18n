@@ -127,6 +127,13 @@ export const OPTION_DEFINITIONS: {
 		description: 'How many levels a key may be nested, e.g. `2` for `attr.folder`'
 	},
 	{
+		flag: 'length-ratio',
+		option: 'lengthRatio',
+		type: 'string',
+		valueName: '<times>',
+		description: 'Report a value more than this many times longer or shorter than the target'
+	},
+	{
 		flag: 'reporter',
 		option: 'reporter',
 		type: 'string',
@@ -425,6 +432,9 @@ export function resolveOptions(
 
 	const width = readNumber(raw.width, 'width', { least: 1, whole: true });
 	const maxKeyDepth = readNumber(raw.maxKeyDepth, 'maxKeyDepth', { least: 1, whole: true });
+	// A ratio of one would report every value whose length is not exactly the
+	// target's, which is every value there is.
+	const lengthRatio = readNumber(raw.lengthRatio, 'lengthRatio', { least: 1.01 });
 	let keyCase: Chki18nKeyCase | null = null;
 
 	if (raw.keyCase) {
@@ -450,6 +460,7 @@ export function resolveOptions(
 			source: raw.source || null,
 			keyCase,
 			maxKeyDepth,
+			lengthRatio,
 			reporter,
 			groupBy: readChoice<Chki18nGroupBy>(
 				raw.groupBy,

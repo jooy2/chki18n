@@ -14,6 +14,7 @@ import {
 	nameOfInvisibleCharacter,
 	scriptOfLocale
 } from './value.js';
+import { displayWidth } from './width.js';
 import type {
 	Chki18nCheckCode,
 	Chki18nEntry,
@@ -32,6 +33,12 @@ const DIGIT_PATTERN = /\d/;
 const SURROUNDING_WHITESPACE_PATTERN = /^\s|\s$/;
 
 const NO_KEYS: readonly string[] = Object.freeze([]);
+
+/**
+ * Below this many columns a length ratio says nothing: `OK` and its four
+ * character translation are four times apart and both are correct.
+ */
+const MIN_MEASURED_LENGTH = 8;
 
 const times = (count: number): string => `${count} time${count === 1 ? '' : 's'}`;
 
@@ -119,6 +126,7 @@ type CheckFlags = {
 	invisibleCharacter: boolean;
 	missingNumber: boolean;
 	numberMismatch: boolean;
+	suspiciousLength: boolean;
 };
 
 type FileLookup = ((group: string, locale: string) => string | undefined) | null;
@@ -142,7 +150,8 @@ const buildCheckFlags = (enabled: Set<Chki18nCheckCode>): CheckFlags => ({
 	surroundingWhitespace: enabled.has(CHECK_CODE.SURROUNDING_WHITESPACE),
 	invisibleCharacter: enabled.has(CHECK_CODE.INVISIBLE_CHARACTER),
 	missingNumber: enabled.has(CHECK_CODE.MISSING_NUMBER),
-	numberMismatch: enabled.has(CHECK_CODE.NUMBER_MISMATCH)
+	numberMismatch: enabled.has(CHECK_CODE.NUMBER_MISMATCH),
+	suspiciousLength: enabled.has(CHECK_CODE.SUSPICIOUS_LENGTH)
 });
 
 /** Values are reported as text, whatever their original type was. */
@@ -268,6 +277,10 @@ function checkKeySlots(
 	// carries does not change while the locales are walked.
 	const targetTagCounts =
 		flags.tagMismatch && targetIsString ? countTags(extractTags(targetValue as string)) : null;
+	const targetWidth =
+		flags.suspiciousLength && options.lengthRatio !== null && targetIsString
+			? displayWidth(targetValue as string)
+			: 0;
 	const targetInterpolationCounts =
 		flags.interpolationCount && targetInterpolations.length > 0
 			? countOf(targetInterpolations)
@@ -377,6 +390,20 @@ function checkKeySlots(
 					hasTranslatableText(value, options.interpolationPrefix, options.interpolationSuffix)
 				) {
 					issues.push(createIssue(CHECK_CODE.UNTRANSLATED_SCRIPT, { ...base, value }));
+				}
+			}
+
+			if (targetWidth >= MIN_MEASURED_LENGTH && options.lengthRatio !== null) {
+				const ratio = displayWidth(value) / targetWidth;
+
+				if (ratio > options.lengthRatio || ratio * options.lengthRatio < 1) {
+					issues.push(
+						createIssue(CHECK_CODE.SUSPICIOUS_LENGTH, {
+							...base,
+							value,
+							message: `The value is ${ratio.toFixed(1)} times the length of the target language value.`
+						})
+					);
 				}
 			}
 		}

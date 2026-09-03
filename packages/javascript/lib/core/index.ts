@@ -37,6 +37,7 @@ export {
 	hasTranslatableText,
 	scriptOfLocale
 } from './value.js';
+export { charWidth, displayWidth } from './width.js';
 export { createIssue, groupIssuesByCode, summarizeIssues } from './issue.js';
 export { buildResult } from './result.js';
 export { createSession } from './session.js';
