@@ -5,6 +5,9 @@ import {
 	CHECK_CODE,
 	createAnalyzer,
 	extractNumbers,
+	pluralBaseOf,
+	pluralCategoriesOf,
+	pluralPartsOf,
 	extractTags,
 	findInvisibleCharacter,
 	hasTranslatableText,
@@ -365,6 +368,120 @@ describe('SUSPICIOUS_LENGTH', () => {
 			).length,
 			0
 		);
+	});
+});
+
+describe('NO_PLURAL_FORM', () => {
+	const forms = { en: { item_one: '1 item', item_other: '{count} items' } };
+
+	it('asks a language only for the forms it uses', () => {
+		const issues = check(CHECK_CODE.NO_PLURAL_FORM, {
+			...forms,
+			ko: { item_other: '{count}개' }
+		});
+
+		assert.deepStrictEqual(issues, []);
+	});
+
+	it('finds the forms a language needs and does not have', () => {
+		const issues = check(CHECK_CODE.NO_PLURAL_FORM, {
+			...forms,
+			ru: { item_one: '1 элемент', item_other: '{count} элементов' }
+		});
+
+		assert.strictEqual(issues.length, 1);
+		assert.strictEqual(issues[0].locale, 'ru');
+		assert.strictEqual(issues[0].key, 'item');
+		assert.ok(issues[0].message.includes('`item_few`'));
+		assert.ok(issues[0].message.includes('`item_many`'));
+	});
+
+	it('judges the target language too', () => {
+		const issues = check(CHECK_CODE.NO_PLURAL_FORM, {
+			en: { item_one: '1 item' },
+			ko: { item_other: '{count}개' }
+		});
+
+		assert.strictEqual(issues.length, 1);
+		assert.strictEqual(issues[0].locale, 'en');
+	});
+
+	it('says nothing about a language it has no table for', () => {
+		assert.deepStrictEqual(
+			check(CHECK_CODE.NO_PLURAL_FORM, { ...forms, mt: { item_one: '1 oggett' } }),
+			[]
+		);
+	});
+
+	it('leaves the older plural convention as ordinary keys', () => {
+		assert.deepStrictEqual(
+			check(CHECK_CODE.NO_PLURAL_FORM, {
+				en: { item: '1 item', item_plural: '{count} items' }
+			}),
+			[]
+		);
+	});
+});
+
+describe('plural forms and the keys they excuse', () => {
+	it('does not ask a language for a form it never uses', () => {
+		const issues = check(CHECK_CODE.NO_KEY, {
+			en: { item_one: '1 item', item_other: '{count} items' },
+			ko: { item_other: '{count}개' }
+		});
+
+		assert.deepStrictEqual(issues, []);
+	});
+
+	it('still asks for the forms the language does use', () => {
+		const issues = check(CHECK_CODE.NO_KEY, {
+			en: { item_one: '1 item', item_other: '{count} items' },
+			ko: { item_one: '1개' }
+		});
+
+		assert.strictEqual(issues.length, 1);
+		assert.strictEqual(issues[0].key, 'item_other');
+	});
+
+	it('does not call a form the target has no use for a stray key', () => {
+		const issues = check(CHECK_CODE.DUMMY_KEY, {
+			ko: { item_other: '{count}개' },
+			ru: { item_other: '{count}', item_few: '{count} элемента' }
+		});
+
+		assert.deepStrictEqual(issues, []);
+	});
+
+	it('leaves a language it has no table for exactly as it was', () => {
+		const issues = check(CHECK_CODE.NO_KEY, {
+			en: { item_one: '1 item', item_other: '{count} items' },
+			mt: { item_one: '1 oggett' }
+		});
+
+		assert.strictEqual(issues.length, 1);
+		assert.strictEqual(issues[0].key, 'item_other');
+	});
+});
+
+describe('the plural primitives', () => {
+	it('reads the form a suffixed key names', () => {
+		assert.deepStrictEqual(pluralPartsOf('item_one'), { base: 'item', category: 'one' });
+		assert.strictEqual(pluralPartsOf('item'), null);
+		assert.strictEqual(pluralPartsOf('item_plural'), null);
+		assert.strictEqual(pluralPartsOf('_one'), null);
+	});
+
+	it('reads the base of either plural convention', () => {
+		assert.strictEqual(pluralBaseOf('item_one'), 'item');
+		assert.strictEqual(pluralBaseOf('item_plural'), 'item');
+		assert.strictEqual(pluralBaseOf('item'), null);
+	});
+
+	it('knows what each language needs, and admits what it does not know', () => {
+		assert.deepStrictEqual(pluralCategoriesOf('ko'), ['other']);
+		assert.deepStrictEqual(pluralCategoriesOf('en-GB'), ['one', 'other']);
+		assert.deepStrictEqual(pluralCategoriesOf('ru'), ['one', 'few', 'many', 'other']);
+		assert.strictEqual(pluralCategoriesOf('mt'), null);
 	});
 });
 

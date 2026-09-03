@@ -10,6 +10,7 @@ export const CHECK_CODE = {
 	DUMMY_KEY: 'DUMMY_KEY',
 	DUPLICATE_KEY: 'DUPLICATE_KEY',
 	UNUSED_KEY: 'UNUSED_KEY',
+	NO_PLURAL_FORM: 'NO_PLURAL_FORM',
 	KEY_NAMING: 'KEY_NAMING',
 	KEY_DEPTH: 'KEY_DEPTH',
 	EMPTY_VALUE: 'EMPTY_VALUE',
@@ -91,6 +92,11 @@ export const CHECK_META: Record<
 		level: 'warn',
 		summary: 'Some keys are nested deeper than the project allows',
 		description: 'The key has more levels than `maxKeyDepth` allows.'
+	},
+	[CHECK_CODE.NO_PLURAL_FORM]: {
+		level: 'warn',
+		summary: 'Some keys are missing a plural form their language needs',
+		description: 'The language needs a plural form of this key that the file does not define.'
 	},
 	[CHECK_CODE.EMPTY_VALUE]: {
 		level: 'warn',
@@ -178,6 +184,7 @@ export const ANALYZE_CHECK_CODES: Chki18nCheckCode[] = [
 	CHECK_CODE.DUMMY_KEY,
 	CHECK_CODE.DUPLICATE_KEY,
 	CHECK_CODE.UNUSED_KEY,
+	CHECK_CODE.NO_PLURAL_FORM,
 	CHECK_CODE.KEY_NAMING,
 	CHECK_CODE.KEY_DEPTH,
 	CHECK_CODE.EMPTY_VALUE,
@@ -209,7 +216,9 @@ export const CROSS_KEY_CHECK_CODES: Chki18nCheckCode[] = [
 	// A key can only be seen twice by looking at the whole file, and whether one
 	// is referenced is a fact about the source tree rather than about the key.
 	CHECK_CODE.DUPLICATE_KEY,
-	CHECK_CODE.UNUSED_KEY
+	CHECK_CODE.UNUSED_KEY,
+	// A language needs every form of a plural key before any of them is right.
+	CHECK_CODE.NO_PLURAL_FORM
 ];
 
 /** How translation files are laid out on disk. */

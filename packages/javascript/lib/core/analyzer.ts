@@ -5,6 +5,7 @@ import { extractInterpolationKeys } from './interpolation.js';
 import { findDuplicateKeys } from './duplicate.js';
 import { applyLevelOverrides, createIssue } from './issue.js';
 import { checkKeyShape } from './key.js';
+import { pluralCategoriesOf, pluralPartsOf, usesPluralCategory } from './plural.js';
 import { buildResult } from './result.js';
 import {
 	extractNumbers,
@@ -113,6 +114,7 @@ type CheckFlags = {
 	dummyKey: boolean;
 	duplicateKey: boolean;
 	unusedKey: boolean;
+	noPluralForm: boolean;
 	emptyValue: boolean;
 	noInterpolationKey: boolean;
 	extraInterpolationKey: boolean;
@@ -138,6 +140,7 @@ const buildCheckFlags = (enabled: Set<Chki18nCheckCode>): CheckFlags => ({
 	dummyKey: enabled.has(CHECK_CODE.DUMMY_KEY),
 	duplicateKey: enabled.has(CHECK_CODE.DUPLICATE_KEY),
 	unusedKey: enabled.has(CHECK_CODE.UNUSED_KEY),
+	noPluralForm: enabled.has(CHECK_CODE.NO_PLURAL_FORM),
 	emptyValue: enabled.has(CHECK_CODE.EMPTY_VALUE),
 	noInterpolationKey: enabled.has(CHECK_CODE.NO_INTERPOLATION_KEY),
 	extraInterpolationKey: enabled.has(CHECK_CODE.EXTRA_INTERPOLATION_KEY),
@@ -287,6 +290,10 @@ function checkKeySlots(
 			: null;
 	const checkInterpolation =
 		flags.noInterpolationKey || flags.extraInterpolationKey || flags.interpolationCount;
+	// A plural key belongs to one language's grammar. Korean needs only `other`,
+	// so `item_one` being absent from it is correct rather than missing, and
+	// Russian needs `item_few` that English never writes.
+	const plural = pluralPartsOf(key);
 
 	for (let index = 0; index < localeNames.length; index += 1) {
 		if (index === targetIndex) {
@@ -299,7 +306,7 @@ function checkKeySlots(
 		const base = { locale, key, group, file, targetValue: targetText };
 
 		if (!present[index]) {
-			if (hasTargetKey && flags.noKey) {
+			if (hasTargetKey && flags.noKey && (!plural || usesPluralCategory(locale, plural.category))) {
 				issues.push(createIssue(CHECK_CODE.NO_KEY, base));
 			}
 
@@ -308,7 +315,12 @@ function checkKeySlots(
 
 		const text = asDisplayValue(value);
 
-		if (!hasTargetKey && flags.dummyKey) {
+		if (
+			!hasTargetKey &&
+			flags.dummyKey &&
+			// The target language may simply have no use for this plural form.
+			(!plural || usesPluralCategory(options.target, plural.category))
+		) {
 			issues.push(createIssue(CHECK_CODE.DUMMY_KEY, { ...base, value: text }));
 		}
 
@@ -615,6 +627,66 @@ function checkInconsistentValues(
 	}
 }
 
+/**
+ * Report a plural key one of whose forms the language needs and does not have.
+ * Which forms a language needs is a fact about the language, not about the
+ * target: English writes two, Russian four, Korean one, and a file that follows
+ * its own language is right even where it does not follow the original.
+ */
+function checkPluralForms(
+	issues: Chki18nIssue[],
+	group: string,
+	localeNames: string[],
+	maps: TranslationMap[],
+	fileOf: FileLookup
+): void {
+	for (let index = 0; index < localeNames.length; index += 1) {
+		const locale = localeNames[index];
+		const categories = pluralCategoriesOf(locale);
+
+		if (!categories) {
+			continue;
+		}
+
+		const formsOfBase = new Map<string, Set<string>>();
+
+		for (const key of Object.keys(maps[index])) {
+			const parts = pluralPartsOf(key);
+
+			if (!parts) {
+				continue;
+			}
+
+			const found = formsOfBase.get(parts.base);
+
+			if (found) {
+				found.add(parts.category);
+				continue;
+			}
+
+			formsOfBase.set(parts.base, new Set([parts.category]));
+		}
+
+		for (const [base, found] of formsOfBase) {
+			const missing = categories.filter((category) => !found.has(category));
+
+			if (missing.length < 1) {
+				continue;
+			}
+
+			issues.push(
+				createIssue(CHECK_CODE.NO_PLURAL_FORM, {
+					locale,
+					key: base,
+					group,
+					file: fileOf ? fileOf(group, locale) : undefined,
+					message: `\`${locale}\` needs ${listOf(missing.map((category) => `\`${base}_${category}\``))} and the file does not define ${missing.length === 1 ? 'it' : 'them'}.`
+				})
+			);
+		}
+	}
+}
+
 /** Keys of every locale, target language first so reports follow its order. */
 export const collectKeys = (maps: TranslationMap[], targetIndex: number): string[] => {
 	const keys: string[] = [];
@@ -839,6 +911,10 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 
 			if (flags.duplicateValue) {
 				checkDuplicateValues(issues, group, localeNames, maps, targetIndex, fileOf);
+			}
+
+			if (flags.noPluralForm) {
+				checkPluralForms(issues, group, localeNames, maps, fileOf);
 			}
 
 			if (flags.inconsistentValue) {

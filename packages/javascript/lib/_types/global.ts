@@ -5,6 +5,9 @@ export type AnyValueObject = { [key: string]: any };
 /** A single check identifier (see `CHECK_CODE`). */
 export type Chki18nCheckCode = (typeof CHECK_CODE)[keyof typeof CHECK_CODE];
 
+/** A plural form a language may need (see `PLURAL_CATEGORIES`). */
+export type Chki18nPluralCategory = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
+
 /** Severity of a reported issue. `info` issues never fail a run. */
 export type Chki18nLevel = 'error' | 'warn' | 'info';
 

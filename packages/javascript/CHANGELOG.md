@@ -19,6 +19,7 @@
 - `INCONSISTENT_VALUE`, for two keys sharing one target language string that a locale translates two different ways. `DUPLICATE_VALUE` asks whether one locale repeats itself; this asks the opposite
 - `KEY_NAMING` and `KEY_DEPTH`, for the shape of a key rather than what it translates to. Both wait for `keyCase` and `maxKeyDepth` to say what the project wants, and are judged once per key rather than once per locale
 - `keyCase` and `maxKeyDepth`, the options those two compare against. `keyCase` accepts the plural and context suffixes an i18n library appends, whatever case the project uses
+- `NO_PLURAL_FORM`, for a plural key missing a form its language needs. Which forms a language needs is a fact about the language rather than about the original: English writes two, Russian four, Korean one. The older i18next pairing of a bare key with `_plural` is left as ordinary keys, and a language the table does not cover is never judged
 - `SUSPICIOUS_LENGTH`, reported at `info`, for a value far longer or shorter than the one it translates. Waits for `lengthRatio`, and measures columns rather than characters so a Korean or Japanese value is not short by default
 - `lengthRatio`, the option it compares against
 - `checkKeyShape` and `displayWidth` are exported, so an editor can judge a key the user is still typing and lay a value out the way the report does
@@ -45,6 +46,8 @@
 - The CLI report was rebuilt around what the reader is looking for: a heading block naming what was scanned, one section per language with its own tally, each check's meaning printed once above its findings, and a summary that counts the axis the sections did not use. Columns are laid out by display width, so a Korean, Japanese or Chinese value no longer pushes the ones beside it out of line
 - `--no-info` drops the heading block and the summary rather than only the progress lines, and `--debug` writes to standard error so a report piped out of standard output stays parseable
 - A description that does not fit the width wraps onto the next line instead of being cut short, so a narrow terminal loses no wording
+- `NO_KEY` and `DUMMY_KEY` no longer ask every language for every plural form. Korean needs only `item_other`, so `item_one` being absent from it was reported as missing and is not; Russian needs an `item_few` that English never writes, and that was reported as a stray key. Applies only to keys ending in a named plural category, and only to the languages the plural table covers
+- `UNUSED_KEY` searches for a plural key by its base. No source file writes `item_one`, so every plural key in a project was reported as unused
 - The CLI moved to its own entry point (`dist/cli.js`). Importing the module has no side effect and never writes to the console or exits the process
 - The package now publishes `types`, so TypeScript consumers get the result shape
 - Analysis is linear in the number of keys rather than quadratic: comparing 5,000 keys across 5 locales went from about 10.8s to about 26ms

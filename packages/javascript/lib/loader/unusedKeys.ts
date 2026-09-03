@@ -14,15 +14,23 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { SOURCE_EXTENSIONS, SOURCE_MAX_FILE_BYTES } from '../constants.js';
+import { pluralBaseOf } from '../core/plural.js';
 import type { Chki18nResolvedOptions } from '../_types/global.js';
 
 const EXTENSIONS = new Set(SOURCE_EXTENSIONS);
 
-/** `desc.hello` → `hello`. */
+/**
+ * `desc.hello` → `hello`, and `desc.item_one` → `item`.
+ *
+ * The plural suffix comes off because no source file writes it: the code asks
+ * for `item` and the runtime picks the form. Searching for `item_one` would
+ * report every plural key in the project as unused.
+ */
 export const leafOfKey = (key: string): string => {
 	const index = key.lastIndexOf('.');
+	const leaf = index === -1 ? key : key.slice(index + 1);
 
-	return index === -1 ? key : key.slice(index + 1);
+	return pluralBaseOf(leaf) ?? leaf;
 };
 
 const isScannableName = (name: string): boolean => {

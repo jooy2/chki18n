@@ -19,6 +19,11 @@ describe('leafOfKey', () => {
 		assert.strictEqual(leafOfKey('hello'), 'hello');
 		assert.strictEqual(leafOfKey(''), '');
 	});
+
+	it('takes the plural suffix off, since no source file writes one', () => {
+		assert.strictEqual(leafOfKey('desc.item_one'), 'item');
+		assert.strictEqual(leafOfKey('item_plural'), 'item');
+	});
 });
 
 describe('findUnusedKeys', () => {

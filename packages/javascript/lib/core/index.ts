@@ -31,6 +31,13 @@ export { collectFlatKeys, findDuplicateKeys } from './duplicate.js';
 export { extractInterpolationKeys } from './interpolation.js';
 export { checkKeyShape } from './key.js';
 export {
+	PLURAL_CATEGORIES,
+	pluralBaseOf,
+	pluralCategoriesOf,
+	pluralPartsOf,
+	usesPluralCategory
+} from './plural.js';
+export {
 	extractNumbers,
 	extractTags,
 	findInvisibleCharacter,
@@ -58,6 +65,7 @@ export type {
 	Chki18nInput,
 	Chki18nIssue,
 	Chki18nKeyCase,
+	Chki18nPluralCategory,
 	Chki18nLevel,
 	Chki18nLevelCount,
 	Chki18nOptions,
