@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 
@@ -18,6 +19,29 @@ def run(*arguments: str) -> subprocess.CompletedProcess[str]:
         text=True,
         check=False,
     )
+
+
+def test_prints_the_report_whatever_the_console_encoding_is() -> None:
+    # A console that cannot encode a box rule or a Korean value is the normal
+    # case on Windows, where stdout defaults to the ANSI code page. Asking for
+    # one here reproduces that anywhere.
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "chki18n.cli",
+            "tests/samples/locales-issue-no-key",
+            "--target",
+            "en",
+        ],
+        capture_output=True,
+        env={**os.environ, "PYTHONIOENCODING": "cp1252"},
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert b"NO_KEY" in result.stdout
+    assert b"UnicodeEncodeError" not in result.stderr
 
 
 def test_reads_a_flag_and_the_word_after_it() -> None:

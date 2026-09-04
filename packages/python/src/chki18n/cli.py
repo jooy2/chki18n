@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import sys
 from collections.abc import Sequence
 from dataclasses import replace
@@ -70,12 +71,32 @@ def capitalize_first(value: str) -> str:
     return f"{value[0].upper()}{value[1:]}" if value else ""
 
 
+def _write_utf8() -> None:
+    """Send UTF-8 to the console whatever its code page says.
+
+    The report is drawn with box rules and a middle dot, and it quotes values in
+    whatever languages the project translates into. On Windows stdout defaults to
+    the ANSI code page, which encodes none of that: the command prints its banner
+    and then dies with a `UnicodeEncodeError` half a report in. Node and Dart both
+    write UTF-8 there regardless, so this is also what keeps the three packages
+    printing the same bytes.
+
+    Only the command line does this. A library has no business reconfiguring the
+    streams of the application that imported it.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        if isinstance(stream, io.TextIOWrapper):
+            stream.reconfigure(encoding="utf-8")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the command line and answer with the exit code it should leave.
 
     ``0`` when nothing failed the run, ``1`` when at least one `error` level issue
     was found — which is what makes this usable as a CI step.
     """
+    _write_utf8()
+
     args = parse_arguments(sys.argv[1:] if argv is None else argv)
     version = installed_version()
 
