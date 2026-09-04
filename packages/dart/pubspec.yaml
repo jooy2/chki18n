@@ -2,7 +2,7 @@ name: chki18n
 description: >-
   Checks that your i18n translation files agree with each other — missing keys,
   untranslated values, broken placeholders. No dependencies, pure Dart.
-version: 1.0.0
+version: 1.1.0
 repository: https://github.com/jooy2/chki18n
 homepage: https://chki18n.cdget.com
 issue_tracker: https://github.com/jooy2/chki18n/issues

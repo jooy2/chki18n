@@ -7,4 +7,4 @@
 library;
 
 /// The version `chki18n --version` prints.
-const String packageVersion = '1.0.0';
+const String packageVersion = '1.1.0';

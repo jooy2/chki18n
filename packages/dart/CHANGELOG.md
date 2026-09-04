@@ -1,6 +1,6 @@
 # Changelog
 
-## vNext (2026--)
+## 1.1.0 (2026-09-04)
 
 > The target language is checked too. Everything else is compared against it, so it sat outside every check, and a mistake typed into the source language stayed there however often the files were checked.
 
