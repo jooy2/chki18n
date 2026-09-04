@@ -2,11 +2,11 @@
 
 # chki18n
 
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/jooy2/chki18n/blob/main/LICENSE) [![npm latest package](https://img.shields.io/npm/v/chki18n/latest.svg)](https://www.npmjs.com/package/chki18n) [![npm downloads](https://img.shields.io/npm/dm/chki18n.svg)](https://www.npmjs.com/package/chki18n) ![Commit Count](https://img.shields.io/github/commit-activity/y/jooy2/chki18n) ![Stars](https://img.shields.io/github/stars/jooy2/chki18n?style=social)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/jooy2/chki18n/blob/main/LICENSE) [![npm latest package](https://img.shields.io/npm/v/chki18n/latest.svg)](https://www.npmjs.com/package/chki18n) [![pub package](https://img.shields.io/pub/v/chki18n.svg)](https://pub.dev/packages/chki18n) [![PyPI](https://img.shields.io/pypi/v/chki18n.svg)](https://pypi.org/project/chki18n/) ![Commit Count](https://img.shields.io/github/commit-activity/y/jooy2/chki18n) ![Stars](https://img.shields.io/github/stars/jooy2/chki18n?style=social)
 
 ### 📘 [**chki18n.cdget.com**](https://chki18n.cdget.com)
 
-Every check, every option and every example. This README is the map; each package has a quick start of its own.
+Every check, every option and every example, for all three packages on one page. This README is the map; each package has a quick start of its own.
 
 ---
 
@@ -14,6 +14,7 @@ Every check, every option and every example. This README is the map; each packag
 
 - **Twenty-five checks.** Missing keys, a whole language file nobody created, keys defined twice, empty values, untranslated strings, interpolation placeholders that do not match in name or in number, markup a translation dropped, numbers it changed, characters nothing will draw, terminology that drifted between two screens, plural forms a language needs, and — pointed at your sources — keys nothing references and keys nothing defines.
 - **Every layout.** One file per locale (`en.json`), one folder per locale (`en/common.json`), or one file holding them all. Files that share keys are compared as a group, so a key missing from `errors.json` is never confused with one missing from `common.json`.
+- **Three languages, one library.** The JavaScript, Dart and Python packages run the same checks in the same order and print the same report, byte for byte. Pick the one your project already speaks.
 - **From the command line or from code.** The same checks and the same options either way — a CLI flag and its API option are one definition, so the two can never disagree.
 - **Fast enough to run on every keystroke.** Comparing 5,000 keys across 5 locales takes about 17ms, and re-checking a single edited key takes about 2µs. An editor can lint as the user types.
 - **A report you can act on.** Grouped by language, by check, by file or not at all; rendered for a terminal, for `grep`, as JSON, as Markdown or as GitHub Actions annotations; and written to a file when you want to keep it.
@@ -21,21 +22,35 @@ Every check, every option and every example. This README is the map; each packag
 
 ## Packages
 
-| Package                                      | Registry                                               | Requires             | Quick start                             |
-| -------------------------------------------- | ------------------------------------------------------ | -------------------- | --------------------------------------- |
+| Package                                      | Registry                                                | Requires             | Quick start                             |
+| -------------------------------------------- | ------------------------------------------------------- | -------------------- | --------------------------------------- |
 | [`packages/javascript`](packages/javascript) | [npm: `chki18n`](https://www.npmjs.com/package/chki18n) | Node.js 18 or later  | [README](packages/javascript/README.md) |
+| [`packages/dart`](packages/dart)             | [pub.dev: `chki18n`](https://pub.dev/packages/chki18n)  | Dart 3.7 or later    | [README](packages/dart/README.md)       |
+| [`packages/python`](packages/python)         | [PyPI: `chki18n`](https://pypi.org/project/chki18n/)    | Python 3.10 or later | [README](packages/python/README.md)     |
 
-More languages are planned. Each package keeps its own changelog and versions independently, so a release on one side is not a release on the others.
+The JavaScript package is the reference implementation, and the other two are held to its output rather than to a description of it. Each package keeps its own changelog and versions independently, so a release on one side is not a release on the others.
 
-## Install
-
-### JavaScript / TypeScript
+## Quick start
 
 Check a folder from the command line — in CI, or before a commit:
 
 ```bash
+# JavaScript
 npx chki18n ./locales --target en
 ```
+
+```bash
+# Dart
+dart pub global activate chki18n
+chki18n ./locales --target en
+```
+
+```bash
+# Python
+pipx run chki18n ./locales --target en
+```
+
+Whichever one you ran:
 
 ```text
   Path     ./locales
@@ -66,10 +81,6 @@ It exits with `1` when something is wrong, so a CI job fails on it.
 
 Or call it from your own code and act on the result yourself:
 
-```bash
-npm install chki18n
-```
-
 ```javascript
 import { checkTranslationFiles } from 'chki18n';
 
@@ -80,7 +91,30 @@ result.summary; // { error: 1, warn: 2, info: 0, total: 3, ... }
 result.issues; // every issue, with its level, key, locale and file
 ```
 
-Every issue carries the words to describe it, so a build script, a dashboard or a translation editor can render the result without hard-coding a single string. [**The JavaScript quick start**](packages/javascript/README.md) has the rest.
+```dart
+import 'package:chki18n/chki18n.dart';
+
+final result = await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(target: 'en'),
+);
+
+result.success; // false
+result.summary.error; // 1
+result.issues; // every issue, with its level, key, locale and file
+```
+
+```python
+from chki18n import Options, check_translation_files
+
+result = check_translation_files("./locales", Options(target="en"))
+
+result.success  # False
+result.summary.error  # 1
+result.issues  # every issue, with its level, key, locale and file
+```
+
+Every issue carries the words to describe it, so a build script, a dashboard or a translation editor can render the result without hard-coding a single string. The quick start for each package has the rest: [JavaScript](packages/javascript/README.md), [Dart](packages/dart/README.md), [Python](packages/python/README.md).
 
 ## Contributing
 
