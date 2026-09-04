@@ -14,6 +14,7 @@ chki18n이 보고하는 모든 문제에는 검사 코드, 심각도, 그리고 
 | 오류   | `NO_KEY`                  | 기준 언어에는 있고 이 로케일에는 없는 키             |
 | 오류   | `NO_INTERPOLATION_KEY`    | 기준 언어에는 있고 이 값에는 없는 자리표시자         |
 | 오류   | `EXTRA_INTERPOLATION_KEY` | 이 값에는 있고 기준 언어에는 없는 자리표시자         |
+| 오류   | `DUPLICATE_KEY`           | 두 번 정의되어 한쪽 값이 사라지는 키                 |
 | 경고   | `DUMMY_KEY`               | 이 로케일에는 있고 기준 언어에는 없는 키             |
 | 경고   | `EMPTY_VALUE`             | 빈 문자열로 정의된 키                                |
 | 경고   | `NOT_TRANSLATED_VALUE`    | 기준 언어와 값이 동일                                |
@@ -31,6 +32,7 @@ chki18n이 보고하는 모든 문제에는 검사 코드, 심각도, 그리고 
 | 경고   | `KEY_NAMING`              | `keyCase`가 정한 표기법을 따르지 않는 키             |
 | 경고   | `KEY_DEPTH`               | `maxKeyDepth`보다 깊게 중첩된 키                     |
 | 참고   | `SUSPICIOUS_LENGTH`       | 기준 언어보다 지나치게 길거나 짧은 값                |
+| 참고   | `UNUSED_KEY`              | 검사한 소스 어디에서도 참조하지 않는 키              |
 | 경고   | `UNDEFINED_KEY`           | 소스가 부르는데 어느 언어 파일에도 없는 키           |
 | 경고   | `NO_PLURAL_FORM`          | 그 언어에 필요한 복수형이 파일에 없음                |
 
@@ -115,7 +117,7 @@ locales/
 키는 정의되어 있지만 값이 `""`인 경우입니다. 나중에 채우려고 자리만 만들어 둔 경우가 많고, 그런 것이 실수로 배포되곤 합니다. 기본은 경고이며, 빈 문자열을 누락된 번역으로 취급하는 프로젝트라면 승격하세요.
 
 ```bash
-npx chki18n ./locales --levels EMPTY_VALUE=error
+chki18n ./locales --levels EMPTY_VALUE=error
 ```
 
 ### `NOT_TRANSLATED_VALUE`
@@ -132,7 +134,7 @@ npx chki18n ./locales --levels EMPTY_VALUE=error
 정당하게 동일한 문자열이 많은 프로젝트라면 꺼두는 것이 합리적입니다.
 
 ```bash
-npx chki18n ./locales --ignore-checks NOT_TRANSLATED_VALUE
+chki18n ./locales --ignore-checks NOT_TRANSLATED_VALUE
 ```
 
 ### `SURROUNDING_WHITESPACE`
@@ -238,7 +240,7 @@ npx chki18n ./locales --ignore-checks NOT_TRANSLATED_VALUE
 원문보다 지나치게 길거나 짧은 값입니다. 잘린 문자열이나 통째로 붙여 넣은 문단이 이렇게 보입니다. 어디까지가 지나친지는 `lengthRatio`가 정합니다. `4`를 주면 원문의 4분의 1보다 짧거나 4배보다 긴 값을 보고합니다.
 
 ```bash
-npx chki18n ./locales --length-ratio 3
+chki18n ./locales --length-ratio 3
 ```
 
 길이는 글자 수가 아니라 칸 수로 셉니다. 한국어와 일본어가 그냥 짧게 나오지 않습니다. 원문이 여덟 칸 미만이면 건너뜁니다. `OK` 같은 값에 비율은 아무것도 말해 주지 않기 때문입니다. 언어마다 길이가 다른 것은 정상이므로 `info`로 보고하며, 결함이라기보다 한번 보라는 신호입니다.
@@ -250,12 +252,35 @@ npx chki18n ./locales --length-ratio 3
 소스 파일 어디에서도 이 키를 참조하지 않는 것으로 보이는 경우입니다. 검사할 소스 위치를 지정해야 동작합니다.
 
 ```bash
-npx chki18n ./locales --target en --source ./src
+chki18n ./locales --target en --source ./src
 ```
+
+::: lang js
 
 ```javascript
 await checkTranslationFiles('./locales', { target: 'en', source: './src' });
 ```
+
+:::
+
+::: lang dart
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(target: 'en', source: './src'),
+);
+```
+
+:::
+
+::: lang py
+
+```python
+check_translation_files("./locales", Options(target="en", source="./src"))
+```
+
+:::
 
 검색은 키의 **마지막 세그먼트**를 기준으로 합니다. `desc.hello`는 `hello`로 찾습니다. 코드에서 중첩 키를 마지막 세그먼트만으로 참조하는 경우가 매우 흔하기 때문입니다. 네임스페이스가 상위에 묶인 `t('hello')` 같은 형태입니다. 점으로 이어진 전체 키로 찾으면 멀쩡히 동작하는 코드를 미사용으로 보고하게 되는데, 둘 중 그쪽이 더 나쁜 실수입니다.
 
@@ -265,9 +290,34 @@ await checkTranslationFiles('./locales', { target: 'en', source: './src' });
 
 이미 답을 알고 있다면 — 프로젝트를 직접 스캔한 편집기라면 — 다시 계산하게 하지 말고 넘기세요.
 
+::: lang js
+
 ```javascript
 analyzeTranslations({ locales, unusedKeys: ['desc.orphan'] }, { target: 'en' });
 ```
+
+:::
+
+::: lang dart
+
+```dart
+analyzeTranslations(
+  Chki18nInput(locales: locales, unusedKeys: const ['desc.orphan']),
+  options: const Chki18nOptions(target: 'en'),
+);
+```
+
+:::
+
+::: lang py
+
+```python
+analyze_translations(
+    Input(locales=locales, unused_keys=["desc.orphan"]), Options(target="en")
+)
+```
+
+:::
 
 ### `UNDEFINED_KEY`
 
@@ -325,7 +375,7 @@ t('attr.missing'); // 어느 언어 파일에도 없음
 `keyCase`는 키의 각 단계를 어떤 표기법으로 적을지 정합니다. `kebab`, `camel`, `snake` 중 하나입니다.
 
 ```bash
-npx chki18n ./locales --key-case kebab
+chki18n ./locales --key-case kebab
 ```
 
 ```text
@@ -341,7 +391,7 @@ i18n 라이브러리가 붙이는 복수형과 문맥 접미사는 어떤 표기
 `maxKeyDepth`는 키를 몇 단계까지 중첩할 수 있는지 정합니다. `2`를 주면 `attr.folder`는 통과하고 `attr.folder.name`은 보고합니다.
 
 ```bash
-npx chki18n ./locales --max-key-depth 2
+chki18n ./locales --max-key-depth 2
 ```
 
 ```text
@@ -396,8 +446,10 @@ npx chki18n ./locales --max-key-depth 2
 기본 구분자는 `{`와 `}`입니다. 프로젝트가 `{{ }}`를 쓴다면 반드시 알려주세요. 그러지 않으면 자리표시자가 전혀 인식되지 않고 두 보간 검사가 조용히 통과합니다.
 
 ```bash
-npx chki18n ./locales --interpolation-prefix "{{" --interpolation-suffix "}}"
+chki18n ./locales --interpolation-prefix "{{" --interpolation-suffix "}}"
 ```
+
+::: lang js
 
 ```javascript
 await checkTranslationFiles('./locales', {
@@ -406,18 +458,41 @@ await checkTranslationFiles('./locales', {
 });
 ```
 
+:::
+
+::: lang dart
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(interpolationPrefix: '{{', interpolationSuffix: '}}'),
+);
+```
+
+:::
+
+::: lang py
+
+```python
+check_translation_files(
+    "./locales", Options(interpolation_prefix="{{", interpolation_suffix="}}")
+)
+```
+
+:::
+
 ## 실행할 검사 고르기
 
 일부만 실행하기:
 
 ```bash
-npx chki18n ./locales --checks NO_KEY,NO_INTERPOLATION_KEY
+chki18n ./locales --checks NO_KEY,NO_INTERPOLATION_KEY
 ```
 
 일부만 빼고 실행하기:
 
 ```bash
-npx chki18n ./locales --ignore-checks DUPLICATE_VALUE,MISSING_NUMBER
+chki18n ./locales --ignore-checks DUPLICATE_VALUE,MISSING_NUMBER
 ```
 
 둘을 함께 쓸 수는 없습니다. `checks`가 우선하며 `ignoreChecks`는 무시되었다고 보고됩니다. `INVALID_FILE`과 `INVALID_OPTIONS`는 어느 목록에도 속하지 않습니다. 실행 자체가 어떻게 됐는지를 알리는 항목이라 끌 수 없습니다.
@@ -427,8 +502,10 @@ npx chki18n ./locales --ignore-checks DUPLICATE_VALUE,MISSING_NUMBER
 모든 비교 검사는 심각도를 다시 지정할 수 있습니다. 무엇이 빌드를 막을지 프로젝트가 스스로 정하는 방법입니다.
 
 ```bash
-npx chki18n ./locales --levels EMPTY_VALUE=error,DUPLICATE_VALUE=info
+chki18n ./locales --levels EMPTY_VALUE=error,DUPLICATE_VALUE=info
 ```
+
+::: lang js
 
 ```javascript
 await checkTranslationFiles('./locales', {
@@ -436,11 +513,42 @@ await checkTranslationFiles('./locales', {
 });
 ```
 
+:::
+
+::: lang dart
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(
+    levels: {
+      Chki18nCheckCode.emptyValue: Chki18nLevel.error,
+      Chki18nCheckCode.duplicateValue: Chki18nLevel.info,
+    },
+  ),
+);
+```
+
+:::
+
+::: lang py
+
+```python
+check_translation_files(
+    "./locales",
+    Options(levels={"EMPTY_VALUE": "error", "DUPLICATE_VALUE": "info"}),
+)
+```
+
+:::
+
 수준은 `error`, `warn`, `info`입니다. `error`만 실행을 실패시키므로, `info`로 낮추면 아무것도 막지 않으면서 리포트에는 계속 남습니다. `INVALID_FILE`과 `INVALID_OPTIONS`는 변경할 수 없습니다.
 
 ## 코드에서 검사 정보 읽기
 
-검사 코드와 메타데이터가 export되어 있어, UI가 문자열을 하드코딩할 필요가 없습니다.
+검사 코드와 메타데이터가 공개되어 있어, UI가 문자열을 하드코딩할 필요가 없습니다.
+
+::: lang js
 
 ```javascript
 import { ANALYZE_CHECK_CODES, CHECK_CODE, CHECK_META } from 'chki18n';
@@ -454,5 +562,41 @@ CHECK_META[CHECK_CODE.NO_KEY];
 
 ANALYZE_CHECK_CODES; // 번역을 비교하는 모든 코드, 리포트 순서대로
 ```
+
+:::
+
+::: lang dart
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+checkMeta[Chki18nCheckCode.noKey];
+// Chki18nCheckMeta(
+//   level: Chki18nLevel.error,
+//   summary: 'Some translation files did not include the following keys',
+//   description: 'The key exists in the target language but is missing here.',
+// )
+
+analyzeCheckCodes; // 번역을 비교하는 모든 코드, 리포트 순서대로
+```
+
+:::
+
+::: lang py
+
+```python
+from chki18n import ANALYZE_CHECK_CODES, CHECK_META
+
+CHECK_META["NO_KEY"]
+# CheckMeta(
+#     level="error",
+#     summary="Some translation files did not include the following keys",
+#     description="The key exists in the target language but is missing here.",
+# )
+
+ANALYZE_CHECK_CODES  # 번역을 비교하는 모든 코드, 리포트 순서대로
+```
+
+:::
 
 `summary`는 여러 발생 건을 묶는 제목이고, `description`은 한 건을 설명합니다. 이 둘이 어떻게 쓰이는지는 [결과 객체](/ko/reference/result)를 참고하세요.

@@ -75,12 +75,35 @@ locales/
 필요하면 직접 지정할 수 있습니다.
 
 ```bash
-npx chki18n ./locales --format folder
+chki18n ./locales --format folder
 ```
+
+::: lang js
 
 ```javascript
 await checkTranslationFiles('./locales', { format: 'folder' });
 ```
+
+:::
+
+::: lang dart
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(format: Chki18nFileFormat.folder),
+);
+```
+
+:::
+
+::: lang py
+
+```python
+check_translation_files("./locales", Options(format="folder"))
+```
+
+:::
 
 지정한 구조에 맞는 파일이 하나도 없으면, 아무것도 검사하지 않은 채 조용히 통과하는 대신 `INVALID_FILE` 오류로 보고됩니다.
 
@@ -112,12 +135,35 @@ node_modules  dist  build  out  coverage
 기본값이 맞지 않으면 직접 목록을 지정하세요.
 
 ```bash
-npx chki18n ./locales --exclude tmp,vendor
+chki18n ./locales --exclude tmp,vendor
 ```
+
+::: lang js
 
 ```javascript
 await checkTranslationFiles('./locales', { exclude: ['tmp', 'vendor'] });
 ```
+
+:::
+
+::: lang dart
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(exclude: ['tmp', 'vendor']),
+);
+```
+
+:::
+
+::: lang py
+
+```python
+check_translation_files("./locales", Options(exclude=["tmp", "vendor"]))
+```
+
+:::
 
 `exclude`는 기본 목록에 **추가**하는 것이 아니라 **대체**합니다. 계속 제외하고 싶은 기본값이 있다면 함께 적어야 합니다.
 
