@@ -277,6 +277,36 @@ void main() {
       expect(command, contains('Missing: here, and there.'));
     });
 
+    test('writes a path GitHub can match, whatever the runner calls a separator', () {
+      final onWindows = buildResult(
+        [
+          const Chki18nIssue(
+            code: Chki18nCheckCode.noKey,
+            level: Chki18nLevel.error,
+            locale: 'ko',
+            key: 'attr.folder',
+            group: '',
+            file: r'D:\repo\locales\ko.json',
+            message: 'Missing.',
+          ),
+        ],
+        resolveOptions(const Chki18nOptions(target: 'en')).options,
+        locales: ['en', 'ko'],
+        groups: [''],
+        keyCount: 1,
+      );
+      final command =
+          render(
+            onWindows,
+            const Chki18nOptions(reporter: Chki18nReporter.github),
+            cwd: r'D:\repo',
+          ).split('\n').first;
+
+      // GitHub matches an annotation against a repository path, which is always
+      // written with forward slashes.
+      expect(command, contains('file=locales/ko.json'));
+    });
+
     test('leaves out what the level options hid', () async {
       final report = render(
         await analyze(),

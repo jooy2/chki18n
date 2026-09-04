@@ -264,6 +264,32 @@ def test_escapes_what_would_otherwise_end_a_command_or_a_property() -> None:
     assert "Missing: here, and there." in command
 
 
+def test_writes_a_path_github_can_match_whatever_the_runner_calls_a_separator() -> None:
+    options, _ = resolve_options(Options(target="en"))
+    on_windows = build_result(
+        [
+            Issue(
+                code="NO_KEY",
+                level="error",
+                locale="ko",
+                key="attr.folder",
+                group="",
+                file="D:\\repo\\locales\\ko.json",
+                message="Missing.",
+            )
+        ],
+        options,
+        locales=["en", "ko"],
+        groups=[""],
+        key_count=1,
+    )
+    command = render(on_windows, reporter="github", cwd="D:\\repo").split("\n")[0]
+
+    # GitHub matches an annotation against a repository path, which is always
+    # written with forward slashes.
+    assert "file=locales/ko.json" in command
+
+
 def test_leaves_out_what_the_level_options_hid() -> None:
     report = render(analyze(), reporter="github", warn=False)
 

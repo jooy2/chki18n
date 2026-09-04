@@ -21,6 +21,13 @@ const escapeProperty = (value: string): string =>
 	escapeData(value).replace(/:/g, '%3A').replace(/,/g, '%2C');
 
 /**
+ * A path GitHub can match against the repository, which means forward slashes
+ * whatever the runner reports. An annotation carrying `locales\\ko.json` attaches
+ * to nothing at all, silently, on a Windows runner.
+ */
+const annotationPath = (path: string): string => path.replace(/\\/g, '/');
+
+/**
  * Workflow commands, one per issue, which GitHub Actions turns into annotations
  * on the files themselves — so a reviewer sees each finding on the line of the
  * pull request it belongs to rather than in a log nobody opens.
@@ -36,7 +43,7 @@ export function formatGitHub(context: Chki18nReportContext): string {
 		.flatMap((section) => section.issues)
 		.map((issue) => {
 			const properties = [
-				issue.file && `file=${escapeProperty(relativeTo(issue.file, cwd))}`,
+				issue.file && `file=${escapeProperty(annotationPath(relativeTo(issue.file, cwd)))}`,
 				`title=${escapeProperty(`chki18n ${issue.code}`)}`
 			]
 				.filter(Boolean)

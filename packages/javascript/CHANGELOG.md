@@ -1,5 +1,11 @@
 # Changelog
 
+## vNext (2026--)
+
+### Fixed
+
+- The `github` reporter writes the annotation's `file=` path with forward slashes on every platform. On a Windows runner it wrote the platform's own separator, which GitHub matches against nothing, so the annotation silently attached to no file
+
 ## 1.0.0 (2026-09-03)
 
 > The first stable release. The checks no longer depend on the file system, so they run against translations an application already holds in memory as well as against a folder of files; the report was rebuilt around what a reader is looking for, and can be written as JSON, Markdown or GitHub annotations; and the comparison grew to twenty-five checks.

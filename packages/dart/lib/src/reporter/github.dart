@@ -22,6 +22,11 @@ String _escapeData(String value) =>
 String _escapeProperty(String value) =>
     _escapeData(value).replaceAll(':', '%3A').replaceAll(',', '%2C');
 
+/// A path GitHub can match against the repository, which means forward slashes
+/// whatever the runner reports. An annotation carrying `locales\ko.json`
+/// attaches to nothing at all, silently, on a Windows runner.
+String _annotationPath(String path) => path.replaceAll('\\', '/');
+
 /// Workflow commands, one per issue, which GitHub Actions turns into
 /// annotations on the files themselves — so a reviewer sees each finding on the
 /// line of the pull request it belongs to rather than in a log nobody opens.
@@ -38,7 +43,7 @@ String formatGitHub(Chki18nReportContext context) {
     for (final issue in section.issues) {
       final file = issue.file;
       final properties = [
-        if (file != null) 'file=${_escapeProperty(relativeTo(file, context.cwd))}',
+        if (file != null) 'file=${_escapeProperty(_annotationPath(relativeTo(file, context.cwd)))}',
         'title=${_escapeProperty('chki18n ${issue.code.code}')}',
       ].join(',');
       final reference = referenceOf(issue, result.target);

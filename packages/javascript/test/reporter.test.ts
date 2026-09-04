@@ -254,6 +254,31 @@ describe('the GitHub reporter', () => {
 		assert.ok(command.includes('Missing: here, and there.'));
 	});
 
+	it('writes a path GitHub can match, whatever the runner calls a separator', () => {
+		const onWindows = buildResult(
+			[
+				{
+					code: 'NO_KEY',
+					level: 'error',
+					locale: 'ko',
+					key: 'attr.folder',
+					group: '',
+					file: 'D:\\repo\\locales\\ko.json',
+					message: 'Missing.'
+				}
+			],
+			resolveOptions({ target: 'en' }).options,
+			{ locales: ['en', 'ko'], groups: [''], keyCount: 1 }
+		);
+		const [command] = render(onWindows, { reporter: REPORTER.GITHUB }, { cwd: 'D:\\repo' }).split(
+			'\n'
+		);
+
+		// GitHub matches an annotation against a repository path, which is always
+		// written with forward slashes.
+		assert.ok(command.includes('file=locales/ko.json'));
+	});
+
 	it('leaves out what the level options hid', async () => {
 		const report = render(await analyze(), { reporter: REPORTER.GITHUB, warn: false });
 

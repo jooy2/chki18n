@@ -32,6 +32,15 @@ def _escape_property(value: str) -> str:
     return _escape_data(value).replace(":", "%3A").replace(",", "%2C")
 
 
+def _annotation_path(path: str) -> str:
+    r"""A path GitHub can match against the repository, which means forward slashes.
+
+    An annotation carrying `locales\ko.json` attaches to nothing at all,
+    silently, on a Windows runner.
+    """
+    return path.replace("\\", "/")
+
+
 def format_github(context: ReportContext) -> str:
     """Workflow commands, one per issue, which GitHub Actions turns into annotations.
 
@@ -48,13 +57,10 @@ def format_github(context: ReportContext) -> str:
 
     for section in context.sections:
         for issue in section.issues:
+            file = _annotation_path(relative_to(issue.file, context.cwd)) if issue.file else ""
             properties = ",".join(
                 [
-                    *(
-                        [f"file={_escape_property(relative_to(issue.file, context.cwd))}"]
-                        if issue.file
-                        else []
-                    ),
+                    *([f"file={_escape_property(file)}"] if file else []),
                     f"title={_escape_property(f'chki18n {issue.code}')}",
                 ]
             )
