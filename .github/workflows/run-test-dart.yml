@@ -35,9 +35,14 @@ jobs:
         with:
           sdk: ${{ matrix.sdk }}
       - run: dart pub get
+      # Style, on one leg only. The formatter's own output changes between SDK
+      # versions, so asking the floor to agree with code formatted by a current
+      # SDK fails on a difference that means nothing.
       - name: Check formatting
+        if: matrix.sdk == 'stable'
         run: dart format --output=none --set-exit-if-changed .
       - name: Analyze
+        if: matrix.sdk == 'stable'
         run: dart analyze --fatal-infos
       - name: Test
         run: dart test
