@@ -1,0 +1,50 @@
+name: run-test-parity
+
+# The one check no package can run on its own: that the three command lines
+# print the same report. Each package's suite only knows its own expected
+# output, so a drift between two of them passes everywhere until someone
+# compares them.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - packages/**
+      - tools/parity/**
+      - .github/workflows/run-test-parity.yml
+  workflow_dispatch:
+
+jobs:
+  run-test-parity:
+    runs-on: ubuntu-latest
+    name: Compare the three command lines
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: packages/javascript/package-lock.json
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # The reference implementation is compared from its build, so it has to
+      # be a current one.
+      - name: Build the JavaScript package
+        working-directory: packages/javascript
+        run: |
+          npm ci
+          npm run build
+      - name: Get the Dart dependencies
+        working-directory: packages/dart
+        run: dart pub get
+      # Python runs from the source tree, so there is nothing to install.
+      - name: Compare
+        run: node tools/parity/run.mjs

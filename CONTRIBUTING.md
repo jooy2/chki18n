@@ -32,6 +32,16 @@ Here's the process for contributing to the project:
 5. Update the documentation (if it exists) or create a new one. If your project supports multilingual documentation, update the documentation for all languages. You can fill in the content in your own language and not translate it.
 6. Add or modify tests as needed (if test code exists). You should also verify that existing tests pass.
 
+### Keep the three packages in step
+
+The JavaScript, Dart and Python packages are one library, and the documentation promises they print the same report. Each package's own suite only knows its own expected output, so a change to one of them can drift from the others and still pass everywhere. Compare them directly:
+
+```bash
+node tools/parity/run.mjs
+```
+
+It runs the three command lines over the same samples, with every reporter and every grouping, and fails on the first line that differs. It needs `node`, `dart` and a Python 3, and the JavaScript package built (`npm run build` in `packages/javascript`). CI runs it on every pull request that touches a package.
+
 ### Write a commit message
 
 While we don't have strict restrictions on commit messages, we recommend that you follow the recommendations below whenever possible:
