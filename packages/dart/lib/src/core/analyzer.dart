@@ -277,7 +277,12 @@ void _reportTagMismatch(
   }
 }
 
-/// Compares one key across every locale.
+/// Compares one key across every locale, the target language included. What
+/// that language is compared against is itself, so only the checks that read a
+/// single value — its type, whether it is empty, the whitespace around it, the
+/// characters in it and the script it is written in — have anything to say
+/// about it. A source language is written by hand like any other and picks up
+/// the same mistakes, so leaving it out would hide them.
 ///
 /// Locales are addressed by index into three parallel lists rather than by one
 /// object per key: a full analysis calls this once per key per group, so the
@@ -329,19 +334,22 @@ void _checkKeySlots(
   final plural = pluralPartsOf(key);
 
   for (var index = 0; index < localeNames.length; index += 1) {
-    if (index == targetIndex) {
-      continue;
-    }
-
+    // The target language is walked like any other, but only the checks that
+    // read one value on its own can say anything about it: it is what the
+    // comparisons compare against, so it can never disagree with itself.
+    final isTarget = index == targetIndex;
     final locale = localeNames[index];
     final value = values[index];
     final file = fileOf == null ? null : fileOf(group, locale);
+    // Nothing is quoted beside a finding of the target language's own: the
+    // value the report already shows is the value it would be compared to.
+    final reference = isTarget ? null : targetText;
     final base = _IssueBase(
       locale: locale,
       key: key,
       group: group,
       file: file,
-      targetValue: targetText,
+      targetValue: reference,
     );
 
     if (!present[index]) {
@@ -355,7 +363,7 @@ void _checkKeySlots(
             key: key,
             group: group,
             file: file,
-            targetValue: targetText,
+            targetValue: reference,
           ),
         );
       }
@@ -376,7 +384,7 @@ void _checkKeySlots(
           key: key,
           group: group,
           file: file,
-          targetValue: targetText,
+          targetValue: reference,
           value: text,
         ),
       );
@@ -391,7 +399,7 @@ void _checkKeySlots(
             key: key,
             group: group,
             file: file,
-            targetValue: targetText,
+            targetValue: reference,
             value: text,
             message:
                 'The value is ${value == null ? '`null`' : 'a `${_typeNameOf(value)}`'}, '
@@ -412,7 +420,7 @@ void _checkKeySlots(
             key: key,
             group: group,
             file: file,
-            targetValue: targetText,
+            targetValue: reference,
             value: value,
           ),
         );
@@ -429,7 +437,7 @@ void _checkKeySlots(
           key: key,
           group: group,
           file: file,
-          targetValue: targetText,
+          targetValue: reference,
           value: value,
         ),
       );
@@ -446,7 +454,7 @@ void _checkKeySlots(
             key: key,
             group: group,
             file: file,
-            targetValue: targetText,
+            targetValue: reference,
             value: value,
             message:
                 'The value holds ${nameOfInvisibleCharacter(invisible)}, '
@@ -456,63 +464,73 @@ void _checkKeySlots(
       }
     }
 
+    // Reaching here as the target language means the value is a non-empty
+    // string, so `targetIsString` is already true and the block below is the
+    // one place its own findings can come from.
     if (targetIsString) {
-      if (flags.notTranslatedValue && value == targetValue) {
-        issues.add(
-          createIssue(
-            Chki18nCheckCode.notTranslatedValue,
-            locale: locale,
-            key: key,
-            group: group,
-            file: file,
-            targetValue: targetText,
-            value: value,
-          ),
-        );
-      }
-
-      if (flags.missingNumber && targetHasDigit && !_digitPattern.hasMatch(value)) {
-        issues.add(
-          createIssue(
-            Chki18nCheckCode.missingNumber,
-            locale: locale,
-            key: key,
-            group: group,
-            file: file,
-            targetValue: targetText,
-            value: value,
-          ),
-        );
-      }
-
-      if (flags.numberMismatch && targetHasDigit && _digitPattern.hasMatch(value)) {
-        final numbers = extractNumbers(value);
-
-        if (!_sameItems(targetNumbers, numbers)) {
+      // Each of these asks how the value differs from the target language's.
+      // The target language's own value is that reference, so there is nothing
+      // for it to differ from.
+      if (!isTarget) {
+        if (flags.notTranslatedValue && value == targetValue) {
           issues.add(
             createIssue(
-              Chki18nCheckCode.numberMismatch,
+              Chki18nCheckCode.notTranslatedValue,
               locale: locale,
               key: key,
               group: group,
               file: file,
-              targetValue: targetText,
+              targetValue: reference,
               value: value,
-              message:
-                  'The target language uses ${targetNumbers.join(', ')} and this value '
-                  'uses ${numbers.join(', ')}.',
             ),
           );
         }
+
+        if (flags.missingNumber && targetHasDigit && !_digitPattern.hasMatch(value)) {
+          issues.add(
+            createIssue(
+              Chki18nCheckCode.missingNumber,
+              locale: locale,
+              key: key,
+              group: group,
+              file: file,
+              targetValue: reference,
+              value: value,
+            ),
+          );
+        }
+
+        if (flags.numberMismatch && targetHasDigit && _digitPattern.hasMatch(value)) {
+          final numbers = extractNumbers(value);
+
+          if (!_sameItems(targetNumbers, numbers)) {
+            issues.add(
+              createIssue(
+                Chki18nCheckCode.numberMismatch,
+                locale: locale,
+                key: key,
+                group: group,
+                file: file,
+                targetValue: reference,
+                value: value,
+                message:
+                    'The target language uses ${targetNumbers.join(', ')} and this value '
+                    'uses ${numbers.join(', ')}.',
+              ),
+            );
+          }
+        }
+
+        if (targetTagCounts != null && (targetTagCounts.isNotEmpty || value.contains('<'))) {
+          _reportTagMismatch(issues, base, value, targetTagCounts);
+        }
       }
 
-      if (targetTagCounts != null && (targetTagCounts.isNotEmpty || value.contains('<'))) {
-        _reportTagMismatch(issues, base, value, targetTagCounts);
-      }
-
-      // A value identical to the target language is already reported as
-      // untranslated; saying it twice adds nothing.
-      if (flags.untranslatedScript && value != targetValue) {
+      // Which script a value is written in is a fact about that one value, so
+      // the target language is asked it too. A value identical to the target
+      // language is already reported as untranslated, and saying it twice adds
+      // nothing.
+      if (flags.untranslatedScript && (isTarget || value != targetValue)) {
         final script = scriptOfLocale(locale);
 
         if (script != null &&
@@ -525,7 +543,7 @@ void _checkKeySlots(
               key: key,
               group: group,
               file: file,
-              targetValue: targetText,
+              targetValue: reference,
               value: value,
             ),
           );
@@ -534,7 +552,7 @@ void _checkKeySlots(
 
       final lengthRatio = options.lengthRatio;
 
-      if (targetWidth >= _minMeasuredLength && lengthRatio != null) {
+      if (!isTarget && targetWidth >= _minMeasuredLength && lengthRatio != null) {
         final ratio = displayWidth(value) / targetWidth;
 
         if (ratio > lengthRatio || ratio * lengthRatio < 1) {
@@ -545,7 +563,7 @@ void _checkKeySlots(
               key: key,
               group: group,
               file: file,
-              targetValue: targetText,
+              targetValue: reference,
               value: value,
               message:
                   'The value is ${ratio.toStringAsFixed(1)} times the length of the '
@@ -556,7 +574,9 @@ void _checkKeySlots(
       }
     }
 
-    if (!hasTargetKey || !checkInterpolation) {
+    // Placeholders are compared against the target language's, so its own are
+    // the reference rather than a finding.
+    if (isTarget || !hasTargetKey || !checkInterpolation) {
       continue;
     }
 
@@ -579,7 +599,7 @@ void _checkKeySlots(
             key: key,
             group: group,
             file: file,
-            targetValue: targetText,
+            targetValue: reference,
             value: value,
             interpolation: interpolation,
             message:
@@ -604,7 +624,7 @@ void _checkKeySlots(
             key: key,
             group: group,
             file: file,
-            targetValue: targetText,
+            targetValue: reference,
             value: value,
             interpolation: interpolation,
             message:
@@ -638,7 +658,7 @@ void _checkKeySlots(
           key: key,
           group: group,
           file: file,
-          targetValue: targetText,
+          targetValue: reference,
           value: value,
           interpolation: entry.key,
           message:

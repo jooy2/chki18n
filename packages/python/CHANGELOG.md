@@ -2,6 +2,13 @@
 
 ## vNext (2026--)
 
+> The target language is checked too. Everything else is compared against it, so it sat outside every check, and a mistake typed into the source language stayed there however often the files were checked.
+
+### Changed
+
+- The target language is now checked by everything that reads one value on its own: `EMPTY_VALUE`, `SURROUNDING_WHITESPACE`, `INVISIBLE_CHARACTER`, `INVALID_VALUE_TYPE` and `UNTRANSLATED_SCRIPT`. It was skipped outright before, so an empty string, a trailing space or a zero width character in `en.json` was never reported. The comparison checks still say nothing about it, since it is what they compare against. None of the five reports at `error`, so a run that passed still passes; switch one off with `ignore_checks` the way you would for any other language
+- An issue about the target language's own value carries no `target_value`. What a report quotes beside a finding is the value it would be compared to, and for the target language that is the value already shown
+
 ### Fixed
 
 - The `github` reporter writes the annotation's `file=` path with forward slashes on every platform. On a Windows runner it wrote the platform's own separator, which GitHub matches against nothing, so the annotation silently attached to no file

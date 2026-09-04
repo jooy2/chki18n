@@ -30,6 +30,27 @@ void main() {
       expect(issue.file, endsWith('ko.json'));
     });
 
+    test('reports what the target language got wrong in its own file', () async {
+      final result = await checkTranslationFiles(path: samplePath('locales-target-issue'));
+      final codes =
+          result.issues
+              .where((issue) => issue.locale == 'en')
+              .map((issue) => issue.code.name)
+              .toList()
+            ..sort();
+
+      expect(codes, [
+        Chki18nCheckCode.emptyValue.name,
+        Chki18nCheckCode.invalidValueType.name,
+        Chki18nCheckCode.invisibleCharacter.name,
+        Chki18nCheckCode.surroundingWhitespace.name,
+      ]);
+      // None of them is an error, so a source language nobody had checked
+      // before does not start failing the build the day this arrives.
+      expect(result.success, isTrue);
+      expect(result.issues.every((issue) => issue.locale.isEmpty || issue.locale == 'en'), isTrue);
+    });
+
     test('compares a folder per locale layout', () async {
       final result = await checkTranslationFiles(path: samplePath('multiple-translate-files'));
 

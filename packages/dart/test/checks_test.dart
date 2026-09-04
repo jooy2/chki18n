@@ -31,6 +31,23 @@ List<Chki18nIssue> check(
   ),
 ).of(code);
 
+/// Runs every check and keeps what was said about the target language, so the
+/// ones that must stay quiet about it are given the chance to fire.
+List<Chki18nIssue> checkAll(
+  Map<String, TranslationMap> locales, {
+  double? lengthRatio,
+  List<Chki18nCheckCode>? ignoreChecks,
+}) =>
+    analyzeTranslations(
+      Chki18nInput(locales: locales),
+      options: Chki18nOptions(
+        target: 'en',
+        flattened: true,
+        lengthRatio: lengthRatio,
+        ignoreChecks: ignoreChecks,
+      ),
+    ).issues.where((issue) => issue.locale == 'en').toList();
+
 void main() {
   group('NO_LOCALE', () {
     test('finds the language a group is missing entirely', () {
@@ -641,6 +658,123 @@ void main() {
       expect(hasTranslatableText('{name}', '{', '}'), isFalse);
       expect(hasTranslatableText('<br/>', '{', '}'), isFalse);
       expect(hasTranslatableText('Hi {name}', '{', '}'), isTrue);
+    });
+  });
+
+  group('the target language', () {
+    test('reports an empty value of its own', () {
+      final issues = checkAll({
+        'en': {'a': ''},
+        'ko': {'a': '비어 있음'},
+      });
+
+      expect(issues, hasLength(1));
+      expect(issues.first.code, Chki18nCheckCode.emptyValue);
+    });
+
+    test('reports the whitespace around a value of its own', () {
+      final issues = checkAll({
+        'en': {'a': 'Save '},
+        'ko': {'a': '저장'},
+      });
+
+      expect(issues, hasLength(1));
+      expect(issues.first.code, Chki18nCheckCode.surroundingWhitespace);
+    });
+
+    test('reports a character of its own that nothing will draw', () {
+      final issues = checkAll({
+        'en': {'a': 'Sign${zeroWidthSpace}in'},
+        'ko': {'a': '로그인'},
+      });
+
+      expect(issues, hasLength(1));
+      expect(issues.first.code, Chki18nCheckCode.invisibleCharacter);
+      expect(issues.first.message, contains('zero width space'));
+    });
+
+    test('reports a value of its own that is not a string', () {
+      final issues = checkAll({
+        'en': {'a': 42},
+        'ko': {'a': '42'},
+      });
+
+      expect(issues, hasLength(1));
+      expect(issues.first.code, Chki18nCheckCode.invalidValueType);
+    });
+
+    test('reports a value of its own written in the wrong script', () {
+      final issues =
+          analyzeTranslations(
+            const Chki18nInput(
+              locales: {
+                'ko': {'a': 'Hello'},
+                'en': {'a': 'Hello'},
+              },
+            ),
+            options: const Chki18nOptions(
+              target: 'ko',
+              flattened: true,
+              checks: [Chki18nCheckCode.untranslatedScript],
+            ),
+          ).issues;
+
+      expect(issues, hasLength(1));
+      expect(issues.first.locale, 'ko');
+      expect(issues.first.code, Chki18nCheckCode.untranslatedScript);
+    });
+
+    test('quotes nothing beside a finding of its own, having nothing to compare it to', () {
+      final issues = checkAll({
+        'en': {'a': 'Save '},
+        'ko': {'a': '저장'},
+      });
+
+      expect(issues.first.targetValue, isNull);
+      expect(issues.first.value, 'Save ');
+    });
+
+    test('never disagrees with itself, whatever the value holds', () {
+      expect(
+        checkAll({
+          'en': {'a': 'Hello <b>{name}</b>, you have 3 of {count}'},
+          'ko': {'a': '안녕하세요 <b>{name}</b>님, {count} 중 3개가 있습니다'},
+        }, lengthRatio: 2),
+        isEmpty,
+      );
+    });
+
+    test('is still what the other locales are compared against', () {
+      final result = analyzeTranslations(
+        const Chki18nInput(
+          locales: {
+            'en': {'a': 'Save '},
+            'ko': {'a': 'Save '},
+          },
+        ),
+        options: const Chki18nOptions(target: 'en', flattened: true),
+      );
+
+      expect(
+        result.of(Chki18nCheckCode.surroundingWhitespace).map((issue) => issue.locale).toList(),
+        ['en', 'ko'],
+      );
+      expect(result.of(Chki18nCheckCode.notTranslatedValue).map((issue) => issue.locale).toList(), [
+        'ko',
+      ]);
+    });
+
+    test('can be silenced like any other locale, by switching the check off', () {
+      expect(
+        checkAll(
+          {
+            'en': {'a': ''},
+            'ko': {'a': '비어 있음'},
+          },
+          ignoreChecks: [Chki18nCheckCode.emptyValue],
+        ),
+        isEmpty,
+      );
     });
   });
 }

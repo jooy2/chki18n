@@ -246,7 +246,12 @@ function reportTagMismatch(
 }
 
 /**
- * Compare one key across every locale.
+ * Compare one key across every locale, the target language included. What that
+ * language is compared against is itself, so only the checks that read a single
+ * value — its type, whether it is empty, the whitespace around it, the
+ * characters in it and the script it is written in — have anything to say about
+ * it. A source language is written by hand like any other and picks up the same
+ * mistakes, so leaving it out would hide them.
  *
  * Locales are addressed by index into three parallel arrays rather than by one
  * object per key: a full analysis calls this once per key per group, so the
@@ -298,14 +303,16 @@ function checkKeySlots(
 	const plural = pluralPartsOf(key);
 
 	for (let index = 0; index < localeNames.length; index += 1) {
-		if (index === targetIndex) {
-			continue;
-		}
-
+		// The target language is walked like any other, but only the checks that
+		// read one value on its own can say anything about it: it is what the
+		// comparisons compare against, so it can never disagree with itself.
+		const isTarget = index === targetIndex;
 		const locale = localeNames[index];
 		const value = values[index];
 		const file = fileOf ? fileOf(group, locale) : undefined;
-		const base = { locale, key, group, file, targetValue: targetText };
+		// Nothing is quoted beside a finding of the target language's own: the
+		// value the report already shows is the value it would be compared to.
+		const base = { locale, key, group, file, targetValue: isTarget ? undefined : targetText };
 
 		if (!present[index]) {
 			if (hasTargetKey && flags.noKey && (!plural || usesPluralCategory(locale, plural.category))) {
@@ -366,36 +373,46 @@ function checkKeySlots(
 			}
 		}
 
+		// Reaching here as the target language means the value is a non-empty
+		// string, so `targetIsString` is already true and the block below is the
+		// one place its own findings can come from.
 		if (targetIsString) {
-			if (flags.notTranslatedValue && value === targetValue) {
-				issues.push(createIssue(CHECK_CODE.NOT_TRANSLATED_VALUE, { ...base, value }));
-			}
+			// Each of these asks how the value differs from the target language's.
+			// The target language's own value is that reference, so there is
+			// nothing for it to differ from.
+			if (!isTarget) {
+				if (flags.notTranslatedValue && value === targetValue) {
+					issues.push(createIssue(CHECK_CODE.NOT_TRANSLATED_VALUE, { ...base, value }));
+				}
 
-			if (flags.missingNumber && targetHasDigit && !DIGIT_PATTERN.test(value)) {
-				issues.push(createIssue(CHECK_CODE.MISSING_NUMBER, { ...base, value }));
-			}
+				if (flags.missingNumber && targetHasDigit && !DIGIT_PATTERN.test(value)) {
+					issues.push(createIssue(CHECK_CODE.MISSING_NUMBER, { ...base, value }));
+				}
 
-			if (flags.numberMismatch && targetHasDigit && DIGIT_PATTERN.test(value)) {
-				const numbers = extractNumbers(value);
+				if (flags.numberMismatch && targetHasDigit && DIGIT_PATTERN.test(value)) {
+					const numbers = extractNumbers(value);
 
-				if (!sameItems(targetNumbers, numbers)) {
-					issues.push(
-						createIssue(CHECK_CODE.NUMBER_MISMATCH, {
-							...base,
-							value,
-							message: `The target language uses ${targetNumbers.join(', ')} and this value uses ${numbers.join(', ')}.`
-						})
-					);
+					if (!sameItems(targetNumbers, numbers)) {
+						issues.push(
+							createIssue(CHECK_CODE.NUMBER_MISMATCH, {
+								...base,
+								value,
+								message: `The target language uses ${targetNumbers.join(', ')} and this value uses ${numbers.join(', ')}.`
+							})
+						);
+					}
+				}
+
+				if (targetTagCounts && (targetTagCounts.size > 0 || value.indexOf('<') !== -1)) {
+					reportTagMismatch(issues, base, value, targetTagCounts);
 				}
 			}
 
-			if (targetTagCounts && (targetTagCounts.size > 0 || value.indexOf('<') !== -1)) {
-				reportTagMismatch(issues, base, value, targetTagCounts);
-			}
-
-			// A value identical to the target language is already reported as
-			// untranslated; saying it twice adds nothing.
-			if (flags.untranslatedScript && value !== targetValue) {
+			// Which script a value is written in is a fact about that one value,
+			// so the target language is asked it too. A value identical to the
+			// target language is already reported as untranslated, and saying it
+			// twice adds nothing.
+			if (flags.untranslatedScript && (isTarget || value !== targetValue)) {
 				const script = scriptOfLocale(locale);
 
 				if (
@@ -407,7 +424,7 @@ function checkKeySlots(
 				}
 			}
 
-			if (targetWidth >= MIN_MEASURED_LENGTH && options.lengthRatio !== null) {
+			if (!isTarget && targetWidth >= MIN_MEASURED_LENGTH && options.lengthRatio !== null) {
 				const ratio = displayWidth(value) / targetWidth;
 
 				if (ratio > options.lengthRatio || ratio * options.lengthRatio < 1) {
@@ -422,7 +439,9 @@ function checkKeySlots(
 			}
 		}
 
-		if (!hasTargetKey || !checkInterpolation) {
+		// Placeholders are compared against the target language's, so its own are
+		// the reference rather than a finding.
+		if (isTarget || !hasTargetKey || !checkInterpolation) {
 			continue;
 		}
 

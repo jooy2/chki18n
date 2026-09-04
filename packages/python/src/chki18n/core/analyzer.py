@@ -280,7 +280,13 @@ def _check_key_slots(
     options: ResolvedOptions,
     file_of: dict[str, str] | None,
 ) -> None:
-    """Compare one key across every locale.
+    """Compare one key across every locale, the target language included.
+
+    What that language is compared against is itself, so only the checks that
+    read a single value -- its type, whether it is empty, the whitespace around
+    it, the characters in it and the script it is written in -- have anything to
+    say about it. A source language is written by hand like any other and picks
+    up the same mistakes, so leaving it out would hide them.
 
     Locales are addressed by index into two parallel lists rather than by one
     object per key: a full analysis calls this once per key per group, so the
@@ -329,9 +335,10 @@ def _check_key_slots(
     plural = plural_parts_of(key)
 
     for index, locale in enumerate(locale_names):
-        if index == target_index:
-            continue
-
+        # The target language is walked like any other, but only the checks that
+        # read one value on its own can say anything about it: it is what the
+        # comparisons compare against, so it can never disagree with itself.
+        is_target = index == target_index
         value = values[index]
         file = file_of.get(f"{group} {locale}") if file_of is not None else None
         base: dict[str, Any] = {
@@ -339,7 +346,9 @@ def _check_key_slots(
             "key": key,
             "group": group,
             "file": file,
-            "target_value": target_text,
+            # Nothing is quoted beside a finding of the target language's own:
+            # the value the report already shows is the one it compares to.
+            "target_value": None if is_target else target_text,
         }
 
         if value is _MISSING:
@@ -402,35 +411,44 @@ def _check_key_slots(
                     )
                 )
 
+        # Reaching here as the target language means the value is a non-empty
+        # string, so `target_is_string` is already true and the block below is
+        # the one place its own findings can come from.
         if target_is_string:
-            if flags.not_translated_value and value == target_value:
-                issues.append(create_issue("NOT_TRANSLATED_VALUE", **base, value=value))
+            # Each of these asks how the value differs from the target
+            # language's. The target language's own value is that reference, so
+            # there is nothing for it to differ from.
+            if not is_target:
+                if flags.not_translated_value and value == target_value:
+                    issues.append(create_issue("NOT_TRANSLATED_VALUE", **base, value=value))
 
-            if flags.missing_number and target_has_digit and not _DIGIT_PATTERN.search(value):
-                issues.append(create_issue("MISSING_NUMBER", **base, value=value))
+                if flags.missing_number and target_has_digit and not _DIGIT_PATTERN.search(value):
+                    issues.append(create_issue("MISSING_NUMBER", **base, value=value))
 
-            if flags.number_mismatch and target_has_digit and _DIGIT_PATTERN.search(value):
-                numbers = extract_numbers(value)
+                if flags.number_mismatch and target_has_digit and _DIGIT_PATTERN.search(value):
+                    numbers = extract_numbers(value)
 
-                if not _same_items(target_numbers, numbers):
-                    issues.append(
-                        create_issue(
-                            "NUMBER_MISMATCH",
-                            **base,
-                            value=value,
-                            message=(
-                                f"The target language uses {', '.join(target_numbers)} and "
-                                f"this value uses {', '.join(numbers)}."
-                            ),
+                    if not _same_items(target_numbers, numbers):
+                        issues.append(
+                            create_issue(
+                                "NUMBER_MISMATCH",
+                                **base,
+                                value=value,
+                                message=(
+                                    f"The target language uses {', '.join(target_numbers)} and "
+                                    f"this value uses {', '.join(numbers)}."
+                                ),
+                            )
                         )
-                    )
 
-            if target_tag_counts is not None and (target_tag_counts or "<" in value):
-                _report_tag_mismatch(issues, base, value, target_tag_counts)
+                if target_tag_counts is not None and (target_tag_counts or "<" in value):
+                    _report_tag_mismatch(issues, base, value, target_tag_counts)
 
-            # A value identical to the target language is already reported as
-            # untranslated; saying it twice adds nothing.
-            if flags.untranslated_script and value != target_value:
+            # Which script a value is written in is a fact about that one value,
+            # so the target language is asked it too. A value identical to the
+            # target language is already reported as untranslated, and saying it
+            # twice adds nothing.
+            if flags.untranslated_script and (is_target or value != target_value):
                 script = script_of_locale(locale)
 
                 if (
@@ -444,7 +462,7 @@ def _check_key_slots(
 
             length_ratio = options.length_ratio
 
-            if target_width >= _MIN_MEASURED_LENGTH and length_ratio is not None:
+            if not is_target and target_width >= _MIN_MEASURED_LENGTH and length_ratio is not None:
                 ratio = display_width(value) / target_width
 
                 if ratio > length_ratio or ratio * length_ratio < 1:
@@ -460,7 +478,9 @@ def _check_key_slots(
                         )
                     )
 
-        if not has_target_key or not check_interpolation:
+        # Placeholders are compared against the target language's, so its own
+        # are the reference rather than a finding.
+        if is_target or not has_target_key or not check_interpolation:
             continue
 
         current_interpolations = extract_interpolation_keys(

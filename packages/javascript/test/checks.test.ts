@@ -594,3 +594,97 @@ describe('the value primitives', () => {
 		assert.strictEqual(hasTranslatableText('Hi {name}', '{', '}'), true);
 	});
 });
+
+describe('the target language', () => {
+	/** Every check, so the ones that must stay quiet are given the chance to fire. */
+	const checkAll = (locales: { [locale: string]: TranslationMap }, options: Chki18nOptions = {}) =>
+		analyzeTranslations({ locales }, { target: 'en', flattened: true, ...options }).issues.filter(
+			(issue) => issue.locale === 'en'
+		);
+
+	it('reports an empty value of its own', () => {
+		const issues = checkAll({ en: { a: '' }, ko: { a: '비어 있음' } });
+
+		assert.strictEqual(issues.length, 1);
+		assert.strictEqual(issues[0].code, CHECK_CODE.EMPTY_VALUE);
+	});
+
+	it('reports the whitespace around a value of its own', () => {
+		const issues = checkAll({ en: { a: 'Save ' }, ko: { a: '저장' } });
+
+		assert.strictEqual(issues.length, 1);
+		assert.strictEqual(issues[0].code, CHECK_CODE.SURROUNDING_WHITESPACE);
+	});
+
+	it('reports a character of its own that nothing will draw', () => {
+		const issues = checkAll({ en: { a: `Sign${ZERO_WIDTH_SPACE}in` }, ko: { a: '로그인' } });
+
+		assert.strictEqual(issues.length, 1);
+		assert.strictEqual(issues[0].code, CHECK_CODE.INVISIBLE_CHARACTER);
+		assert.ok(issues[0].message.includes('zero width space'));
+	});
+
+	it('reports a value of its own that is not a string', () => {
+		const issues = checkAll({ en: { a: 42 }, ko: { a: '42' } });
+
+		assert.strictEqual(issues.length, 1);
+		assert.strictEqual(issues[0].code, CHECK_CODE.INVALID_VALUE_TYPE);
+	});
+
+	it('reports a value of its own written in the wrong script', () => {
+		const issues = analyzeTranslations(
+			{ locales: { ko: { a: 'Hello' }, en: { a: 'Hello' } } },
+			{ target: 'ko', flattened: true, checks: [CHECK_CODE.UNTRANSLATED_SCRIPT] }
+		).issues;
+
+		assert.strictEqual(issues.length, 1);
+		assert.strictEqual(issues[0].locale, 'ko');
+		assert.strictEqual(issues[0].code, CHECK_CODE.UNTRANSLATED_SCRIPT);
+	});
+
+	it('quotes nothing beside a finding of its own, having nothing to compare it to', () => {
+		const issues = checkAll({ en: { a: 'Save ' }, ko: { a: '저장' } });
+
+		assert.strictEqual(issues[0].targetValue, undefined);
+		assert.strictEqual(issues[0].value, 'Save ');
+	});
+
+	it('never disagrees with itself, whatever the value holds', () => {
+		assert.deepStrictEqual(
+			checkAll(
+				{
+					en: { a: 'Hello <b>{name}</b>, you have 3 of {count}' },
+					ko: { a: '안녕하세요 <b>{name}</b>님, {count} 중 3개가 있습니다' }
+				},
+				{ lengthRatio: 2 }
+			),
+			[]
+		);
+	});
+
+	it('is still what the other locales are compared against', () => {
+		const result = analyzeTranslations(
+			{ locales: { en: { a: 'Save ' }, ko: { a: 'Save ' } } },
+			{ target: 'en', flattened: true }
+		);
+
+		const locales = result.issues
+			.filter((issue) => issue.code === CHECK_CODE.SURROUNDING_WHITESPACE)
+			.map((issue) => issue.locale);
+
+		assert.deepStrictEqual(locales, ['en', 'ko']);
+		assert.strictEqual(
+			result.issues.some(
+				(issue) => issue.code === CHECK_CODE.NOT_TRANSLATED_VALUE && issue.locale === 'ko'
+			),
+			true
+		);
+	});
+
+	it('can be silenced like any other locale, by switching the check off', () => {
+		assert.deepStrictEqual(
+			checkAll({ en: { a: '' }, ko: { a: '비어 있음' } }, { ignoreChecks: ['EMPTY_VALUE'] }),
+			[]
+		);
+	});
+});

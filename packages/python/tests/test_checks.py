@@ -42,6 +42,22 @@ def check(
     ).of(code)
 
 
+def check_all(locales: dict[str, dict[str, Any]], **options: Any) -> list[Issue]:
+    """Run every check and keep what was said about the target language.
+
+    Every check rather than one, so the ones that have to stay quiet about the
+    target language are given the chance to fire.
+    """
+    return [
+        issue
+        for issue in analyze_translations(
+            Input(locales=locales),
+            Options(target="en", flattened=True, **options),
+        ).issues
+        if issue.locale == "en"
+    ]
+
+
 def test_no_locale_finds_the_language_a_group_is_missing_entirely() -> None:
     result = analyze_translations(
         Input(
@@ -515,3 +531,79 @@ def test_the_value_primitives_do_not_count_a_placeholder_as_a_word() -> None:
     assert has_translatable_text("{name}", "{", "}") is False
     assert has_translatable_text("<br/>", "{", "}") is False
     assert has_translatable_text("Hi {name}", "{", "}") is True
+
+
+def test_the_target_language_reports_an_empty_value_of_its_own() -> None:
+    issues = check_all({"en": {"a": ""}, "ko": {"a": "비어 있음"}})
+
+    assert len(issues) == 1
+    assert issues[0].code == "EMPTY_VALUE"
+
+
+def test_the_target_language_reports_the_whitespace_around_its_own_value() -> None:
+    issues = check_all({"en": {"a": "Save "}, "ko": {"a": "저장"}})
+
+    assert len(issues) == 1
+    assert issues[0].code == "SURROUNDING_WHITESPACE"
+
+
+def test_the_target_language_reports_its_own_undrawn_character() -> None:
+    issues = check_all({"en": {"a": f"Sign{ZERO_WIDTH_SPACE}in"}, "ko": {"a": "로그인"}})
+
+    assert len(issues) == 1
+    assert issues[0].code == "INVISIBLE_CHARACTER"
+    assert "zero width space" in issues[0].message
+
+
+def test_the_target_language_reports_its_own_value_that_is_not_a_string() -> None:
+    issues = check_all({"en": {"a": 42}, "ko": {"a": "42"}})
+
+    assert len(issues) == 1
+    assert issues[0].code == "INVALID_VALUE_TYPE"
+
+
+def test_the_target_language_reports_its_own_value_in_the_wrong_script() -> None:
+    issues = analyze_translations(
+        Input(locales={"ko": {"a": "Hello"}, "en": {"a": "Hello"}}),
+        Options(target="ko", flattened=True, checks=["UNTRANSLATED_SCRIPT"]),
+    ).issues
+
+    assert len(issues) == 1
+    assert issues[0].locale == "ko"
+    assert issues[0].code == "UNTRANSLATED_SCRIPT"
+
+
+def test_the_target_language_quotes_nothing_beside_a_finding_of_its_own() -> None:
+    issues = check_all({"en": {"a": "Save "}, "ko": {"a": "저장"}})
+
+    assert issues[0].target_value is None
+    assert issues[0].value == "Save "
+
+
+def test_the_target_language_never_disagrees_with_itself() -> None:
+    assert (
+        check_all(
+            {
+                "en": {"a": "Hello <b>{name}</b>, you have 3 of {count}"},
+                "ko": {"a": "안녕하세요 <b>{name}</b>님, {count} 중 3개가 있습니다"},
+            },
+            length_ratio=2,
+        )
+        == []
+    )
+
+
+def test_the_target_language_is_still_what_the_others_are_compared_against() -> None:
+    result = analyze_translations(
+        Input(locales={"en": {"a": "Save "}, "ko": {"a": "Save "}}),
+        Options(target="en", flattened=True),
+    )
+
+    assert [issue.locale for issue in result.of("SURROUNDING_WHITESPACE")] == ["en", "ko"]
+    assert [issue.locale for issue in result.of("NOT_TRANSLATED_VALUE")] == ["ko"]
+
+
+def test_the_target_language_can_be_silenced_by_switching_the_check_off() -> None:
+    assert (
+        check_all({"en": {"a": ""}, "ko": {"a": "비어 있음"}}, ignore_checks=["EMPTY_VALUE"]) == []
+    )

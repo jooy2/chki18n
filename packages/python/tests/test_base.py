@@ -35,6 +35,22 @@ def test_reports_a_key_the_target_has_and_another_locale_does_not() -> None:
     assert issue.file.endswith("ko.json")
 
 
+def test_reports_what_the_target_language_got_wrong_in_its_own_file() -> None:
+    result = check_translation_files(sample_path("locales-target-issue"))
+    codes = sorted(issue.code for issue in result.issues if issue.locale == "en")
+
+    assert codes == [
+        "EMPTY_VALUE",
+        "INVALID_VALUE_TYPE",
+        "INVISIBLE_CHARACTER",
+        "SURROUNDING_WHITESPACE",
+    ]
+    # None of them is an error, so a source language nobody had checked before
+    # does not start failing the build the day this arrives.
+    assert result.success is True
+    assert all(issue.locale in ("", "en") for issue in result.issues)
+
+
 def test_compares_a_folder_per_locale_layout() -> None:
     result = check_translation_files(sample_path("multiple-translate-files"))
 

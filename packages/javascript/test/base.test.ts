@@ -31,6 +31,25 @@ describe('checkTranslationFiles', () => {
 		assert.ok(issue.file?.endsWith('ko.json'));
 	});
 
+	it('reports what the target language got wrong in its own file', async () => {
+		const result = await checkTranslationFiles(samplePath('locales-target-issue'));
+		const codes = result.issues
+			.filter((issue) => issue.locale === 'en')
+			.map((issue) => issue.code)
+			.sort();
+
+		assert.deepStrictEqual(codes, [
+			CHECK_CODE.EMPTY_VALUE,
+			CHECK_CODE.INVALID_VALUE_TYPE,
+			CHECK_CODE.INVISIBLE_CHARACTER,
+			CHECK_CODE.SURROUNDING_WHITESPACE
+		]);
+		// None of them is an error, so a source language nobody had checked
+		// before does not start failing the build the day this arrives.
+		assert.strictEqual(result.success, true);
+		assert.ok(result.issues.every((issue) => issue.locale === '' || issue.locale === 'en'));
+	});
+
 	it('compares a folder per locale layout', async () => {
 		const result = await checkTranslationFiles(samplePath('multiple-translate-files'));
 

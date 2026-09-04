@@ -40,6 +40,22 @@ The last three are off until an option says what the project wants: `keyCase`, `
 
 `INVALID_OPTIONS` also appears in a result, at whatever level fits: `info` when an option simply fell back to its default, `error` when the target language is nowhere in the files and there is nothing to compare against.
 
+## The target language
+
+Every other language is compared against the target language, so most checks have nothing to ask of the target itself: it cannot be missing a key it defines, and it cannot use a placeholder differently from the way it uses it. The checks that read one value on its own do apply to it. A source language is typed by hand like any other and picks up the same mistakes, and one that is never checked keeps them.
+
+| Code | What it catches in the target language |
+| --- | --- |
+| `EMPTY_VALUE` | A key defined with an empty string |
+| `SURROUNDING_WHITESPACE` | A value that begins or ends with whitespace |
+| `INVISIBLE_CHARACTER` | A zero width, bidirectional or non-breaking character |
+| `INVALID_VALUE_TYPE` | A value that is not a string |
+| `UNTRANSLATED_SCRIPT` | A value with no character of the target language's own script |
+
+The checks about a key rather than a value — `DUPLICATE_KEY`, `KEY_NAMING`, `KEY_DEPTH`, `UNUSED_KEY` and `UNDEFINED_KEY` — were never tied to one language to begin with, and `DUPLICATE_VALUE` and `NO_PLURAL_FORM` already asked every language including the target.
+
+None of the five reports at `error`, so a source language nobody had checked before does not start failing a build. Switch one off with `ignoreChecks` the way you would for any other language; there is no separate switch for the target.
+
 ## Structural checks
 
 ### `NO_LOCALE`
