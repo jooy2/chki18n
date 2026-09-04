@@ -10,6 +10,7 @@ chki18n reads a folder of i18n translation files, compares every language agains
 
 - [**Getting started**](./getting-started) — pick a package, install it, and get a first report from the command line or from code.
 - [**Command line**](./cli) — every flag, the exit code, and how to wire it into CI or a pre-commit hook.
+- [**Continuous integration**](./ci) — jobs to paste, for GitHub Actions and Bitbucket Pipelines.
 - [**File layouts**](./file-layouts) — one file per locale, one folder per locale, or one file holding them all, and how files are grouped for comparison.
 - [**Checks**](./checks) — the twenty-five things it looks for, what each one means, and how to turn one off or change how seriously it is taken.
 - [**Options**](./options) — the full option set, shared by the CLI and the API.

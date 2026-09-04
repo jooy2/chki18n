@@ -91,6 +91,7 @@ const SIDEBAR_ORDER = [
 	'index.md',
 	'getting-started.md',
 	'cli.md',
+	'ci.md',
 	'file-layouts.md',
 	'checks.md',
 	'options.md',

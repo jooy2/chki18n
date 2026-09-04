@@ -229,7 +229,7 @@ chki18n ./locales --target en --levels EMPTY_VALUE=error
 
 ## CI에서
 
-GitHub Actions 스텝은 한 줄이면 됩니다.
+GitHub Actions 스텝은 한 줄이면 됩니다. 작업 전체와 Bitbucket Pipelines 쪽은 [CI에 붙이기](./ci)에 정리되어 있습니다.
 
 ::: lang js
 
@@ -247,7 +247,7 @@ GitHub Actions 스텝은 한 줄이면 됩니다.
 - name: Check translations
   run: |
     dart pub global activate chki18n
-    chki18n ./locales --target en
+    dart pub global run chki18n ./locales --target en
 ```
 
 :::
@@ -255,7 +255,7 @@ GitHub Actions 스텝은 한 줄이면 됩니다.
 ::: lang py
 
 ```yaml
-- uses: actions/setup-python@v5
+- uses: actions/setup-python@v6
 - name: Check translations
   run: |
     pip install chki18n

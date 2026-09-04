@@ -229,7 +229,7 @@ chki18n ./locales --target en --levels EMPTY_VALUE=error
 
 ## In CI
 
-A GitHub Actions step is one line:
+A GitHub Actions step is one line. [Continuous integration](./ci) has the whole job, and the Bitbucket Pipelines equivalent.
 
 ::: lang js
 
@@ -247,7 +247,7 @@ A GitHub Actions step is one line:
 - name: Check translations
   run: |
     dart pub global activate chki18n
-    chki18n ./locales --target en
+    dart pub global run chki18n ./locales --target en
 ```
 
 :::
@@ -255,7 +255,7 @@ A GitHub Actions step is one line:
 ::: lang py
 
 ```yaml
-- uses: actions/setup-python@v5
+- uses: actions/setup-python@v6
 - name: Check translations
   run: |
     pip install chki18n
