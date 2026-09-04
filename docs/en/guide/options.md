@@ -39,15 +39,15 @@ Option names are written here in their JavaScript spelling. Dart uses the same o
 
 The last two are API-only: the CLI always prints, so `verbose` is set for you, and `flattened` describes data you pass in rather than a directory.
 
-::: lang dart Dart takes all of them as one
+::: lang dart
 
-`Chki18nOptions` object built with named parameters, and the closed value sets are enums — `Chki18nFileFormat.folder` rather than `'folder'`, `Chki18nCheckCode.noKey` rather than `'NO_KEY'`. The text forms a flag writes (`'NO_KEY,EMPTY_VALUE'`, `'EMPTY_VALUE=error'`) live on `Chki18nTextOptions`, which `Chki18nOptions.text` carries, so no field has to accept two types.
+Dart takes all of them as one `Chki18nOptions` object built with named parameters, and the closed value sets are enums — `Chki18nFileFormat.folder` rather than `'folder'`, `Chki18nCheckCode.noKey` rather than `'NO_KEY'`. The text forms a flag writes (`'NO_KEY,EMPTY_VALUE'`, `'EMPTY_VALUE=error'`) live on `Chki18nTextOptions`, which `Chki18nOptions.text` carries, so no field has to accept two types.
 
 :::
 
-::: lang py Python takes all of them as one
+::: lang py
 
-keyword-only `Options` object, and the closed value sets stay the strings they are everywhere else: `format="folder"`, `checks=["NO_KEY"]`, `levels={"EMPTY_VALUE": "error"}`. A list option also accepts the comma separated text a flag gives it.
+Python takes all of them as one keyword-only `Options` object, and the closed value sets stay the strings they are everywhere else: `format="folder"`, `checks=["NO_KEY"]`, `levels={"EMPTY_VALUE": "error"}`. A list option also accepts the comma separated text a flag gives it.
 
 :::
 

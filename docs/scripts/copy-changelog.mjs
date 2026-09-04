@@ -62,7 +62,7 @@ async function main() {
 		const strings = STRINGS[locale];
 		const sections = PACKAGES.map(
 			(pkg, index) =>
-				`::: lang ${pkg.lang}\n${strings.source(pkg.registry, pkg.name)}\n\n${bodies[index]}\n:::`
+				`::: lang ${pkg.lang}\n\n${strings.source(pkg.registry, pkg.name)}\n\n${bodies[index]}\n:::`
 		);
 
 		const page = [
