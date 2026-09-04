@@ -4,7 +4,7 @@ title: API
 
 # API
 
-chki18n에는 네 개의 진입점이 있고, 어느 것을 쓸지는 번역 데이터를 누가 소유하며 얼마나 자주 검사하느냐에 달려 있습니다. 넷 모두 같은 비교 엔진, 같은 옵션 체계, 같은 결과 형태를 공유하므로 진입점을 바꿔도 데이터가 도착하는 방식만 달라집니다.
+chki18n에는 네 개의 진입점이 있고, 어느 것을 쓸지는 번역 데이터를 누가 소유하며 얼마나 자주 검사하느냐에 달려 있습니다. 넷 모두 같은 비교 엔진, 같은 옵션 체계, 같은 결과 형태를 공유하므로 진입점을 바꿔도 데이터가 도착하는 방식만 달라집니다. 세 패키지 모두 넷을 전부 제공합니다.
 
 ## 어떤 진입점을 쓸까
 
@@ -15,7 +15,9 @@ chki18n에는 네 개의 진입점이 있고, 어느 것을 쓸지는 번역 데
 | 디렉토리를 한 번 읽고 반복해서 검사 | [`loadTranslations`](./load-translations) | 한 번만 |
 | 값은 앱이 소유하고 판정만 필요 | [`createAnalyzer`](./create-analyzer) | 아니오 |
 
-파일 시스템을 쓰지 않는 두 개는 [`chki18n/core`](./core)로도 배포됩니다. Node 내장 모듈을 전혀 import하지 않아 브라우저나 편집기의 렌더러 프로세스에도 번들됩니다.
+파일 시스템을 쓰지 않는 두 개는 <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />로도 따로 배포됩니다. 파일 시스템에 전혀 닿지 않는 진입점이며, [코어 진입점](./core)에 정리해 두었습니다.
+
+아래의 모든 이름은 JavaScript 표기로 적습니다. Dart도 같은 표기를 쓰고, Python은 snake_case이므로 `analyzeTranslations`는 `analyze_translations`입니다. 이 대응은 [시작하기](/ko/guide/getting-started#이름은-이렇게-대응됩니다)에 한 번 정리해 두었습니다.
 
 ## 값을 누가 소유하는가
 
@@ -25,15 +27,34 @@ chki18n에는 네 개의 진입점이 있고, 어느 것을 쓸지는 번역 데
 
 반대로 chki18n이 소유자인 경우 — 스크립트, 감시자, 같은 폴더를 두 번 검사하는 CI 단계 — 라면 세션 쪽이 훨씬 간단합니다.
 
-## 그 밖에 export되는 것들
+## 그 밖에 공개된 것들
 
 네 진입점 외에:
 
-- **검사 메타데이터** — `CHECK_CODE`, `CHECK_META`, `ANALYZE_CHECK_CODES`, `CROSS_KEY_CHECK_CODES`. [검사 항목](/ko/guide/checks) 참고.
+- **검사 메타데이터** — <Lang js="CHECK_CODE" dart="Chki18nCheckCode" py="CHECK_CODES" code />, `CHECK_META`, `ANALYZE_CHECK_CODES`, `CROSS_KEY_CHECK_CODES`. [검사 항목](/ko/guide/checks) 참고.
 - **결과 헬퍼** — `groupIssuesByCode`, `summarizeIssues`, `createIssue`, `buildResult`. [결과 객체](/ko/reference/result) 참고.
-- **옵션** — `resolveOptions`, `argsToOptions`, `buildUsageText`, `OPTION_DEFINITIONS`. [옵션](/ko/guide/options) 참고.
-- **기본값** — `DEFAULT_TARGET_LOCALE`, `DEFAULT_EXCLUDE_DIRS`, `DEFAULT_INTERPOLATION_PREFIX`, `DEFAULT_INTERPOLATION_SUFFIX`, `FILE_FORMAT`.
+- **옵션** — `resolveOptions`, <Lang js="argsToOptions" dart="optionsFromArgs" py="options_from_args" code />, `buildUsageText`, `OPTION_DEFINITIONS`. [옵션](/ko/guide/options) 참고.
+- **기본값** — `DEFAULT_TARGET_LOCALE`, `DEFAULT_EXCLUDE_DIRS`, `DEFAULT_INTERPOLATION_PREFIX`, `DEFAULT_INTERPOLATION_SUFFIX`, <Lang js="FILE_FORMAT" dart="Chki18nFileFormat" py="FILE_FORMATS" code />.
+- **리포팅** — `formatResult`, `groupIssues`, `displayWidth`, `padTo`, `truncate`. [옵션](/ko/guide/options#reporter) 참고.
 - **유틸리티** — `isLocaleCode`, `extractInterpolationKeys`, `scanTranslationDirectory`.
 - **세션** — `createSession`. 디렉토리 대신 직접 전달하는 번역 데이터용입니다.
 
-모든 타입도 함께 export됩니다. `Chki18nOptions`, `Chki18nResult`, `Chki18nIssue`, `Chki18nSummary`, `Chki18nEntry`, `Chki18nSession` 등입니다.
+모든 타입도 함께 공개됩니다.
+
+::: lang js
+
+`Chki18nOptions`, `Chki18nResult`, `Chki18nIssue`, `Chki18nSummary`, `Chki18nEntry`, `Chki18nSession` 등입니다.
+
+:::
+
+::: lang dart
+
+`Chki18nOptions`, `Chki18nResult`, `Chki18nIssue`, `Chki18nSummary`, `Chki18nEntry`, `Chki18nSession` 등입니다. Dart는 공개 타입에 모두 접두사를 붙이므로, 가져다 쓰는 라이브러리의 이름과 부딪히지 않습니다.
+
+:::
+
+::: lang py
+
+`Options`, `Result`, `Issue`, `Summary`, `Entry`, `Session` 등입니다. Python은 접두사를 붙이지 않습니다. `chki18n.Result`만으로 어느 라이브러리의 것인지 이미 드러나기 때문입니다.
+
+:::
