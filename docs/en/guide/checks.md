@@ -14,6 +14,7 @@ Every problem chki18n reports has a check code, a severity and a sentence descri
 | Error | `NO_KEY` | A key the target language has and this locale does not |
 | Error | `NO_INTERPOLATION_KEY` | A placeholder the target language has and this value does not |
 | Error | `EXTRA_INTERPOLATION_KEY` | A placeholder this value has and the target language does not |
+| Error | `DUPLICATE_KEY` | A key defined twice, so one of its two values is lost |
 | Warning | `DUMMY_KEY` | A key this locale has and the target language does not |
 | Warning | `EMPTY_VALUE` | A key defined with an empty string |
 | Warning | `NOT_TRANSLATED_VALUE` | A value identical to the target language's |
@@ -31,6 +32,7 @@ Every problem chki18n reports has a check code, a severity and a sentence descri
 | Warning | `KEY_NAMING` | A key not written in the case `keyCase` asks for |
 | Warning | `KEY_DEPTH` | A key nested deeper than `maxKeyDepth` allows |
 | Info | `SUSPICIOUS_LENGTH` | A value far longer or shorter than the target language's |
+| Info | `UNUSED_KEY` | A key nothing in the scanned source appears to reference |
 | Warning | `UNDEFINED_KEY` | A key the source asks for that no language file defines |
 | Warning | `NO_PLURAL_FORM` | A plural form a language needs and the file does not have |
 
