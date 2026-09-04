@@ -44,13 +44,13 @@ The last three are off until an option says what the project wants: `keyCase`, `
 
 Every other language is compared against the target language, so most checks have nothing to ask of the target itself: it cannot be missing a key it defines, and it cannot use a placeholder differently from the way it uses it. The checks that read one value on its own do apply to it. A source language is typed by hand like any other and picks up the same mistakes, and one that is never checked keeps them.
 
-| Code | What it catches in the target language |
-| --- | --- |
-| `EMPTY_VALUE` | A key defined with an empty string |
-| `SURROUNDING_WHITESPACE` | A value that begins or ends with whitespace |
-| `INVISIBLE_CHARACTER` | A zero width, bidirectional or non-breaking character |
-| `INVALID_VALUE_TYPE` | A value that is not a string |
-| `UNTRANSLATED_SCRIPT` | A value with no character of the target language's own script |
+| Code                     | What it catches in the target language                        |
+| ------------------------ | ------------------------------------------------------------- |
+| `EMPTY_VALUE`            | A key defined with an empty string                            |
+| `SURROUNDING_WHITESPACE` | A value that begins or ends with whitespace                   |
+| `INVISIBLE_CHARACTER`    | A zero width, bidirectional or non-breaking character         |
+| `INVALID_VALUE_TYPE`     | A value that is not a string                                  |
+| `UNTRANSLATED_SCRIPT`    | A value with no character of the target language's own script |
 
 The checks about a key rather than a value — `DUPLICATE_KEY`, `KEY_NAMING`, `KEY_DEPTH`, `UNUSED_KEY` and `UNDEFINED_KEY` — were never tied to one language to begin with, and `DUPLICATE_VALUE` and `NO_PLURAL_FORM` already asked every language including the target.
 
