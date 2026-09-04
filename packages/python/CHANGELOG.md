@@ -1,5 +1,12 @@
 # Changelog
 
+## vNext (2026--)
+
+### Fixed
+
+- The `github` reporter writes the annotation's `file=` path with forward slashes on every platform. On a Windows runner it wrote the platform's own separator, which GitHub matches against nothing, so the annotation silently attached to no file
+- The command writes UTF-8 to the console whatever its code page is. On Windows it printed the banner and then died with a `UnicodeEncodeError` half a report in, exiting `1` on a directory with nothing wrong
+
 ## 1.0.0 (2026-09-03)
 
 > The first release. A port of the JavaScript package at the same version: the same twenty-five checks, the same option names, the same report, and the same exit code from the command line.
