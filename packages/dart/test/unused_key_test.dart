@@ -53,7 +53,8 @@ void main() {
         sourcePath,
         ['desc.hello'],
         options,
-        skipFiles: ['${Directory.current.path}/$sourcePath/app.ts'],
+        // Resolved through a URI so the separator is the platform's own.
+        skipFiles: [Directory.current.uri.resolve('$sourcePath/app.ts').toFilePath()],
       );
 
       expect(scan.unusedKeys, ['desc.hello']);
