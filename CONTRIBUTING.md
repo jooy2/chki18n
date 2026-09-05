@@ -1,36 +1,34 @@
-# Contributing to Project
+# Contributing to chki18n
 
-Thank you for contributing to the project. Your contributions will help us take the project to the next level.
+Thank you for contributing. Issues and pull requests are both welcome, and this page covers what each one needs.
 
-This project adheres to the Contributor Covenant code of conduct. Your contribution implies that you have read and agree to this policy. Any behavior that undermines the quality of the project community, including this policy, will be warned or restricted by the maintainers.
+This project adheres to the Contributor Covenant code of conduct. Contributing means you have read that policy and agree to it. The maintainers will warn or restrict any behaviour that undermines it.
 
 ## Issues
 
-Issues can be created on the following page: https://github.com/jooy2/chki18n/issues
+Open an issue at https://github.com/jooy2/chki18n/issues. You can email the maintainer instead, but GitHub Issues is where progress is tracked.
 
-Alternatively, you can email the package maintainer. However, we prefer to track progress via GitHub Issues.
+When you open one, keep the following in mind:
 
-When creating an issue, keep the following in mind:
-
-- Please specify the correct category selection based on the format of the issue (e.g., bug report, feature request).
-- Check to see if there are duplicate issues.
-- Describe in detail what is happening and what needs to be fixed. You may need additional materials such as images or video.
-- Use appropriate keyword titles to make it easy for others to search and understand.
-- Please use English in all content.
-- You may need to describe the environment in which the issue occurs.
+- Pick the category that matches the issue, such as bug report or feature request.
+- Check whether the same issue already exists.
+- Describe what is happening and what needs to be fixed. An image or a short video often helps.
+- Write a title someone else can find by searching for it.
+- Write everything in English.
+- Describe the environment the issue occurs in, including the package and the language version.
 
 ## How to contribute (Pull Requests)
 
-### Write the code you want to change
+### Making the change
 
-Here's the process for contributing to the project:
+The process is:
 
-1. Clone the project (or rebase to the latest commit in the main branch)
-2. Install the package (if the package manager exists)
-3. Setting up lint or code formatter in the IDE (if your project includes a linter) and installing the relevant plugins. Some projects may use specific commands to check rules and perform formatting after module installation and before committing.
-4. Write the code that needs to be fixed
-5. Update the documentation (if it exists) or create a new one. If your project supports multilingual documentation, update the documentation for all languages. You can fill in the content in your own language and not translate it.
-6. Add or modify tests as needed (if test code exists). You should also verify that existing tests pass.
+1. Clone the repository, or rebase onto the latest commit on `main`.
+2. Install the dependencies of the package you are changing.
+3. Set up the linter and formatter for that package in your editor. Each package brings its own, and CI checks the result.
+4. Write the change.
+5. Update the documentation, or add a page if none covers it. `docs/` ships in English and Korean, so update both. Write the content in your own language rather than leaving a page out; a translation can follow later.
+6. Add or change tests where the code has them, and confirm the existing tests still pass.
 
 ### Keep the three packages in step
 
@@ -40,21 +38,21 @@ The JavaScript, Dart and Python packages are one library, and the documentation 
 node tools/parity/run.mjs
 ```
 
-It runs the three command lines over the same samples, with every reporter and every grouping, and fails on the first line that differs. It needs `node`, `dart` and a Python 3, and the JavaScript package built (`npm run build` in `packages/javascript`). CI runs it on every pull request that touches a package.
+It runs the three command lines over the same samples, with every reporter and every grouping, and fails on the first line that differs. It needs `node`, `dart` and a Python 3, and the JavaScript package built (`npm run build` in `packages/javascript`). CI runs it on every pull request to `main`.
 
 ### Write a commit message
 
-While we don't have strict restrictions on commit messages, we recommend that you follow the recommendations below whenever possible:
+There are no strict rules for commit messages, but follow these where you can:
 
 - Write in English.
-- Use the ` symbol to name functions, variables, or folders and files.
-- Use a format like `xxx: message (fixes #1)`. The content in parentheses is optional.
-- The message includes a summary of what was modified.
-- It's a good idea to separate multiple modifications into their own commit messages.
+- Wrap the names of functions, variables, folders and files in backticks.
+- Use the format `tag: message (fixes #1)`. The part in parentheses is optional.
+- Summarise what changed.
+- Split unrelated changes into separate commits.
 
-It is recommended that you include a tag at the beginning of the commit message. Between the tag and the message, use `: ` between the tag and the message.
+Because this repository holds three packages, name the one you changed in square brackets before the tag: `[javascript] fix: …`, `[dart]`, `[python]`, or `[common]` for a change that covers all of them. Leave the prefix off when the change belongs to no single package.
 
-tags conform to the ["Udacity Git Commit Message Style Guide"](https://udacity.github.io/git-styleguide). However, you are welcome to use tags not listed here for additional situations.
+The tags follow the [Udacity Git Commit Message Style Guide](https://udacity.github.io/git-styleguide). Tags outside this list are fine for situations it does not cover.
 
 - `feat`: A new feature
 - `fix`: A bug fix
@@ -73,8 +71,8 @@ Informal tags:
 
 When creating a pull request, keep the following in mind:
 
-- Include a specific description of what the modification is, why it needs to be made, and how it works.
-- Check to see if there are duplicate pull requests.
-- Please use English in all content.
+- Describe what the change is, why it is needed, and how it works.
+- Check whether an open pull request already does the same thing.
+- Write everything in English.
 
-Typically, a project maintainer will review and test your code before merging it into the project. This process can take some time, and they may ask you for further edits or clarifications in the comments.
+A maintainer reviews and tests the change before merging it. That takes some time, and they may ask for edits or for more detail in the comments.

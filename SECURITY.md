@@ -2,19 +2,19 @@
 
 ## Reporting Security Issues
 
-To report a security vulnerability, create an issue on GitHub on the "Open a draft security advisory" page on GitHub: https://github.com/jooy2/chki18n/security/advisories/new
+To report a security vulnerability, open a draft security advisory: https://github.com/jooy2/chki18n/security/advisories/new
 
-Also, send private instructions in advance via maintainer email. Do not submit vulnerability-related content as a general issue.
+You can also email the maintainer first. Do not report a vulnerability as a public issue.
 
 ## Security compliance
 
-Project maintainers are quickly addressing reported security vulnerabilities in the project and providing relevant patches.
+The maintainers address reported vulnerabilities as quickly as they can and publish a patch for them.
 
-We report these to the relevant users and handle the correspondence to prevent the issue from recurring.
+Affected users are told what happened, and the fix is followed up so the same issue does not return.
 
 ## Security recommendations
 
-We recommend that users of project sources use the latest version, which addresses possible security vulnerabilities.
+Use the latest release. It carries the fixes for every vulnerability reported so far.
 
 ## Contact
 
