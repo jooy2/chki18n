@@ -36,7 +36,7 @@ Every problem chki18n reports has a check code, a severity and a sentence descri
 | Warning | `UNDEFINED_KEY` | A key the source asks for that no language file defines |
 | Warning | `NO_PLURAL_FORM` | A plural form a language needs and the file does not have |
 
-The last three are off until an option says what the project wants: `keyCase`, `maxKeyDepth` and `lengthRatio`. None of them has a right answer on its own.
+`KEY_NAMING`, `KEY_DEPTH` and `SUSPICIOUS_LENGTH` report nothing until `keyCase`, `maxKeyDepth` and `lengthRatio` say what the project wants, since none of the three has a right answer on its own. `UNUSED_KEY` and `UNDEFINED_KEY` need a `source` directory to search.
 
 `INVALID_OPTIONS` also appears in a result, at whatever level fits: `info` when an option simply fell back to its default, `error` when the target language is nowhere in the files and there is nothing to compare against.
 
@@ -376,11 +376,11 @@ Only the named categories are read: `_zero`, `_one`, `_two`, `_few`, `_many` and
 
 A language the table does not cover is never judged. The table is deliberately conservative: recent CLDR releases added a `many` category to several languages for compact decimals, and a project on an older runtime does not write it.
 
-### What this changes for `NO_KEY` and `DUMMY_KEY`
+### Plural keys in `NO_KEY` and `DUMMY_KEY`
 
-A plural form belongs to one language's grammar, so the two key checks stopped asking every language for every form. Korean needs only `item_other`, and `item_one` being absent from it is correct rather than missing; Russian needs an `item_few` that English never writes, and that is not a stray key.
+A plural form belongs to one language's grammar, so the two key checks do not ask every language for every form. Korean needs only `item_other`, so `item_one` being absent from it is correct rather than missing. Russian needs an `item_few` that English never writes, and that is not a stray key.
 
-This applies only to keys ending in a named plural category, and only to languages the table covers. Everything else is compared exactly as before.
+This holds only for keys ending in a named plural category, and only for languages the table covers. Every other key is compared normally.
 
 ## Key shape checks
 

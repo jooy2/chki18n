@@ -233,7 +233,7 @@ Four functions, depending on who owns the translations and how often you check t
 | Read a directory once, then check it repeatedly | [`loadTranslations`](/api/load-translations) |
 | Your own application owns the values and needs only a verdict | [`createAnalyzer().checkEntry`](/api/create-analyzer) |
 
-The first two read files. The last two do no file system work at all and are also published on their own as <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />, which runs where there is no disk to read — see [The core entry point](/api/core).
+`checkTranslationFiles` and `loadTranslations` read a directory. `analyzeTranslations` and `createAnalyzer` do no file system work at all, and are also published on their own as <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />, which runs where there is no disk to read. See [The core entry point](/api/core).
 
 ## Next
 

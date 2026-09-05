@@ -233,7 +233,7 @@ if not result.success:
 | 디렉토리를 한 번 읽고 반복해서 검사 | [`loadTranslations`](/ko/api/load-translations) |
 | 값은 앱이 소유하고 판정만 필요 | [`createAnalyzer().checkEntry`](/ko/api/create-analyzer) |
 
-앞의 두 개는 파일을 읽습니다. 뒤의 두 개는 파일 시스템을 전혀 건드리지 않으며 <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />로도 따로 배포되어, 읽을 디스크가 없는 곳에서도 돌아갑니다. [코어 진입점](/ko/api/core)을 참고하세요.
+`checkTranslationFiles`와 `loadTranslations`는 디렉터리를 읽습니다. `analyzeTranslations`와 `createAnalyzer`는 파일 시스템을 전혀 사용하지 않으며, <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />로도 따로 배포되어 읽을 디스크가 없는 곳에서도 실행됩니다. [코어 진입점](/ko/api/core)을 참고하세요.
 
 ## 다음으로
 

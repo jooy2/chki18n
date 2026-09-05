@@ -152,7 +152,7 @@ package.json  tsconfig.json  tsconfig.*.json  eslintrc.json
 *-lock.json   *-config.json  *.config.json
 ```
 
-These are the configuration and lock files an application root is full of. Pointing chki18n at that root rather than at a folder of locales used to mean reading and parsing every one of them on every run, which cost more than the comparison did.
+These are the configuration and lock files an application root is full of. Skipping them is what makes it practical to point chki18n at that root rather than at a folder of locales: reading and parsing every one of them costs more than the comparison itself.
 
 ```bash
 chki18n . --exclude-files '*-lock.json,*.config.json,messages.json'

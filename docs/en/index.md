@@ -25,7 +25,7 @@ hero:
 
 features:
   - title: Twenty-five checks, one report
-    details: Missing keys, a language file nobody created, empty values, untranslated strings, interpolation that does not match in name or in number, markup a translation dropped, numbers it changed, invisible characters, terminology that drifted. Each with a severity you can override.
+    details: Missing keys, a language file nobody created, empty values, untranslated strings, interpolation that does not match in name or in number, markup a translation dropped, numbers it changed, invisible characters, terminology that drifted. Every comparison check reports at a severity you can override.
     link: /guide/checks
     linkText: What it checks
   - title: Every layout you already use

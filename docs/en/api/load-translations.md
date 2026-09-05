@@ -391,7 +391,7 @@ It has everything above except `path`, `skipped` and `reload`, which only mean s
 
 Worth deciding deliberately. The session holds its own copy of every string. If your application is _also_ holding them — a translation editor bound to what a user is typing — then two copies exist and every edit has to reach both, which is a bug waiting to happen.
 
-In that case use [`createAnalyzer().checkEntry`](./create-analyzer): you pass the values on each call, your application stays the single source of truth, and the check costs about the same.
+In that case use [`createAnalyzer().checkEntry`](./create-analyzer): you pass the values on each call, your application stays the single source of truth, and the check still costs a couple of microseconds.
 
 ## Errors
 

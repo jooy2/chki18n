@@ -152,7 +152,7 @@ package.json  tsconfig.json  tsconfig.*.json  eslintrc.json
 *-lock.json   *-config.json  *.config.json
 ```
 
-애플리케이션 루트에 흔한 설정 파일과 잠금 파일입니다. 로케일 폴더가 아니라 이 루트를 chki18n에 넘기면 실행할 때마다 그 파일을 전부 읽고 파싱했고, 그 비용이 비교 자체보다 컸습니다.
+애플리케이션 루트에 흔한 설정 파일과 잠금 파일입니다. 로케일 폴더 대신 이 루트를 넘겨도 되는 이유가 여기에 있습니다. 이런 파일을 전부 읽고 파싱하면 비교 자체보다 비용이 더 큽니다.
 
 ```bash
 chki18n . --exclude-files '*-lock.json,*.config.json,messages.json'
