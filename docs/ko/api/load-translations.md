@@ -4,7 +4,7 @@ title: loadTranslations
 
 # `loadTranslations`
 
-디렉토리를 한 번 읽고, 파싱된 번역 데이터를 들고 있는 세션을 돌려줍니다. 이후의 모든 호출 — 전체 분석, 키 하나, 값 수정 — 은 이미 메모리에 있는 데이터로 처리되므로, 같은 폴더를 반복해서 검사해도 읽기는 한 번뿐입니다.
+디렉터리를 한 번 읽고, 파싱된 번역 데이터를 들고 있는 세션을 돌려줍니다. 전체 분석이든 키 하나 검사든 값 수정이든, 이후의 모든 호출은 이미 메모리에 있는 데이터로 처리됩니다. 그래서 같은 폴더를 반복해서 검사해도 읽기는 한 번뿐입니다.
 
 ## 시그니처
 
@@ -57,7 +57,7 @@ session.checkKey('desc.hello'); // [{ code: 'NO_INTERPOLATION_KEY', … }]
 session.set('ko', 'desc.hello', '{name}님 안녕하세요'); // → [] — 이제 문제없음
 session.analyze(); // 오류 하나 감소
 
-await session.reload(); // 수정 사항을 버리고 디렉토리를 다시 읽기
+await session.reload(); // 수정 사항을 버리고 디렉터리를 다시 읽기
 ```
 
 :::
@@ -85,7 +85,7 @@ session.checkKey('desc.hello'); // [Chki18nIssue(code: NO_INTERPOLATION_KEY, …
 session.set('ko', 'desc.hello', '{name}님 안녕하세요'); // [] — 이제 문제없음
 session.analyze(); // 오류 하나 감소
 
-await session.reload(); // 수정 사항을 버리고 디렉토리를 다시 읽기
+await session.reload(); // 수정 사항을 버리고 디렉터리를 다시 읽기
 ```
 
 :::
@@ -110,7 +110,7 @@ session.check_key("desc.hello")  # [Issue(code='NO_INTERPOLATION_KEY', …)]
 session.set("ko", "desc.hello", "{name}님 안녕하세요")  # [] — 이제 문제없음
 session.analyze()  # 오류 하나 감소
 
-session.reload()  # 수정 사항을 버리고 디렉토리를 다시 읽기
+session.reload()  # 수정 사항을 버리고 디렉터리를 다시 읽기
 ```
 
 :::
@@ -204,7 +204,7 @@ session.detected_interpolation  # Delimiters('{{', '}}') — 파일이 쓰는 �
 
 :::
 
-<Lang js="detectedInterpolation" dart="detectedInterpolation" py="detected_interpolation" code />는 프로젝트를 처음 설정하는 사람에게 건네는 추측입니다. 검사가 받아들인 파일의 원문에서 읽어냅니다. 어느 파일에도 자리표시자로 보이는 것이 없으면 <Lang js="null" dart="null" py="None" code />이며, 실제 비교에 쓰인 값은 바꾸지 않습니다. 검사는 파일이 어떻게 생겼든 `interpolationPrefix`로 돌아갑니다.
+<Lang js="detectedInterpolation" dart="detectedInterpolation" py="detected_interpolation" code />는 프로젝트를 처음 설정하는 사람에게 건네는 추측입니다. 검사가 받아들인 파일의 원문에서 읽어냅니다. 어느 파일에도 자리 표시자로 보이는 것이 없으면 <Lang js="null" dart="null" py="None" code />이며, 실제 비교에 쓰인 값은 바꾸지 않습니다. 검사는 파일이 어떻게 생겼든 `interpolationPrefix`로 돌아갑니다.
 
 ## 쓰기
 
@@ -289,11 +289,11 @@ session.remove("attr.folder")  # 전부 삭제 -> []
 
 ### `reset(input)`
 
-옵션과 분석기는 유지한 채 번역 데이터만 교체합니다. `reload()`는 같은 디렉토리를 다시 읽어 이 작업을 수행합니다.
+옵션과 분석기는 유지한 채 번역 데이터만 교체합니다. `reload()`는 같은 디렉터리를 다시 읽어 이 작업을 수행합니다.
 
 ### `reload()`
 
-디렉토리를 다시 읽으며, `set`과 `remove`로 가한 수정은 모두 버립니다.
+디렉터리를 다시 읽으며, `set`과 `remove`로 가한 수정은 모두 버립니다.
 
 ## 그룹
 
@@ -342,7 +342,7 @@ session.set("ko", "failed", "실패", "errors.json")  # 명시적으로 지정
 
 ## 이미 가지고 있는 번역 데이터
 
-<Lang js="createSession" dart="createSession" py="create_session" code />은 디렉토리 없이 같은 일을 하며, [코어 진입점](./core)에서도 가져올 수 있습니다.
+<Lang js="createSession" dart="createSession" py="create_session" code />은 디렉터리 없이 같은 일을 하며, [코어 진입점](./core)에서도 가져올 수 있습니다.
 
 ::: lang js
 
@@ -385,7 +385,7 @@ session.reset(Input(groups=next_groups))  # 데이터만 교체, 옵션은 유�
 
 :::
 
-디렉토리에만 의미가 있는 `path`, `skipped`, `reload`를 제외하면 위의 모든 기능이 동일합니다.
+디렉터리에만 의미가 있는 `path`, `skipped`, `reload`를 제외하면 위의 모든 기능이 동일합니다.
 
 ## 세션은 사본을 소유합니다
 
@@ -395,7 +395,7 @@ session.reset(Input(groups=next_groups))  # 데이터만 교체, 옵션은 유�
 
 ## 오류
 
-경로가 없거나 디렉토리를 읽지 못해도 예외를 던지지 않습니다. 세션이 빈 상태로 돌아오면서 문제를 함께 들고 있으며, 첫 `analyze()`에서 드러납니다.
+경로가 없거나 디렉터리를 읽지 못해도 예외를 던지지 않습니다. 세션이 빈 상태로 돌아오면서 문제를 함께 들고 있으며, 첫 `analyze()`에서 드러납니다.
 
 ::: lang js
 

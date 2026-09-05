@@ -125,7 +125,7 @@ check_translation_files("./locales", Options(format="folder"))
 
 ## 검사 대상
 
-`.json` 파일만 읽습니다. 이름이 `.`으로 시작하는 항목은 건너뛰며, 다음 디렉토리도 마찬가지입니다.
+`.json` 파일만 읽습니다. 이름이 `.`으로 시작하는 항목은 건너뛰며, 다음 디렉터리도 마찬가지입니다.
 
 ```text
 node_modules  dist  build  out  coverage

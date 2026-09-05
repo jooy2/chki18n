@@ -163,7 +163,7 @@ chki18n ./locales --target en
   FAIL  2 errors must be fixed before this passes.
 ```
 
-실제 문제 두 가지입니다. 한국어 번역이 `{name}` 자리표시자를 빠뜨렸고, 키 하나가 통째로 없습니다. 종료 코드가 `1`이므로 CI 작업은 여기서 실패합니다.
+실제 문제 두 가지입니다. 한국어 번역이 `{name}` 자리 표시자를 빠뜨렸고, 키 하나가 통째로 없습니다. 종료 코드가 `1`이므로 CI 작업은 여기서 실패합니다.
 
 모든 플래그와 종료 코드, CI 연결 방법은 [커맨드라인](./cli)에 정리되어 있습니다.
 
@@ -228,9 +228,9 @@ if not result.success:
 
 | 상황 | 사용할 함수 |
 | --- | --- |
-| 디렉토리를 한 번 검사 — CI, 스크립트, pre-commit 훅 | [`checkTranslationFiles`](/ko/api/check-translation-files) |
+| 디렉터리를 한 번 검사 — CI, 스크립트, pre-commit 훅 | [`checkTranslationFiles`](/ko/api/check-translation-files) |
 | 이미 메모리에 있는 데이터를 한 번 검사 | [`analyzeTranslations`](/ko/api/analyze-translations) |
-| 디렉토리를 한 번 읽고 반복해서 검사 | [`loadTranslations`](/ko/api/load-translations) |
+| 디렉터리를 한 번 읽고 반복해서 검사 | [`loadTranslations`](/ko/api/load-translations) |
 | 값은 앱이 소유하고 판정만 필요 | [`createAnalyzer().checkEntry`](/ko/api/create-analyzer) |
 
 `checkTranslationFiles`와 `loadTranslations`는 디렉터리를 읽습니다. `analyzeTranslations`와 `createAnalyzer`는 파일 시스템을 전혀 사용하지 않으며, <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />로도 따로 배포되어 읽을 디스크가 없는 곳에서도 실행됩니다. [코어 진입점](/ko/api/core)을 참고하세요.

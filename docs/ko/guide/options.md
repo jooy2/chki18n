@@ -38,7 +38,7 @@ title: 옵션
 | `flattened` | — | `boolean` | `false` |
 | `verbose` | — | `boolean` | `false` |
 
-마지막 두 개는 API 전용입니다. CLI는 항상 출력하므로 `verbose`는 자동으로 켜지고, `flattened`는 디렉토리가 아니라 직접 전달하는 데이터를 설명하는 옵션입니다.
+마지막 두 개는 API 전용입니다. CLI는 항상 출력하므로 `verbose`는 자동으로 켜지고, `flattened`는 디렉터리가 아니라 직접 전달하는 데이터를 설명하는 옵션입니다.
 
 ::: lang dart
 
@@ -56,14 +56,14 @@ Python은 이 전부를 keyword-only `Options` 객체 하나로 받으며, 값�
 
 ### `path`
 
-번역 파일이 있는 디렉토리입니다. CLI에서는 위치 인자로도 받으므로 다음 둘은 같습니다.
+번역 파일이 있는 디렉터리입니다. CLI에서는 위치 인자로도 받으므로 다음 둘은 같습니다.
 
 ```bash
 chki18n ./locales
 chki18n --path ./locales
 ```
 
-상대 경로는 현재 작업 디렉토리를 기준으로 해석됩니다. 코드에서는 첫 번째 인자이며, `path` 옵션으로도 받습니다. 둘 다 주면 옵션이 이깁니다. CLI가 기대는 동작입니다.
+상대 경로는 현재 작업 디렉터리를 기준으로 해석됩니다. 코드에서는 첫 번째 인자이며, `path` 옵션으로도 받습니다. 둘 다 주면 옵션이 이깁니다. CLI가 기대는 동작입니다.
 
 ### `target`
 
@@ -89,7 +89,7 @@ chki18n ./locales --format folder
 
 ### `exclude`
 
-검사 중 건너뛸 디렉토리입니다. 기본 목록에 추가하는 것이 아니라 **대체**합니다.
+검사 중 건너뛸 디렉터리입니다. 기본 목록에 추가하는 것이 아니라 **대체**합니다.
 
 ```text
 node_modules  dist  build  out  coverage
@@ -135,7 +135,7 @@ check_translation_files(".", Options(exclude=[*DEFAULT_EXCLUDE_DIRS, "fixtures"]
 
 :::
 
-한 조각짜리 항목은 어느 깊이에 있든 그 이름의 디렉토리를 가리킵니다. `node_modules`가 트리 안의 모든 `node_modules`를 뜻하는 이유입니다. 구분자가 들어간 항목은 검사 루트에서 시작하는 경로를 가리키며, 그 디렉토리와 그 아래 전부가 대상입니다. 다른 곳의 `legacy`는 남겨둔 채 프로젝트 자신의 `src/legacy`만 뺄 수 있습니다.
+한 조각짜리 항목은 어느 깊이에 있든 그 이름의 디렉터리를 가리킵니다. `node_modules`가 트리 안의 모든 `node_modules`를 뜻하는 이유입니다. 구분자가 들어간 항목은 검사 루트에서 시작하는 경로를 가리키며, 그 디렉터리와 그 아래 전부가 대상입니다. 다른 곳의 `legacy`는 남겨둔 채 프로젝트 자신의 `src/legacy`만 뺄 수 있습니다.
 
 ```bash
 chki18n . --exclude node_modules,src/legacy
@@ -195,7 +195,7 @@ check_translation_files(".", Options(exclude_files=[*DEFAULT_EXCLUDE_FILES, "mes
 
 ### `source`
 
-키가 사용되는지 검색할 소스 파일 디렉토리입니다. [`UNUSED_KEY`](./checks#unused-key) 검사에 필요하며, 지정하지 않으면 그 검사는 아무것도 보고하지 않습니다.
+키가 사용되는지 검색할 소스 파일 디렉터리입니다. [`UNUSED_KEY`](./checks#unused-key) 검사에 필요하며, 지정하지 않으면 그 검사는 아무것도 보고하지 않습니다.
 
 ```bash
 chki18n ./locales --target en --source ./src
@@ -203,7 +203,7 @@ chki18n ./locales --target en --source ./src
 
 텍스트 파일만 읽고 5MB를 넘는 파일은 건너뛰며, `exclude`와 `excludeFiles`도 함께 적용됩니다. 프로젝트 자신의 번역 파일은 검색하지 않습니다.
 
-같은 디렉토리를 [`UNDEFINED_KEY`](./checks#undefined-key)도 씁니다. 반대 질문을 하는 검사입니다. 소스가 부르는데 어느 언어 파일에도 없는 키를 찾습니다.
+같은 디렉터리를 [`UNDEFINED_KEY`](./checks#undefined-key)도 씁니다. 반대 질문을 하는 검사입니다. 소스가 부르는데 어느 언어 파일에도 없는 키를 찾습니다.
 
 ### `translateFunctions`
 
@@ -345,19 +345,19 @@ check_translation_files("./locales", Options(levels={"EMPTY_VALUE": "error"}))
 
 ### `interpolationPrefix` / `interpolationSuffix`
 
-자리표시자를 감싸는 구분자입니다. 기본값은 `{`와 `}`이며, 실제 프로젝트에서는 `{{ }}`, `[[ ]]`, `%{ }`도 흔합니다.
+자리 표시자를 감싸는 구분자입니다. 기본값은 `{`와 `}`이며, 실제 프로젝트에서는 `{{ }}`, `[[ ]]`, `%{ }`도 흔합니다.
 
 ```bash
 chki18n ./locales --interpolation-prefix "{{" --interpolation-suffix "}}"
 ```
 
-이 값을 잘못 지정하면 틀린 답이 나오는 것이 아니라 아무 답도 나오지 않습니다. 자리표시자가 인식되지 않아 두 보간 검사가 아무것도 찾지 못하고 조용히 통과합니다.
+이 값을 잘못 지정하면 틀린 답이 나오는 것이 아니라 아무 답도 나오지 않습니다. 자리 표시자가 인식되지 않아 두 보간 검사가 아무것도 찾지 못하고 조용히 통과합니다.
 
 ## 출력
 
 ### `reporter`
 
-보고서의 모양입니다. 터미널용 `pretty`, 이슈 한 건에 한 줄인 `list`, 다른 프로그램에 넘기는 `json`, 표로 만드는 `markdown`, 그리고 GitHub Actions가 파일에 주석으로 다는 워크플로 명령을 내보내는 `github` 중 하나입니다. 어떤 리포터든 같은 이슈를 같은 순서로 담습니다.
+리포트의 모양입니다. 터미널용 `pretty`, 이슈 한 건에 한 줄인 `list`, 다른 프로그램에 넘기는 `json`, 표로 만드는 `markdown`, 그리고 GitHub Actions가 파일에 주석으로 다는 워크플로 명령을 내보내는 `github` 중 하나입니다. 어떤 리포터든 같은 이슈를 같은 순서로 담습니다.
 
 ```bash
 chki18n ./locales --reporter json > report.json
@@ -370,7 +370,7 @@ import { formatResult, resolveOptions } from 'chki18n';
 
 const { options } = resolveOptions({ target: 'en', reporter: 'markdown' });
 
-formatResult(result, options); // 보고서 문자열
+formatResult(result, options); // 리포트 문자열
 ```
 
 :::
@@ -384,7 +384,7 @@ final resolved = resolveOptions(
   const Chki18nOptions(target: 'en', reporter: Chki18nReporter.markdown),
 );
 
-formatResult(result, resolved.options); // 보고서 문자열
+formatResult(result, resolved.options); // 리포트 문자열
 ```
 
 :::
@@ -396,22 +396,22 @@ from chki18n import Options, format_result, resolve_options
 
 options, _ = resolve_options(Options(target="en", reporter="markdown"))
 
-format_result(result, options)  # 보고서 문자열
+format_result(result, options)  # 리포트 문자열
 ```
 
 :::
 
-`pretty`가 아닌 형식은 배너도 진행 상황 줄도 없이 보고서만 출력하므로 다른 프로그램으로 그대로 넘길 수 있습니다. 모르는 이름을 주면 `INVALID_OPTIONS` 이슈로 알리고 `pretty`로 돌아갑니다.
+`pretty`가 아닌 형식은 배너도 진행 상황 줄도 없이 리포트만 출력하므로 다른 프로그램으로 그대로 넘길 수 있습니다. 모르는 이름을 주면 `INVALID_OPTIONS` 이슈로 알리고 `pretty`로 돌아갑니다.
 
 ### `groupBy`
 
-보고서의 구획을 무엇으로 나눌지 정합니다. `locale`(기본값), `code`, `group`, `file`, `none` 중 하나입니다. 언어로 나누면 번역가의 작업 단위와 맞고, 검사로 나누면 관리자가 한 번에 고치는 단위와 맞습니다.
+리포트의 구획을 무엇으로 나눌지 정합니다. `locale`(기본값), `code`, `group`, `file`, `none` 중 하나입니다. 언어로 나누면 번역가의 작업 단위와 맞고, 검사로 나누면 관리자가 한 번에 고치는 단위와 맞습니다.
 
 ```bash
 chki18n ./locales --group-by code
 ```
 
-오류가 있는 구획이 먼저 오고 그다음이 경고만 있는 구획입니다. 파일이 같으면 순서도 같으므로, 같은 번역을 두 번 검사한 보고서를 줄 단위로 비교할 수 있습니다.
+오류가 있는 구획이 먼저 오고 그다음이 경고만 있는 구획입니다. 파일이 같으면 순서도 같으므로, 같은 번역을 두 번 검사한 리포트를 줄 단위로 비교할 수 있습니다.
 
 직접 묶고 싶다면 <Lang js="groupIssues" dart="groupIssues" py="group_issues" code />가 공개되어 있습니다.
 
@@ -447,27 +447,27 @@ group_issues(result.issues, "locale")  # [IssueGroup(id=…, label=…, issues=�
 
 ### `output`
 
-터미널에 더해 보고서를 쓸 파일입니다. 형식은 확장자가 정하며, `.json`과 `.md`는 각자의 형식이 있고 나머지는 평문입니다. 둘 다 주면 `reporter`가 이깁니다.
+터미널에 더해 리포트를 쓸 파일입니다. 형식은 확장자가 정하며, `.json`과 `.md`는 각자의 형식이 있고 나머지는 평문입니다. 둘 다 주면 `reporter`가 이깁니다.
 
 ```bash
 chki18n ./locales --output report.md
 ```
 
-없는 디렉토리는 만들어 주고, 색상 코드는 쓰지 않으며, 터미널 너비 대신 고정 너비로 배치합니다. 어디서 실행하든 같은 파일이 나옵니다. 쓰기에 실패하면 오류로 보고하고 실행도 실패합니다.
+없는 디렉터리는 만들어 주고, 색상 코드는 쓰지 않으며, 터미널 너비 대신 고정 너비로 배치합니다. 어디서 실행하든 같은 파일이 나옵니다. 쓰기에 실패하면 오류로 보고하고 실행도 실패합니다.
 
 ### `color`
 
-터미널 보고서에 색을 입힐지 여부입니다. 터미널이 지원하면 기본으로 켜지고 `--no-color`로 끕니다. `output`으로 쓰는 파일은 이 값과 상관없이 색이 들어가지 않습니다.
+터미널 리포트에 색을 입힐지 여부입니다. 터미널이 지원하면 기본으로 켜지고 `--no-color`로 끕니다. `output`으로 쓰는 파일은 이 값과 상관없이 색이 들어가지 않습니다.
 
 ### `width`
 
-보고서를 배치할 칸 수입니다. 지정하지 않으면 터미널 너비, 그다음 `COLUMNS`, 그다음 96을 씁니다. 잰 너비는 120칸에서 자릅니다. 그보다 벌어지면 라벨과 집계가 한 줄로 읽히지 않기 때문입니다. `width`로 직접 준 값에는 상한이 없습니다.
+리포트를 배치할 칸 수입니다. 지정하지 않으면 터미널 너비, 그다음 `COLUMNS`, 그다음 96을 씁니다. 잰 너비는 120칸에서 자릅니다. 그보다 벌어지면 라벨과 집계가 한 줄로 읽히지 않기 때문입니다. `width`로 직접 준 값에는 상한이 없습니다.
 
 ```bash
 chki18n ./locales --width 72
 ```
 
-설명은 잘리지 않고 다음 줄로 넘어가므로 좁은 보고서에서도 문장이 사라지지 않습니다. `output`으로 쓰는 파일은 터미널을 보지 않고 고정 기본값을 쓰며, `width`를 주면 그 값을 씁니다. 어디서 실행하든 같은 파일이 나옵니다.
+설명은 잘리지 않고 다음 줄로 넘어가므로 좁은 리포트에서도 문장이 사라지지 않습니다. `output`으로 쓰는 파일은 터미널을 보지 않고 고정 기본값을 쓰며, `width`를 주면 그 값을 씁니다. 어디서 실행하든 같은 파일이 나옵니다.
 
 ### `info`, `warn`, `debug`
 
@@ -477,9 +477,9 @@ CLI가 무엇을 출력할지 결정합니다. `--no-info`는 머리말 블록�
 chki18n ./locales --no-info
 ```
 
-출력에만 영향을 줍니다. 숨겨진 경고도 `result.issues`에 그대로 있고 `result.summary`에도 집계되며, 결과를 그대로 담는 `json` 보고서에도 남습니다. 무언가를 감췄다면 보고서가 몇 건인지 알려줍니다.
+출력에만 영향을 줍니다. 숨겨진 경고도 `result.issues`에 그대로 있고 `result.summary`에도 집계되며, 결과를 그대로 담는 `json` 리포트에도 남습니다. 무언가를 감췄다면 리포트가 몇 건인지 알려줍니다.
 
-`--debug`는 표준 오류로 나가므로, 표준 출력으로 넘긴 보고서에 섞이지 않습니다.
+`--debug`는 표준 오류로 나가므로, 표준 출력으로 넘긴 리포트에 섞이지 않습니다.
 
 ### `verbose`
 

@@ -10,9 +10,9 @@ chki18n에는 네 개의 진입점이 있고, 어느 것을 쓸지는 번역 데
 
 | 상황 | 사용할 함수 | 파일 읽기 |
 | --- | --- | --- |
-| 디렉토리를 한 번 검사 — CI, 스크립트, 커밋 훅 | [`checkTranslationFiles`](./check-translation-files) | 예 |
+| 디렉터리를 한 번 검사 — CI, 스크립트, 커밋 훅 | [`checkTranslationFiles`](./check-translation-files) | 예 |
 | 이미 가지고 있는 데이터를 한 번 검사 | [`analyzeTranslations`](./analyze-translations) | 아니오 |
-| 디렉토리를 한 번 읽고 반복해서 검사 | [`loadTranslations`](./load-translations) | 한 번만 |
+| 디렉터리를 한 번 읽고 반복해서 검사 | [`loadTranslations`](./load-translations) | 한 번만 |
 | 값은 앱이 소유하고 판정만 필요 | [`createAnalyzer`](./create-analyzer) | 아니오 |
 
 파일 시스템을 쓰지 않는 두 개는 <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />로도 따로 배포됩니다. 파일 시스템에 전혀 닿지 않는 진입점이며, [코어 진입점](./core)에 정리해 두었습니다.
@@ -25,7 +25,7 @@ chki18n에는 네 개의 진입점이 있고, 어느 것을 쓸지는 번역 데
 
 그런 경우에는 [`createAnalyzer().checkEntry`](./create-analyzer)를 쓰세요. 호출할 때마다 값을 넘기므로 애플리케이션이 유일한 진실의 원천으로 남고, 검사 비용은 약 2마이크로초입니다.
 
-반대로 chki18n이 소유자인 경우 — 스크립트, 감시자, 같은 폴더를 두 번 검사하는 CI 단계 — 라면 세션 쪽이 훨씬 간단합니다.
+반대로 chki18n이 값의 소유자라면, 이를테면 스크립트나 파일 감시자, 같은 폴더를 두 번 검사하는 CI 단계라면 세션 쪽이 훨씬 간단합니다.
 
 ## 그 밖에 공개된 것들
 
@@ -37,7 +37,7 @@ chki18n에는 네 개의 진입점이 있고, 어느 것을 쓸지는 번역 데
 - **기본값** — `DEFAULT_TARGET_LOCALE`, `DEFAULT_EXCLUDE_DIRS`, `DEFAULT_INTERPOLATION_PREFIX`, `DEFAULT_INTERPOLATION_SUFFIX`, <Lang js="FILE_FORMAT" dart="Chki18nFileFormat" py="FILE_FORMATS" code />.
 - **리포팅** — `formatResult`, `groupIssues`, `displayWidth`, `padTo`, `truncate`. [옵션](/ko/guide/options#reporter) 참고.
 - **유틸리티** — `isLocaleCode`, `extractInterpolationKeys`, `scanTranslationDirectory`.
-- **세션** — `createSession`. 디렉토리 대신 직접 전달하는 번역 데이터용입니다.
+- **세션** — `createSession`. 디렉터리 대신 직접 전달하는 번역 데이터용입니다.
 
 모든 타입도 함께 공개됩니다.
 

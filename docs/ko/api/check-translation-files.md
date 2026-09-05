@@ -4,7 +4,7 @@ title: checkTranslationFiles
 
 # `checkTranslationFiles`
 
-번역 파일 디렉토리를 읽어 모든 언어를 기준 언어와 비교하는 일을 한 번의 호출로 수행합니다. CLI가 하는 일을 그대로, 코드에서 다룰 수 있는 값으로 돌려주며, 디렉토리를 한 번만 검사할 때 쓰는 진입점입니다.
+번역 파일 디렉터리를 읽어 모든 언어를 기준 언어와 비교하는 일을 한 번의 호출로 수행합니다. CLI가 하는 일을 그대로, 코드에서 다룰 수 있는 값으로 돌려주며, 디렉터리를 한 번만 검사할 때 쓰는 진입점입니다.
 
 ## 시그니처
 
@@ -313,7 +313,7 @@ if not result.success:
 
 ## 오류는 던지지 않고 보고합니다
 
-없는 디렉토리, 읽을 수 없는 파일, 파싱되지 않는 JSON, 파일 어디에도 없는 기준 언어 — 어느 것도 예외를 던지지 않습니다. 모두 이슈로 돌아오므로, 잘못된 파일 하나가 나머지 발견을 가리지 않습니다.
+없는 디렉터리, 읽을 수 없는 파일, 파싱되지 않는 JSON, 파일 어디에도 없는 기준 언어 — 어느 것도 예외를 던지지 않습니다. 모두 이슈로 돌아오므로, 잘못된 파일 하나가 나머지 발견을 가리지 않습니다.
 
 ::: lang js
 
@@ -355,7 +355,7 @@ result.of("INVALID_FILE")
 
 ## 소요 시간
 
-<Lang js="result.elapsedMs" dart="result.elapsedMs" py="result.elapsed_ms" code />는 검사, 파싱, 비교를 모두 포함한 전체 호출 시간입니다. 같은 디렉토리를 여러 번 검사하면 그만큼 여러 번 읽게 되므로, 그런 형태의 작업이라면 [`loadTranslations`](./load-translations)를 쓰세요.
+<Lang js="result.elapsedMs" dart="result.elapsedMs" py="result.elapsed_ms" code />는 검사, 파싱, 비교를 모두 포함한 전체 호출 시간입니다. 같은 디렉터리를 여러 번 검사하면 그만큼 여러 번 읽게 되므로, 그런 형태의 작업이라면 [`loadTranslations`](./load-translations)를 쓰세요.
 
 ## 함께 보기
 

@@ -173,7 +173,7 @@ analyze_translations(
 
 :::
 
-`locales`는 이름이 `''`인 그룹 하나에 대한 축약형입니다. 디렉토리 검사가 어떻게 같은 형태에 도달하는지는 [파일 구조](/ko/guide/file-layouts#그룹)를 참고하세요.
+`locales`는 이름이 `''`인 그룹 하나에 대한 축약형입니다. 디렉터리 검사가 어떻게 같은 형태에 도달하는지는 [파일 구조](/ko/guide/file-layouts#그룹)를 참고하세요.
 
 ## 평탄화 건너뛰기
 
@@ -273,7 +273,7 @@ class Input:
 
 :::
 
-`files`는 그룹과 로케일을 원본 파일에 연결해, 이슈가 `file` 경로를 담을 수 있게 합니다. `issues`는 입력을 만들어낸 쪽이 자신이 발견한 문제를 같은 결과에 실어 보내는 통로입니다. 디렉토리 검사에서 읽지 못한 파일 오류가 비교 결과와 한 목록에 담기는 것도 이 방식입니다. <Lang js="fileFormat" dart="fileFormat" py="file_format" code />은 결과로 그대로 전달되며, 마지막 두 필드는 [`UNUSED_KEY`](/ko/guide/checks#unused-key)와 [`UNDEFINED_KEY`](/ko/guide/checks#undefined-key)의 답을 이미 알고 있는 애플리케이션을 위한 것입니다.
+`files`는 그룹과 로케일을 원본 파일에 연결해, 이슈가 `file` 경로를 담을 수 있게 합니다. `issues`는 입력을 만들어낸 쪽이 자신이 발견한 문제를 같은 결과에 실어 보내는 통로입니다. 디렉터리 검사에서 읽지 못한 파일 오류가 비교 결과와 한 목록에 담기는 것도 이 방식입니다. <Lang js="fileFormat" dart="fileFormat" py="file_format" code />은 결과로 그대로 전달되며, 마지막 두 필드는 [`UNUSED_KEY`](/ko/guide/checks#unused-key)와 [`UNDEFINED_KEY`](/ko/guide/checks#undefined-key)의 답을 이미 알고 있는 애플리케이션을 위한 것입니다.
 
 ## 결과가 말해주는 것
 
