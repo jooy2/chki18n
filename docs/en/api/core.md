@@ -4,7 +4,7 @@ title: The core entry point
 
 # The core entry point
 
-The comparison engine on its own, without the directory scanner — so it runs where there is no file system to read.
+The comparison engine on its own, without the directory scanner, so it runs where there is no file system to read.
 
 Each package publishes it under its own name:
 
@@ -14,11 +14,11 @@ Each package publishes it under its own name:
 | Dart       | `import 'package:chki18n/core.dart'` |
 | Python     | `from chki18n.core import …`         |
 
-## Why it exists
+## How it differs from the package root
 
-The package root reads directories, so it reaches for the file system: <Lang js="`node:fs`, `node:path` and `node:os`" dart="`dart:io`" py="`os` and `shutil`" />. A build that cannot offer those either fails or pulls in a pile of polyfills for code that will never run.
+The package root reads directories, so it imports the file system modules: <Lang js="`node:fs`, `node:path` and `node:os`" dart="`dart:io`" py="`os` and `shutil`" />. A build that cannot supply them either fails or pulls in a stack of polyfills for code that will never run.
 
-The comparison itself never needed any of it. The core entry point is the same engine with the file system left out:
+The comparison itself uses none of them. The core entry point is the same engine with the file reading left out:
 
 ::: lang js
 
@@ -26,7 +26,7 @@ The comparison itself never needed any of it. The core entry point is the same e
 import { analyzeTranslations, createAnalyzer, CHECK_META } from 'chki18n/core';
 ```
 
-A test walks the subpath's import graph on every build and fails if a Node built-in ever appears in it, so this is a guarantee rather than an intention.
+A test walks the subpath's import graph on every build and fails if a Node built-in appears in it.
 
 :::
 
@@ -36,7 +36,7 @@ A test walks the subpath's import graph on every build and fails if a Node built
 import 'package:chki18n/core.dart';
 ```
 
-A test walks the entry point's import graph on every run and fails if `dart:io` ever appears in it, so this is a guarantee rather than an intention. It is what makes the comparison usable in a Flutter web build.
+A test walks the entry point's import graph on every run and fails if `dart:io` appears in it. That is what keeps the comparison usable in a Flutter web build.
 
 :::
 
@@ -46,7 +46,7 @@ A test walks the entry point's import graph on every run and fails if `dart:io` 
 from chki18n.core import CHECK_META, analyze_translations, create_analyzer
 ```
 
-A test walks the module's import graph on every run and fails if `os`, `pathlib` or `shutil` ever appears in it, so this is a guarantee rather than an intention.
+A test walks the module's import graph on every run and fails if `os`, `pathlib` or `shutil` appears in it.
 
 :::
 
@@ -66,7 +66,7 @@ Everything the root does **except** the parts that read files:
 | `isLocaleCode`, `extractInterpolationKeys`, `detectInterpolationDelimiters` |  |
 | `createPathExcluder`, `createFileExcluder`, and every type |  |
 
-The root re-exports all of it, so `import { createAnalyzer } from 'chki18n'` works too — reach for the subpath when the bundle must not carry the scanner.
+The root re-exports all of it, so `import { createAnalyzer } from 'chki18n'` works too. Reach for the subpath when the bundle must not carry the scanner.
 
 :::
 
@@ -82,7 +82,7 @@ The root re-exports all of it, so `import { createAnalyzer } from 'chki18n'` wor
 | `isLocaleCode`, `extractInterpolationKeys`, `detectInterpolationDelimiters` |  |
 | `createPathExcluder`, `createFileExcluder`, and every type |  |
 
-`package:chki18n/chki18n.dart` re-exports all of it, so one import covers both — reach for `core.dart` when the build must not pull `dart:io` in.
+`package:chki18n/chki18n.dart` re-exports all of it, so one import covers both. Reach for `core.dart` when the build must not pull `dart:io` in.
 
 :::
 
@@ -98,11 +98,11 @@ The root re-exports all of it, so `import { createAnalyzer } from 'chki18n'` wor
 | `is_locale_code`, `extract_interpolation_keys`, `detect_interpolation_delimiters` |  |
 | `create_path_excluder`, `create_file_excluder`, and every type |  |
 
-`chki18n` re-exports all of it, so `from chki18n import create_analyzer` works too — reach for `chki18n.core` when the module must not touch the disk.
+`chki18n` re-exports all of it, so `from chki18n import create_analyzer` works too. Reach for `chki18n.core` when the module must not touch the disk.
 
 :::
 
-## Where it earns its place
+## Using it
 
 Read the files with whatever the environment already uses, then hand the parsed objects over:
 
@@ -155,7 +155,7 @@ result = analyze_translations(Input(locales={"en": en, "ko": ko}), Options(targe
 
 ## In an editor
 
-The pairing this was built for — a full pass when a project opens, and one key on every edit:
+Run a full pass when a project opens, then check one key on every edit:
 
 ::: lang js
 
@@ -196,7 +196,7 @@ analyzer.check_entry(Entry(key=key, values=values, locales=locales))  # on each 
 
 :::
 
-See [`createAnalyzer`](./create-analyzer) for the whole pattern, and for why passing values in beats letting chki18n hold a second copy of them.
+See [`createAnalyzer`](./create-analyzer) for the whole pattern, and for why passing the values in works better than letting chki18n hold a second copy of them.
 
 ## Dependencies
 

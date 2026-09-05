@@ -4,7 +4,7 @@ title: loadTranslations
 
 # `loadTranslations`
 
-Reads a directory once and hands back a session that holds the parsed translations. Every later call — a full analysis, a single key, an edit — works on what is already in memory, so checking the same folder repeatedly costs one scan rather than one per check.
+Reads a directory once and hands back a session that holds the parsed translations. A full analysis, a single key check and an edit all work on what is already in memory, so checking the same folder repeatedly costs one scan instead of one per check.
 
 ## Signature
 
@@ -131,7 +131,7 @@ One value, or <Lang js="undefined" dart="null" py="None" code /> when that local
 
 ### `translations(group?)`
 
-The flattened translations of a group, keyed by locale. These are the session's own objects — read them freely, but write through `set` and `remove` so the session's own bookkeeping stays right.
+The flattened translations of a group, keyed by locale. These are the session's own objects, so read them freely but write through `set` and `remove` to keep the session's bookkeeping correct.
 
 ::: lang js
 
@@ -204,7 +204,7 @@ session.detected_interpolation  # Delimiters('{{', '}}') — what the files look
 
 :::
 
-<Lang js="detectedInterpolation" dart="detectedInterpolation" py="detected_interpolation" code /> is a guess offered to whoever is setting a project up, read off the raw text of the files the scan accepted. It is <Lang js="null" dart="null" py="None" code /> when none of them holds anything that looks like a placeholder, and it never changes what the run itself compared — that is `interpolationPrefix`, which the checks used whatever the files turned out to look like.
+<Lang js="detectedInterpolation" dart="detectedInterpolation" py="detected_interpolation" code /> is a guess offered to whoever is setting a project up, read off the raw text of the files the scan accepted. It is <Lang js="null" dart="null" py="None" code /> when none of them holds anything that looks like a placeholder. It never changes what the run compared: the checks used `interpolationPrefix` whatever the files turned out to look like.
 
 ## Writing
 
@@ -285,11 +285,11 @@ session.remove("attr.folder")  # gone everywhere -> []
 
 Checks one key across every locale. About **1µs**, so it is fine to call on every keystroke.
 
-Cross-key checks are not reported here — `DUPLICATE_VALUE` needs to see a whole locale at once, and one key is not enough to answer it. The codes with that property are in `CROSS_KEY_CHECK_CODES`.
+Cross-key checks are not reported here. `DUPLICATE_VALUE` needs to see a whole locale at once, and one key is not enough to answer it. The codes with that property are in `CROSS_KEY_CHECK_CODES`.
 
 ### `reset(input)`
 
-Replaces the translations while keeping the options and the analyzer. `reload()` is this, with a fresh scan of the same directory.
+Replaces the translations while keeping the options and the analyzer. `reload()` does the same after a fresh scan of the same directory.
 
 ### `reload()`
 
@@ -297,7 +297,7 @@ Reads the directory again, throwing away every edit made through `set` and `remo
 
 ## Groups
 
-A project with several translation files has several groups. Name one when you mean it, or leave it out — with one group there is nothing to decide, and with several the session looks the key up where it actually lives:
+A project with several translation files has several groups. Name one when you mean it, or leave it out. With one group there is nothing to decide, and with several the session looks the key up where it actually lives:
 
 ::: lang js
 
@@ -338,7 +338,7 @@ session.set("ko", "failed", "실패", "errors.json")  # named explicitly
 
 :::
 
-You only have to name a group when adding a key that does not exist yet — there is nowhere to look it up.
+You only have to name a group when adding a key that does not exist yet, since there is nowhere to look it up.
 
 ## Translations you already hold
 
@@ -387,15 +387,15 @@ session.reset(Input(groups=next_groups))  # swap the data, keep the options
 
 It has everything above except `path`, `skipped` and `reload`, which only mean something for a directory.
 
-## A session owns its copy
+## The copy a session holds
 
-Worth deciding deliberately. The session holds its own copy of every string. If your application is _also_ holding them — a translation editor bound to what a user is typing — then two copies exist and every edit has to reach both, which is a bug waiting to happen.
+The session holds its own copy of every string. If your application is _also_ holding them, as a translation editor bound to what a user is typing does, then two copies exist and every edit has to reach both. They drift apart easily.
 
 In that case use [`createAnalyzer().checkEntry`](./create-analyzer): you pass the values on each call, your application stays the single source of truth, and the check still costs a couple of microseconds.
 
 ## Errors
 
-A missing path or an unreadable directory does not raise. The session comes back empty and carries the problem, which surfaces on the first `analyze()`:
+A missing path or an unreadable directory does not raise. The session comes back empty and carries the problem, which surfaces as an issue on the first `analyze()`:
 
 ::: lang js
 

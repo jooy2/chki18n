@@ -4,7 +4,7 @@ title: analyzeTranslations
 
 # `analyzeTranslations`
 
-Compares translations you already hold in memory. It does no file system work at all, so it runs anywhere the language does — in a browser, in a Flutter web build, in a worker, in a sandbox with no disk — and it is the entry point to reach for when something else has already read the files.
+Compares translations you already hold in memory. It does no file system work at all, so it runs anywhere the language does: in a browser, in a Flutter web build, in a worker, in a sandbox with no disk. Reach for it when something else has already read the files.
 
 ## Signature
 
@@ -177,7 +177,7 @@ analyze_translations(
 
 ## Skipping the flatten pass
 
-If your keys are already flat, say so and the objects you pass are used exactly as they are — nothing is copied and nothing is rebuilt:
+If your keys are already flat, say so and the objects you pass are used exactly as they are, with nothing copied and nothing rebuilt:
 
 ::: lang js
 
@@ -273,7 +273,7 @@ class Input:
 
 :::
 
-`files` maps a group and locale onto the file it came from, so issues can carry a `file` path. `issues` lets whatever produced the input report its own problems into the same result — that is how a directory scan's unreadable-file errors end up in the same list as the comparison's findings. <Lang js="fileFormat" dart="fileFormat" py="file_format" code /> is carried through to the result untouched, and the last two answer [`UNUSED_KEY`](/guide/checks#unused-key) and [`UNDEFINED_KEY`](/guide/checks#undefined-key) for an application that has already worked them out.
+`files` maps a group and locale onto the file it came from, so issues can carry a `file` path. `issues` lets whatever produced the input add its own problems to the same result, which is how a directory scan's unreadable-file errors end up in the same list as the comparison's findings. <Lang js="fileFormat" dart="fileFormat" py="file_format" code /> is carried through to the result untouched, and the last two answer [`UNUSED_KEY`](/guide/checks#unused-key) and [`UNDEFINED_KEY`](/guide/checks#undefined-key) for an application that has already worked them out.
 
 ## What the result says
 
@@ -317,7 +317,7 @@ Everything else is the same shape [`checkTranslationFiles`](./check-translation-
 
 ## A locale that is not an object
 
-Reported rather than raised, like every other input problem:
+Reported as an issue rather than raised, like every other input problem:
 
 ::: lang js
 
@@ -330,7 +330,7 @@ analyzeTranslations({ locales: { en: { a: 'A' }, ko: null } }, { target: 'en' })
 
 ::: lang dart
 
-Dart's type system settles this one before it runs: `Chki18nInput.locales` is a `Map<String, TranslationMap>`, so there is nothing to pass that is not a map of keys. A file on disk that holds something else is still reported as `INVALID_FILE` by the scanner.
+Dart's type system settles this one before it runs. `Chki18nInput.locales` is a `Map<String, TranslationMap>`, so there is nothing to pass that is not a map of keys. A file on disk that holds something else is still reported as `INVALID_FILE` by the scanner.
 
 :::
 

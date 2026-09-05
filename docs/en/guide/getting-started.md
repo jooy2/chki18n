@@ -4,11 +4,11 @@ title: Getting started
 
 # Getting started
 
-Install chki18n, point it at the folder your translation files live in, and name the language everything else is compared against. There is no configuration file: a path and a target language are the whole contract.
+Install chki18n, point it at the folder your translation files live in, and name the language everything else is compared against. There is no configuration file: a path and a target language are all it takes.
 
 ## Pick a package
 
-chki18n ships for three languages, and they are one library rather than three: the same twenty-five checks in the same order, the same option names, the same report to the column, and the same exit code. Pick the one your project already speaks — the switch at the top of the sidebar rewrites every code sample on this site to match.
+chki18n ships for three languages, and the three are one library: the same twenty-five checks in the same order, the same option names, the same report to the column, and the same exit code. Pick the one your project already speaks. The switch at the top of the sidebar rewrites every code sample on this site to match.
 
 | Language | Registry | Install | Requires |
 | --- | --- | --- | --- |
@@ -18,22 +18,22 @@ chki18n ships for three languages, and they are one library rather than three: t
 
 ### How the names map
 
-Every function and every option is documented under its **JavaScript spelling**, because a heading and an anchor have to read the same for every reader. The other two follow one mechanical rule each, and this is the only place it is stated:
+Every function and every option is documented under its **JavaScript spelling**, because a heading and an anchor have to read the same for every reader. The other two follow one rule each, and this is the only place it is stated:
 
-- **Dart** keeps the JavaScript spelling. `checkTranslationFiles`, `interpolationPrefix`, `maxKeyDepth`. What differs is the shape: options are one `Chki18nOptions` object built with named parameters, and the closed value sets are enums — `Chki18nCheckCode.noKey` rather than `'NO_KEY'`, though `Chki18nCheckCode.noKey.code` is still `NO_KEY`.
+- **Dart** keeps the JavaScript spelling: `checkTranslationFiles`, `interpolationPrefix`, `maxKeyDepth`. What differs is the shape. Options are one `Chki18nOptions` object built with named parameters, and the closed value sets are enums, so `Chki18nCheckCode.noKey` stands in for `'NO_KEY'`. Its `code` is still `NO_KEY`.
 - **Python** is snake_case throughout. `check_translation_files`, `interpolation_prefix`, `max_key_depth`. The check codes, the severities and the option choices stay the strings they are everywhere else: `"NO_KEY"`, `"error"`, `"kebab"`.
 
 ## Install
 
 ::: lang js
 
-Run it without installing anything, which is what a CI job usually wants:
+Run it without installing anything, the usual form for a CI job:
 
 ```bash
 npx chki18n ./locales --target en
 ```
 
-Or add it to the project, which is what you want if you are going to call it from code:
+Or add it to the project when you are going to call it from code:
 
 ```bash
 npm install chki18n
@@ -59,7 +59,7 @@ Install the command once and it is on your path:
 dart pub global activate chki18n
 ```
 
-Or add it to the project, which is what you want if you are going to call it from code:
+Or add it to the project when you are going to call it from code:
 
 ```bash
 dart pub add chki18n
@@ -71,13 +71,13 @@ In a Flutter project that is `flutter pub add chki18n`. Inside a project that al
 
 ::: lang py
 
-Run it without installing anything, which is what a CI job usually wants:
+Run it without installing anything, the usual form for a CI job:
 
 ```bash
 pipx run chki18n ./locales --target en
 ```
 
-Or add it to the project, which is what you want if you are going to call it from code:
+Or add it to the project when you are going to call it from code:
 
 ```bash
 pip install chki18n
@@ -165,7 +165,7 @@ chki18n ./locales --target en
 
 Two real problems: the Korean translation dropped the `{name}` placeholder, and it is missing a key entirely. The command exits with `1`, so a CI job fails here.
 
-There is more on the command line — every flag, the exit code, how to wire it into CI — on [Command line](./cli).
+[Command line](./cli) has the rest: every flag, the exit code, and how to wire it into CI.
 
 ## From code
 
@@ -220,7 +220,7 @@ if not result.success:
 
 :::
 
-Nothing is printed unless you ask for it, and the process is never exited for you — the returned result is the only thing to act on. See [The result object](/reference/result) for everything it carries.
+Nothing is printed unless you ask for it, and the process is never exited for you. The returned result is the only thing to act on. See [The result object](/reference/result) for everything it carries.
 
 ## Which entry point
 

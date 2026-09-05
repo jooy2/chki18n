@@ -33,7 +33,7 @@ features:
     link: /guide/file-layouts
     linkText: File layouts
   - title: Three languages, one library
-    details: JavaScript, Dart and Python packages that run the same checks in the same order and print the same report, byte for byte. Pick the one your project already speaks.
+    details: JavaScript, Dart and Python packages that run the same checks in the same order and print the same report, character for character. Pick the one your project already speaks.
     link: /guide/getting-started
     linkText: Getting started
   - title: The CLI and the API are one thing
@@ -105,9 +105,9 @@ chki18n ./locales --target en
   FAIL  1 error must be fixed before this passes.
 ```
 
-It exits with `1` when an error level issue was found, so a CI job fails on it. Every package prints that report, to the column, whichever one you install.
+It exits with `1` when an error level issue was found, so a CI job fails on it. Every package prints that report to the column, whichever one you install.
 
-The same run from code, where the result is an object rather than a page of text:
+The same run from code returns an object instead of a page of text:
 
 ::: lang js
 

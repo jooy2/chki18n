@@ -4,7 +4,7 @@ title: The result object
 
 # The result object
 
-Every entry point returns the same result, whether the translations came from a directory, from memory or from a session. It carries every issue found, the same issues grouped by check code, and counts by level, code, locale and group — so a dashboard or a build script never has to derive any of it.
+Every entry point returns the same result, whether the translations came from a directory, from memory or from a session. It carries every issue found, the same issues grouped by check code, and counts by level, code, locale and group, so a dashboard or a build script never has to derive any of it.
 
 ## The result
 
@@ -88,11 +88,11 @@ class Result:
 | <Lang js="fileFormat" dart="fileFormat" py="file_format" code /> | `single`, `folder`, `nested`, or <Lang js="`null`" dart="`null`" py="`None`" /> for in-memory input. |
 | <Lang js="elapsedMs" dart="elapsedMs" py="elapsed_ms" code /> | How long the call took, scan included where there was one. |
 
-<Lang js="`issues` and `issuesByCode`" dart="`issues` and `issuesByCode`" py="`issues` and `issues_by_code`" /> hold the same objects, not copies — grouping is a view, not a duplicate.
+<Lang js="`issues` and `issuesByCode`" dart="`issues` and `issuesByCode`" py="`issues` and `issues_by_code`" /> hold the same objects. Grouping by code does not copy an issue.
 
 ::: lang dart py
 
-Reading one check out of the grouping is common enough to have its own method, so the empty case does not need writing out every time:
+Reading one check out of the grouping is common enough to have its own method, so the empty case does not have to be written out every time:
 
 :::
 
@@ -202,7 +202,7 @@ Optional fields are **absent** rather than `undefined`, so `JSON.stringify` and 
 
 ::: lang dart py
 
-An optional field with nothing in it is <Lang dart="`null`" py="`None`" />, and <Lang dart="`toJson`" py="`to_json`" code /> leaves it out rather than writing it as `null` — which is what keeps the `json` reporter's output the same as the other packages'.
+An optional field with nothing in it is <Lang dart="`null`" py="`None`" />, and <Lang dart="`toJson`" py="`to_json`" code /> leaves it out instead of writing it as `null`. That is what keeps the `json` reporter's output identical across the three packages.
 
 :::
 
@@ -352,7 +352,7 @@ CHECK_META["NO_KEY"]
 
 :::
 
-`summary` heads a list of occurrences; `description` describes one. An issue's own `message` is the description unless the check produced something more specific — which is what `NO_INTERPOLATION_KEY` does when it names the placeholder.
+`summary` heads a list of occurrences and `description` describes one. An issue's own `message` is the description unless the check produced something more specific, as `NO_INTERPOLATION_KEY` does when it names the placeholder.
 
 A minimal report:
 

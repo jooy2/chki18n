@@ -4,9 +4,9 @@ title: Options
 
 # Options
 
-The command line and the API take the same options. Every CLI flag is an API option with the same name, resolved from one definition — so a flag and its option counterpart cannot drift apart, and what passes in CI passes in your build script.
+The command line and the API take the same options. Every CLI flag is an API option with the same name, resolved from one definition, so the two cannot drift apart and what passes in CI passes in your build script.
 
-Option names are written here in their JavaScript spelling. Dart uses the same one; Python is snake_case throughout, so `ignoreChecks` is `ignore_checks` and `maxKeyDepth` is `max_key_depth`. [Getting started](./getting-started#how-the-names-map) states that mapping once.
+Option names are written here in their JavaScript spelling. Dart uses the same one, and Python is snake_case throughout, so `ignoreChecks` is `ignore_checks` and `maxKeyDepth` is `max_key_depth`. [Getting started](./getting-started#how-the-names-map) states that mapping once.
 
 ## The full set
 
@@ -42,7 +42,7 @@ The last two are API-only: the CLI always prints, so `verbose` is set for you, a
 
 ::: lang dart
 
-Dart takes all of them as one `Chki18nOptions` object built with named parameters, and the closed value sets are enums — `Chki18nFileFormat.folder` rather than `'folder'`, `Chki18nCheckCode.noKey` rather than `'NO_KEY'`. The text forms a flag writes (`'NO_KEY,EMPTY_VALUE'`, `'EMPTY_VALUE=error'`) live on `Chki18nTextOptions`, which `Chki18nOptions.text` carries, so no field has to accept two types.
+Dart takes all of them as one `Chki18nOptions` object built with named parameters, and the closed value sets are enums: `Chki18nFileFormat.folder` for `'folder'`, `Chki18nCheckCode.noKey` for `'NO_KEY'`. The text forms a flag writes (`'NO_KEY,EMPTY_VALUE'`, `'EMPTY_VALUE=error'`) live on `Chki18nTextOptions`, which `Chki18nOptions.text` carries, so no field has to accept two types.
 
 :::
 
@@ -63,11 +63,11 @@ chki18n ./locales
 chki18n --path ./locales
 ```
 
-A relative path resolves against the current working directory. From code it is the first argument, and the `path` option is accepted too — it wins when both are given, which is what the CLI relies on.
+A relative path resolves against the current working directory. From code it is the first argument, and the `path` option is accepted too. The option wins when both are given, which is how the CLI passes its positional argument through.
 
 ### `target`
 
-The language every other language is compared against — the one you write first. Defaults to `en`, and a run that falls back to the default says so at `info` level rather than failing.
+The language every other language is compared against, which is the one you write first. It defaults to `en`, and a run that falls back to the default says so at `info` level instead of failing.
 
 ```bash
 chki18n ./locales --target ko
@@ -79,7 +79,7 @@ If the target language is not among the scanned files there is nothing to compar
 
 ### `format`
 
-Which on-disk layout to read. `auto` decides from the paths, which is right nearly always; force it when the detection guesses wrong or when you want a mismatch to fail loudly.
+Which on-disk layout to read. `auto` decides from the paths and is right nearly always. Force it when the detection guesses wrong, or when you want a mismatch to fail outright.
 
 ```bash
 chki18n ./locales --format folder
@@ -135,13 +135,13 @@ check_translation_files(".", Options(exclude=[*DEFAULT_EXCLUDE_DIRS, "fixtures"]
 
 :::
 
-An entry of one segment names a directory wherever it appears, which is what makes `node_modules` mean every `node_modules` in the tree. An entry with a separator names a path from the scanned root, matching that directory and everything under it, so a project can drop its own `src/legacy` without dropping a `legacy` belonging to something else:
+An entry of one segment names a directory wherever it appears, so `node_modules` means every `node_modules` in the tree. An entry with a separator names a path from the scanned root, matching that directory and everything under it, so a project can drop its own `src/legacy` without dropping a `legacy` belonging to something else:
 
 ```bash
 chki18n . --exclude node_modules,src/legacy
 ```
 
-Hidden entries — anything starting with `.` — are always skipped, whatever this is set to.
+Hidden entries, meaning anything starting with `.`, are always skipped whatever this is set to.
 
 ### `excludeFiles`
 
@@ -203,17 +203,17 @@ chki18n ./locales --target en --source ./src
 
 Only text files are read, anything over 5MB is skipped, and both `exclude` and `excludeFiles` apply here as well. The project's own translation files are never searched.
 
-The same directory answers [`UNDEFINED_KEY`](./checks#undefined-key), which asks the opposite question: which keys the source calls for that no language file defines.
+[`UNDEFINED_KEY`](./checks#undefined-key) uses the same directory for the opposite question: which keys the source calls for that no language file defines.
 
 ### `translateFunctions`
 
-The names a translation call goes by, which is how `UNDEFINED_KEY` finds the keys the source asks for. **Replaces** the default list rather than adding to it:
+The names a translation call goes by, which is how `UNDEFINED_KEY` finds the keys the source asks for. It **replaces** the default list rather than adding to it:
 
 ```text
 t  $t  translate
 ```
 
-Those three cover i18next, react-i18next and vue-i18n between them, including `i18n.t` and a `t` bound by `useTranslation`, because a call is matched wherever its name ends. The `i18nKey` attribute a `<Trans>` component takes is always read.
+Those three cover i18next, react-i18next and vue-i18n between them, including `i18n.t` and a `t` bound by `useTranslation`, since a call is matched wherever its name ends. The `i18nKey` attribute a `<Trans>` component takes is always read.
 
 ```bash
 chki18n ./locales --source ./src --translate-functions t,trans,__
@@ -223,7 +223,7 @@ The default list is exported as `TRANSLATION_FUNCTIONS` if you would rather exte
 
 ## Key and value limits
 
-Three options exist only to give a check something to compare against. Each one is off until it is set, because none of them has a right answer of its own — only the one your project chose.
+The three options below exist only to give a check something to compare against. Each one is off until it is set, because none of them has a right answer of its own, only the one your project chose.
 
 ### `keyCase`
 
@@ -233,7 +233,7 @@ The case every segment of a key has to be written in, which is what [`KEY_NAMING
 chki18n ./locales --key-case kebab
 ```
 
-The plural and context suffixes an i18n library appends — `item-count_one`, `greeting_male` — are accepted whatever case you chose.
+The plural and context suffixes an i18n library appends, such as `item-count_one` and `greeting_male`, are accepted whatever case you chose.
 
 ### `maxKeyDepth`
 
@@ -300,7 +300,7 @@ Run everything except these:
 chki18n ./locales --ignore-checks DUPLICATE_VALUE
 ```
 
-Combining the two is not allowed: `checks` wins, and an `INVALID_OPTIONS` issue says `ignoreChecks` was ignored. An unknown code is reported the same way and skipped, rather than failing the run — a typo in one flag should not stop the rest of the scan.
+Combining the two is not allowed: `checks` wins, and an `INVALID_OPTIONS` issue says `ignoreChecks` was ignored. An unknown code is reported the same way and skipped instead of failing the run, so a typo in one flag does not stop the rest of the scan.
 
 ### `levels`
 
@@ -345,13 +345,13 @@ Only comparison checks can be re-graded; `INVALID_FILE` and `INVALID_OPTIONS` re
 
 ### `interpolationPrefix` / `interpolationSuffix`
 
-The delimiters that mark a placeholder. Defaults are `{` and `}`; `{{ }}`, `[[ ]]` and `%{ }` are all common in the wild.
+The delimiters that mark a placeholder. The defaults are `{` and `}`, and `{{ }}`, `[[ ]]` and `%{ }` are all common in real projects.
 
 ```bash
 chki18n ./locales --interpolation-prefix "{{" --interpolation-suffix "}}"
 ```
 
-Getting this wrong does not produce a wrong answer so much as no answer: unrecognised placeholders mean both interpolation checks find nothing and pass quietly.
+Getting this wrong leaves the placeholders unrecognised, so both interpolation checks find nothing and pass without a word.
 
 ## Output
 
@@ -405,7 +405,7 @@ Anything other than `pretty` prints the report on its own, with no banner and no
 
 ### `groupBy`
 
-What a section of the report is: `locale` (the default), `code`, `group`, `file` or `none`. Grouping by language matches how a translator works; grouping by check matches how a maintainer fixes things.
+What a section of the report is: `locale` (the default), `code`, `group`, `file` or `none`. Grouping by language matches how a translator works, and grouping by check matches how a maintainer fixes things.
 
 ```bash
 chki18n ./locales --group-by code
@@ -447,7 +447,7 @@ group_issues(result.issues, "locale")  # [IssueGroup(id=…, label=…, issues=�
 
 ### `output`
 
-A file to write the report to, in addition to the terminal. The extension picks the reporter — `.json` and `.md` have one of their own, anything else is plain text — and `reporter` overrides it when both are given.
+A file to write the report to, in addition to the terminal. The extension picks the reporter, with `.json` and `.md` having one of their own and anything else written as plain text. `reporter` overrides it when both are given.
 
 ```bash
 chki18n ./locales --output report.md
@@ -461,13 +461,13 @@ Whether to colour the terminal report. On by default where the terminal supports
 
 ### `width`
 
-Columns to lay the report out to. Without it the terminal's own width is used, then `COLUMNS`, then 96 — and a measured width is capped at 120, since further apart than that the counts stop reading as part of the same line as their label. What `width` asks for is not capped.
+Columns to lay the report out to. Without it the terminal's own width is used, then `COLUMNS`, then 96. A measured width is capped at 120, since past that the counts stop reading as part of the same line as their label. What `width` asks for is not capped.
 
 ```bash
 chki18n ./locales --width 72
 ```
 
-Descriptions wrap rather than being cut short, so a narrow report loses no wording. A file written by `output` ignores the terminal and uses the fixed default, unless `width` says otherwise, so the same run produces the same file anywhere.
+Descriptions wrap instead of being cut short, so a narrow report loses no wording. A file written by `output` ignores the terminal and uses the fixed default unless `width` says otherwise, so the same run produces the same file anywhere.
 
 ### `info`, `warn`, `debug`
 
@@ -516,7 +516,7 @@ check_translation_files("./locales", Options(verbose=True))
 
 ### `flattened`
 
-API-only. Says the translations you are passing in already use flat keys (`'desc.hello'`) rather than nested objects, so the flatten pass is skipped entirely. This is what makes analysing data you already hold allocation-free:
+API-only. Says the translations you are passing in already use flat keys (`'desc.hello'`) rather than nested objects, so the flatten pass is skipped and the objects you passed are read directly:
 
 ::: lang js
 
@@ -545,11 +545,11 @@ analyze_translations(Input(locales={"en": en, "ko": ko}), Options(target="en", f
 
 :::
 
-Setting it when the data is actually nested does not error — it compares the top-level keys and finds very little.
+Setting it when the data is actually nested does not error. It compares the top-level keys and finds very little.
 
 ## Resolving options yourself
 
-<Lang js="resolveOptions" dart="resolveOptions" py="resolve_options" code /> applies the defaults and normalises the loose forms, and reports what it could not use rather than raising:
+<Lang js="resolveOptions" dart="resolveOptions" py="resolve_options" code /> applies the defaults, normalises the loose forms, and reports what it could not use instead of raising:
 
 ::: lang js
 

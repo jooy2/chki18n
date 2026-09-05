@@ -4,7 +4,7 @@ title: File layouts
 
 # File layouts
 
-Translation files are laid out in one of three ways, and chki18n recognises all of them without being told which. Files that hold the same keys in different languages are compared as a group, so a project split across several translation files is checked file by file rather than as one flat pile of keys.
+Translation files are laid out in one of three ways, and chki18n recognises all of them without being told which. Files that hold the same keys in different languages are compared as a group, so a project split across several translation files is checked file by file instead of as one flat set of keys.
 
 ## The three layouts
 
@@ -64,7 +64,7 @@ The top-level keys are the locales. Several such files are allowed, each becomin
 
 ## How the layout is detected
 
-Path shape alone is ambiguous — `a/ko.json` and `ko/common.json` both have two segments — so the decision is made by **which segment is a real locale code**:
+Path shape alone is ambiguous, since `a/ko.json` and `ko/common.json` both have two segments. The decision is made by **which segment is a real locale code**:
 
 1. A file whose name is a locale (`ko.json`) means `single`.
 2. A folder whose name is a locale (`ko/`) means `folder`.
@@ -119,13 +119,13 @@ A **group** is one set of files that hold the same keys in different languages. 
 | `folder` | `admin/en/common.json` | `admin/common.json` | `en`               |
 | `nested` | `translation.json`     | `translation.json`  | each top-level key |
 
-This is what stops `errors.json` from being reported as missing every key that only `common.json` has. A project with one group — the usual `single` layout at a folder root — has the group name `''`, and the CLI leaves it off the line rather than printing an empty `@`.
+This is what stops `errors.json` from being reported as missing every key that only `common.json` has. A project with one group, which is the usual `single` layout at a folder root, has the group name `''`, and the CLI leaves it off the line instead of printing an empty `@`.
 
 Groups appear on every issue as `issue.group`, and in the result as `result.groups`.
 
 ## What gets scanned
 
-Only `.json` files are read. Hidden entries — anything whose name starts with `.` — are skipped, and so are these directories:
+Only `.json` files are read. Hidden entries, meaning anything whose name starts with `.`, are skipped, and so are these directories:
 
 ```text
 node_modules  dist  build  out  coverage
@@ -167,7 +167,7 @@ check_translation_files("./locales", Options(exclude=["tmp", "vendor"]))
 
 Note that `exclude` **replaces** the default list rather than adding to it, so include the defaults you still want. An entry with a separator names a path from the scanned root (`src/legacy`) rather than a name at any depth, and `excludeFiles` does the same for file names.
 
-A file that is read but does not belong to a locale is skipped silently; `--debug` names every one of them, which is the fastest way to find out why a scan came back empty.
+A file that is read but does not belong to a locale is skipped without a message. `--debug` names every one of them, which is the fastest way to find out why a scan came back empty.
 
 ## Nested keys
 

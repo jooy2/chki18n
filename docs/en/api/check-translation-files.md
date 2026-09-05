@@ -4,7 +4,7 @@ title: checkTranslationFiles
 
 # `checkTranslationFiles`
 
-Reads a directory of translation files and compares every language against the target language, in one call. This is what the CLI does, as a value you can act on — and the entry point to reach for when a directory is checked once.
+Reads a directory of translation files and compares every language against the target language, in one call. It does what the CLI does and returns the result as a value you can act on. Reach for it when a directory is checked once.
 
 ## Signature
 
@@ -33,7 +33,7 @@ def check_translation_files(
 ) -> Result: ...
 ```
 
-Synchronous, unlike the JavaScript package: Python's file system is, and an `async` surface would be a promise this package cannot keep anything with.
+Synchronous, unlike the JavaScript package. Python's file reads are synchronous, so an `async` signature would promise concurrency this package cannot deliver.
 
 :::
 
@@ -116,7 +116,7 @@ result.of("NO_KEY")[0]
 
 :::
 
-The path can also be given as an option, which is what the CLI does with its positional argument:
+The path can also be given as an option, which is how the CLI passes its positional argument:
 
 ::: lang js
 
@@ -146,12 +146,12 @@ check_translation_files(options=Options(path="./locales", target="en"))
 
 Every option is on [Options](/guide/options), and the result on [The result object](/reference/result).
 
-## It never prints and never exits
+## Printing and exiting
 
 Two things this function deliberately does not do:
 
 - **It prints nothing** unless `verbose` is set. Importing the module cannot pollute a host application's output.
-- **It never exits the process.** A failing check is <Lang js="result.success === false" dart="result.success == false" py="result.success is False" code />, not an exit call. Exiting is the CLI's job, and it does it after this function returns.
+- **It never exits the process.** A failing check comes back as <Lang js="result.success === false" dart="result.success == false" py="result.success is False" code />. Exiting is the CLI's job, and it does it after this function returns.
 
 Turn the output on when you want the CLI's report from your own script:
 
@@ -182,7 +182,7 @@ check_translation_files("./locales", Options(target="en", verbose=True))
 
 :::
 
-`reporter` and `groupBy` shape that report exactly as they shape the CLI's. `output` writes it to a file, and that happens whether or not `verbose` is set: a file is something you asked for rather than something printed at you.
+`reporter` and `groupBy` shape that report exactly as they shape the CLI's. `output` writes it to a file whether or not `verbose` is set, because saving a file is something the caller asked for explicitly.
 
 ::: lang js
 
@@ -309,11 +309,11 @@ if not result.success:
 
 :::
 
-`success` is false when at least one issue is at `error` level. Warnings never make it false — promote one with [`levels`](/guide/options#levels) if your project treats it as a blocker.
+`success` is false when at least one issue is at `error` level. Warnings never make it false, so promote one with [`levels`](/guide/options#levels) if your project treats it as a blocker.
 
-## Errors are reported, not raised
+## How errors are reported
 
-A missing directory, an unreadable file, JSON that does not parse, a target language that is nowhere in the files — none of these raise. They come back as issues, so one bad file does not hide everything else that was found:
+A missing directory, an unreadable file, JSON that does not parse, a target language that is nowhere in the files: none of these raise. They come back as issues, so one bad file does not hide everything else that was found:
 
 ::: lang js
 
@@ -355,7 +355,7 @@ Calling it with no path at all is reported the same way, as an `INVALID_OPTIONS`
 
 ## Timing
 
-<Lang js="result.elapsedMs" dart="result.elapsedMs" py="result.elapsed_ms" code /> covers the whole call — the scan, the parse and the comparison. Checking the same directory more than once means scanning it more than once; use [`loadTranslations`](./load-translations) when that is the shape of the work.
+<Lang js="result.elapsedMs" dart="result.elapsedMs" py="result.elapsed_ms" code /> covers the whole call: the scan, the parse and the comparison. Checking the same directory more than once means scanning it more than once, so use [`loadTranslations`](./load-translations) for that kind of work.
 
 ## See also
 

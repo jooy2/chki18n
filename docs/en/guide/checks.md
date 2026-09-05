@@ -42,7 +42,7 @@ Every problem chki18n reports has a check code, a severity and a sentence descri
 
 ## The target language
 
-Every other language is compared against the target language, so most checks have nothing to ask of the target itself: it cannot be missing a key it defines, and it cannot use a placeholder differently from the way it uses it. The checks that read one value on its own do apply to it. A source language is typed by hand like any other and picks up the same mistakes, and one that is never checked keeps them.
+Every other language is compared against the target language, so most checks do not apply to the target itself: it cannot be missing a key it defines, and it cannot use a placeholder differently from the way it uses it. The checks that read one value on its own do apply to it. A source language is typed by hand like any other and picks up the same mistakes, and one that is never checked keeps them.
 
 | Code                     | What it catches in the target language                        |
 | ------------------------ | ------------------------------------------------------------- |
@@ -52,9 +52,9 @@ Every other language is compared against the target language, so most checks hav
 | `INVALID_VALUE_TYPE`     | A value that is not a string                                  |
 | `UNTRANSLATED_SCRIPT`    | A value with no character of the target language's own script |
 
-The checks about a key rather than a value — `DUPLICATE_KEY`, `KEY_NAMING`, `KEY_DEPTH`, `UNUSED_KEY` and `UNDEFINED_KEY` — were never tied to one language to begin with, and `DUPLICATE_VALUE` and `NO_PLURAL_FORM` already asked every language including the target.
+The checks that look at a key rather than a value (`DUPLICATE_KEY`, `KEY_NAMING`, `KEY_DEPTH`, `UNUSED_KEY` and `UNDEFINED_KEY`) are not tied to one language at all, and `DUPLICATE_VALUE` and `NO_PLURAL_FORM` apply to every language including the target.
 
-None of the five reports at `error`, so a source language nobody had checked before does not start failing a build. Switch one off with `ignoreChecks` the way you would for any other language; there is no separate switch for the target.
+None of the five reports at `error`, so a source language nobody had checked before does not start failing a build. Switch one off with `ignoreChecks` the way you would for any other language. There is no separate switch for the target.
 
 ## Structural checks
 
@@ -76,7 +76,7 @@ It needs more than one group to mean anything. With a single set of files, every
 
 ### `NO_KEY`
 
-The target language defines a key and this locale does not. The most common finding, and the one most worth failing a build on: a missing key is a string your users will see untranslated, or a crash, depending on your i18n runtime.
+The target language defines a key and this locale does not. This is the most common finding, and the one most worth failing a build on. Depending on your i18n runtime, a missing key shows up as an untranslated string or as a crash.
 
 ```json
 // en.json
@@ -91,7 +91,7 @@ The target language defines a key and this locale does not. The most common find
 
 ### `DUMMY_KEY`
 
-The reverse: this locale has a key the target language does not. Usually a key that was renamed or deleted in the source language and left behind in the translations — dead weight rather than a defect, which is why it is a warning.
+The opposite case: this locale has a key the target language does not. Usually it is a key that was renamed or deleted in the source language and left behind in the translations. That is leftover weight rather than a defect, so it is a warning.
 
 ```json
 // en.json
@@ -118,19 +118,19 @@ The same key is defined twice, so one of the two values is thrown away before an
 { "attr": { "folder": "Folder" }, "attr.folder": "Directory" }
 ```
 
-The first is what a botched merge conflict leaves behind; the second is what happens when part of a file is written in dotted form and part of it nested. Both are found — the literal kind by reading the file's text before it is parsed, which is the only moment the evidence still exists, and the message names the line it is on.
+The first is what a botched merge conflict leaves behind, and the second happens when part of a file is written in dotted form and part of it nested. Both are found. The literal kind is caught by reading the file's text before it is parsed, since parsing throws the evidence away, and that is also how the message can name the line it is on.
 
-An error, because a value is being lost. This is the one check whose severity chki18n would rather you did not lower, though `levels` will let you.
+This reports as an error, because a value is being lost. `levels` will let you lower it, but this is the one check worth leaving alone.
 
 ### `INVALID_FILE`
 
-A file that could not be read, was empty, did not parse as JSON, or — when a layout was forced with `format` — matched no file at all. Reported before any comparison, and always an error: a file that could not be read is not a file that passed.
+A file that could not be read, was empty, did not parse as JSON, or matched no file at all when a layout was forced with `format`. It is reported before any comparison and is always an error, because a file that could not be read has not been checked.
 
 ## Value checks
 
 ### `EMPTY_VALUE`
 
-The key is defined but its value is `""`. Often a placeholder someone left for later, which is exactly the thing that ships by accident. It is a warning by default; promote it if your project treats an empty string as a missing translation:
+The key is defined but its value is `""`. Usually a placeholder someone left for later, and those ship by accident often enough to be worth reporting. It is a warning by default; promote it if your project treats an empty string as a missing translation:
 
 ```bash
 chki18n ./locales --levels EMPTY_VALUE=error
@@ -138,7 +138,7 @@ chki18n ./locales --levels EMPTY_VALUE=error
 
 ### `NOT_TRANSLATED_VALUE`
 
-The value is byte-for-byte identical to the target language's. Either the translation was never done, or the word is genuinely the same in both languages — `OK`, `Wi-Fi`, a product name. Both are common, which is why this is a warning rather than an error.
+The value is byte-for-byte identical to the target language's. Either the translation was never done, or the word is genuinely the same in both languages, as with `OK`, `Wi-Fi` or a product name. Both are common, so this is a warning rather than an error.
 
 ```json
 // en.json
@@ -155,7 +155,7 @@ chki18n ./locales --ignore-checks NOT_TRANSLATED_VALUE
 
 ### `SURROUNDING_WHITESPACE`
 
-The value begins or ends with whitespace. Almost always accidental — a trailing space that survived a copy-paste — and it shows up as a layout bug that is hard to see in a diff.
+The value begins or ends with whitespace. Almost always accidental, usually a trailing space that survived a copy-paste, and it shows up as a layout bug that is hard to see in a diff.
 
 ```json
 { "attr": { "trim": " Folder " } }
@@ -163,11 +163,11 @@ The value begins or ends with whitespace. Almost always accidental — a trailin
 
 ### `MISSING_NUMBER`
 
-The target language's value contains digits and the translation does not. Catches a number dropped while translating: `You have 3 items` becoming `여러 개 있습니다`. A heuristic, so a warning — a translation that deliberately spells the number out will trip it.
+The target language's value contains digits and the translation does not. It catches a number dropped while translating, as in `You have 3 items` becoming `여러 개 있습니다`. This is a heuristic and reports as a warning, since a translation that deliberately spells the number out will trip it.
 
 ### `INVALID_VALUE_TYPE`
 
-The value is not a string: a number, a boolean, `null`, or an object that survived flattening. Most i18n runtimes want strings, and a `null` is a bug in whatever wrote the file. A warning, because arrays and numbers do have legitimate uses in some setups.
+The value is not a string: a number, a boolean, `null`, or an object that survived flattening. Most i18n runtimes want strings, and a `null` is a bug in whatever wrote the file. It is a warning, because arrays and numbers do have legitimate uses in some setups.
 
 ### `DUPLICATE_VALUE`
 
@@ -181,7 +181,7 @@ Like `DUPLICATE_KEY` and `UNUSED_KEY`, this one has to see more than a single ke
 
 ### `NUMBER_MISMATCH`
 
-`MISSING_NUMBER` asks whether the translation kept any digits at all. This one asks whether it kept the same ones. A translation that says five where the original says three is a worse bug than one that says neither, and it passes every other check.
+`MISSING_NUMBER` checks whether the translation kept any digits at all; this one checks whether it kept the same ones. A translation that says five where the original says three is a worse bug than one that drops the number, and it passes every other check.
 
 ```json
 // en.json
@@ -190,11 +190,11 @@ Like `DUPLICATE_KEY` and `UNUSED_KEY`, this one has to see more than a single ke
 { "count": "5개 있습니다" }
 ```
 
-Numbers the translation reordered are fine — `3 of 5` and `5 중 3` hold the same numbers — and a translation that spells its numbers out is left to `MISSING_NUMBER`.
+Numbers the translation reordered are fine, since `3 of 5` and `5 중 3` hold the same numbers. A translation that spells its numbers out is left to `MISSING_NUMBER`.
 
 ### `TAG_MISMATCH`
 
-The markup a value carries, compared against the target language's. A dropped `<b>` renders as plain text; a dropped `</b>` bolds the rest of the page; and in a `<Trans>` component a tag the translation does not have is a child that never renders.
+The markup a value carries, compared against the target language's. A dropped `<b>` renders as plain text, a dropped `</b>` bolds the rest of the page, and in a `<Trans>` component a tag the translation does not have leaves a child that never renders.
 
 ```json
 // en.json
@@ -207,13 +207,13 @@ The markup a value carries, compared against the target language's. A dropped `<
 [TAG_MISMATCH] ko -> 'hint' The tags `<b>` and `</b>` of the target language are missing from this value.
 ```
 
-Tags are counted, not just looked for, so a value that opens twice and closes once is reported too. Tag names are read case-insensitively, and text that merely compares two numbers — `a < b` — is not mistaken for markup.
+Tags are counted rather than merely looked for, so a value that opens twice and closes once is reported too. Tag names are read case-insensitively, and text that compares two numbers, as in `a < b`, is not mistaken for markup.
 
-This is a warning rather than an error because `<Ctrl>` in a keyboard hint is a tag as far as any pattern can tell. Promote it with `--levels TAG_MISMATCH=error` once you know your files.
+This is a warning rather than an error because `<Ctrl>` in a keyboard hint looks like a tag to any pattern. Promote it with `--levels TAG_MISMATCH=error` once you know your files.
 
 ### `UNTRANSLATED_SCRIPT`
 
-A value that holds no character of the script its language is written in. `NOT_TRANSLATED_VALUE` only catches a translation that is character-for-character the original; add an exclamation mark and it passes.
+A value that holds no character of the script its language is written in. `NOT_TRANSLATED_VALUE` only catches a translation that is character-for-character the original, so adding an exclamation mark is enough to pass it.
 
 ```json
 // en.json
@@ -222,13 +222,13 @@ A value that holds no character of the script its language is written in. `NOT_T
 { "greet": "Hello!" }
 ```
 
-Only languages whose script says something are checked — Korean, Japanese, Chinese, Russian, Arabic, Greek, Hebrew, Thai and the rest of that list. A language written in the Latin alphabet is not, since there would be nothing to tell it apart from the English nobody translated. A locale that names its own script, such as `sr-Latn`, is left alone.
+Only languages whose script is a useful signal are checked: Korean, Japanese, Chinese, Russian, Arabic, Greek, Hebrew, Thai and the rest of that list. A language written in the Latin alphabet is not, since there would be nothing to tell it apart from the English nobody translated. A locale that names its own script, such as `sr-Latn`, is left alone.
 
-A value that is only a placeholder, a tag or a number is skipped. A brand name that stays in English is not, which is the false positive to expect here.
+A value that is only a placeholder, a tag or a number is skipped. A brand name that stays in English is not, so that is the false positive to expect here.
 
 ### `INCONSISTENT_VALUE`
 
-`DUPLICATE_VALUE` asks whether one locale repeats itself. This asks the opposite: two keys share one string in the target language, and this locale translates them differently.
+`DUPLICATE_VALUE` looks for one locale repeating itself; this one looks for the opposite. Two keys share one string in the target language, and this locale translates them differently.
 
 ```json
 // en.json
@@ -241,11 +241,11 @@ A value that is only a placeholder, a tag or a number is skipped. A brand name t
 [INCONSISTENT_VALUE] ko -> 'save-b' The key `save-a` has the same en value but is translated as "저장".
 ```
 
-This is the terminology drift that turns one button into two different words on two screens. It is a warning because the same English word does sometimes need two translations.
+This is the terminology drift that turns one button into two different words on two screens. It is a warning, because the same English word does sometimes need two translations.
 
 ### `INVISIBLE_CHARACTER`
 
-A zero width space, a byte order mark, a bidirectional control, or a non-breaking space where an ordinary space was meant. These survive a copy out of a design tool or a spreadsheet, they break a lookup that compares strings, and no review will ever see them.
+A zero width space, a byte order mark, a bidirectional control, or a non-breaking space where an ordinary space was meant. These survive a copy out of a design tool or a spreadsheet and break a lookup that compares strings, and a code review will not spot them.
 
 ```text
 [INVISIBLE_CHARACTER] ko -> 'clean' The value holds a zero width space (U+200B), which nothing will draw.
@@ -253,13 +253,13 @@ A zero width space, a byte order mark, a bidirectional control, or a non-breakin
 
 ### `SUSPICIOUS_LENGTH`
 
-A value far longer or shorter than the one it translates, which is what a truncated string or a pasted paragraph looks like. `lengthRatio` says how far is too far: `4` reports anything under a quarter or over four times the original.
+A value far longer or shorter than the one it translates, which is how a truncated string or a pasted paragraph looks. `lengthRatio` says how far is too far: `4` reports anything under a quarter or over four times the original.
 
 ```bash
 chki18n ./locales --length-ratio 3
 ```
 
-Lengths are counted in columns rather than characters, so Korean and Japanese are not short by default. Originals under eight columns are skipped, because a ratio says nothing about `OK`. Reported at `info`: languages differ in length honestly, and this is a prompt to look rather than a defect.
+Lengths are counted in columns rather than characters, so Korean and Japanese are not short by default. Originals under eight columns are skipped, because a ratio means nothing for a value like `OK`. It is reported at `info`, since languages genuinely differ in length and this is a prompt to look rather than a defect.
 
 ## Usage checks
 
@@ -298,13 +298,13 @@ check_translation_files("./locales", Options(target="en", source="./src"))
 
 :::
 
-The search is for a key's **leaf segment** — `desc.hello` is looked up as `hello` — because code so often resolves a nested key by its last segment alone, through a scoped `t('hello')` or a namespace bound higher up. Matching the whole dotted key would report working code as unused, which is the worse mistake of the two.
+The search is for a key's **leaf segment**, so `desc.hello` is looked up as `hello`. Code often resolves a nested key by its last segment alone, through a scoped `t('hello')` or a namespace bound higher up. Matching the whole dotted key would report working code as unused, and that is the worse mistake of the two.
 
-That also decides the severity. A leaf like `name` or `title` will turn up in almost any codebase whether or not the key is used, so this is a hint rather than a finding: it is reported at `info`, it never fails a run, and it is worth reading as "start looking here" rather than "delete this".
+That also decides the severity. A leaf like `name` or `title` will turn up in almost any codebase whether or not the key is used, so this is a hint rather than a settled finding. It is reported at `info`, it never fails a run, and it marks a place to start looking rather than something to delete.
 
-The project's own translation files are never searched — a key appears verbatim in the file that defines it, so reading them would mark every key used. Only text files are read (source, styles, templates, docs), skipping anything over 5MB, and the `exclude` and `excludeFiles` lists apply here too.
+The project's own translation files are never searched, since a key appears verbatim in the file that defines it and reading them would mark every key used. Only text files are read (source, styles, templates, docs), anything over 5MB is skipped, and the `exclude` and `excludeFiles` lists apply here too.
 
-If you already know the answer — an editor that has scanned the project itself — hand it over instead of having it worked out again:
+If you already know the answer, as an editor that has scanned the project itself does, hand it over instead of having it worked out again:
 
 ::: lang js
 
@@ -337,7 +337,7 @@ analyze_translations(
 
 ### `UNDEFINED_KEY`
 
-The reverse of `UNUSED_KEY`, and the more serious of the two: the source calls for a key and no language file defines it. Depending on the runtime the user sees the raw key, an empty string, or nothing at all.
+The opposite of `UNUSED_KEY`, and the more serious of the two: the source calls for a key and no language file defines it. Depending on the runtime the user sees the raw key, an empty string, or nothing at all.
 
 ```javascript
 t('attr.missing'); // no language file has it
@@ -347,13 +347,13 @@ t('attr.missing'); // no language file has it
 [UNDEFINED_KEY] 'attr.missing' The scanned source asks for `attr.missing` and no language file defines it.
 ```
 
-It needs the same `source` directory `UNUSED_KEY` does, and reads the calls it finds there. `translateFunctions` says which names a call goes by; the default covers `t`, `$t` and `translate`, which between them cover i18next, react-i18next and vue-i18n, including `i18n.t` and a `t` bound by `useTranslation`. The `i18nKey` attribute a `<Trans>` component takes is read as well.
+It needs the same `source` directory `UNUSED_KEY` does, and reads the calls it finds there. `translateFunctions` says which names a call goes by. The default of `t`, `$t` and `translate` covers i18next, react-i18next and vue-i18n, including `i18n.t` and a `t` bound by `useTranslation`. The `i18nKey` attribute a `<Trans>` component takes is read as well.
 
-Three shapes are deliberately let through, on the same reasoning that makes `UNUSED_KEY` search for the leaf: a check that cries wolf on working code is worse than one that misses something.
+Three shapes are deliberately let through, on the same reasoning that makes `UNUSED_KEY` search for the leaf. Reporting working code as broken is worse than missing something.
 
-- A key built at run time — ``t(`error.${code}`)`` — because the key is not known until it runs.
-- A key reached through a prefix — `t('folder')` where the file defines `attr.folder` — because a bound `keyPrefix` or namespace resolves it.
-- A plural key asked for by its base — `t('item')` where the file defines `item_one` and `item_other` — because the runtime picks the form.
+- A key built at run time, as in ``t(`error.${code}`)``, because the key is not known until it runs.
+- A key reached through a prefix, as in `t('folder')` where the file defines `attr.folder`, because a bound `keyPrefix` or namespace resolves it.
+- A plural key asked for by its base, as in `t('item')` where the file defines `item_one` and `item_other`, because the runtime picks the form.
 
 A namespace written in front of the key, as in `t('common:attr.folder')`, is read and set aside; the key after it is what is looked up.
 
@@ -361,7 +361,7 @@ A namespace written in front of the key, as in `t('common:attr.folder')`, is rea
 
 ### `NO_PLURAL_FORM`
 
-A key written with plural suffixes, missing a form the language needs. Which forms a language needs is a fact about the language rather than about the original: English writes two, Russian four, Korean one.
+A key written with plural suffixes, missing a form the language needs. Which forms a language needs is a fact about that language and not about the original: English writes two, Russian four, Korean one.
 
 ```json
 // ru.json — Russian needs one, few, many and other
@@ -372,9 +372,9 @@ A key written with plural suffixes, missing a form the language needs. Which for
 [NO_PLURAL_FORM] ru -> 'item' `ru` needs `item_few` and `item_many` and the file does not define them.
 ```
 
-Only the named categories are read: `_zero`, `_one`, `_two`, `_few`, `_many` and `_other`. The older i18next pairing of a bare key with `_plural` is left as ordinary keys, because which of the two forms is which depends on the language.
+Only the named categories are read: `_zero`, `_one`, `_two`, `_few`, `_many` and `_other`. The older i18next pairing of a bare key with `_plural` is treated as ordinary keys, because which of the two forms is which depends on the language.
 
-A language the table does not cover is never judged. The table is deliberately conservative: recent CLDR releases added a `many` category to several languages for compact decimals, and a project on an older runtime does not write it.
+A language the table does not cover is never judged. The table is deliberately conservative, because recent CLDR releases added a `many` category to several languages for compact decimals and a project on an older runtime does not write it.
 
 ### Plural keys in `NO_KEY` and `DUMMY_KEY`
 
@@ -384,7 +384,7 @@ This holds only for keys ending in a named plural category, and only for languag
 
 ## Key shape checks
 
-Both are off until you say what the project wants, because a key's shape has no right answer of its own — only the one your project chose. They are judged once per key rather than once per locale: a key is named the same everywhere.
+Both are off until you say what the project wants, because a key's shape has no right answer of its own, only the one your project chose. They are judged once per key rather than once per locale, since a key is named the same everywhere.
 
 ### `KEY_NAMING`
 
@@ -398,7 +398,7 @@ chki18n ./locales --key-case kebab
 [KEY_NAMING] 'attr.badName' The part `badName` is not written in kebab case.
 ```
 
-The plural and context suffixes an i18n library appends — `item-count_one`, `greeting_male` — are accepted whatever case you chose, because that underscore belongs to the library rather than to your naming.
+The plural and context suffixes an i18n library appends, such as `item-count_one` and `greeting_male`, are accepted whatever case you chose, because that underscore belongs to the library rather than to your naming.
 
 A key is reported once however many of its parts are wrong. Naming the second one adds nothing to what has to be done about it.
 
@@ -414,11 +414,11 @@ chki18n ./locales --max-key-depth 2
 [KEY_DEPTH] 'a.b.c.d' The key is 4 levels deep, and `maxKeyDepth` allows 2.
 ```
 
-Deep nesting is what makes a key hard to search for and a translation file hard to merge. One level of grouping is usually enough.
+Deep nesting makes a key hard to search for and a translation file hard to merge. One level of grouping is usually enough.
 
 ## Interpolation checks
 
-An interpolation key is a placeholder inside a string — `{name}` by default. Both sides of the comparison are extracted and the two sets are compared, so a placeholder that was translated along with the sentence gets caught.
+An interpolation key is a placeholder inside a string, `{name}` by default. Both sides of the comparison are extracted and the two sets are compared, so a placeholder that was translated along with the sentence gets caught.
 
 ### `NO_INTERPOLATION_KEY`
 
@@ -438,11 +438,11 @@ The target language's value has a placeholder that this value does not. At run t
 
 ### `EXTRA_INTERPOLATION_KEY`
 
-The reverse: this value has a placeholder the target language does not define. Usually a typo (`{nmae}`) or a placeholder invented during translation, and at run time it renders as literal braces.
+The opposite case: this value has a placeholder the target language does not define. Usually a typo such as `{nmae}`, or a placeholder invented during translation. At run time it renders as literal braces.
 
 ### `INTERPOLATION_COUNT`
 
-The two checks above ask which placeholders a value uses. This one asks how many times it uses each. A string naming the same placeholder twice and a translation naming it once agree on the set and disagree on the sentence.
+The two checks above look at which placeholders a value uses; this one looks at how many times it uses each. A string naming the same placeholder twice and a translation naming it once agree on the set and still disagree on the sentence.
 
 ```json
 // en.json
@@ -459,7 +459,7 @@ A placeholder that is missing outright, or that the target language does not hav
 
 ### Custom delimiters
 
-The default delimiters are `{` and `}`. If your project uses `{{ }}`, say so — otherwise every placeholder goes unrecognised and both interpolation checks silently pass:
+The default delimiters are `{` and `}`. If your project uses `{{ }}`, say so. Otherwise every placeholder goes unrecognised and both interpolation checks pass without finding anything:
 
 ```bash
 chki18n ./locales --interpolation-prefix "{{" --interpolation-suffix "}}"
@@ -511,11 +511,11 @@ Or everything except some:
 chki18n ./locales --ignore-checks DUPLICATE_VALUE,MISSING_NUMBER
 ```
 
-The two cannot be combined — `checks` wins and `ignoreChecks` is reported as ignored. `INVALID_FILE` and `INVALID_OPTIONS` are not in either list: they report how the run itself went and cannot be switched off.
+The two cannot be combined: `checks` wins and `ignoreChecks` is reported as ignored. `INVALID_FILE` and `INVALID_OPTIONS` are in neither list, since they report how the run itself went and cannot be switched off.
 
 ## Changing a check's severity
 
-Every comparison check can be re-graded, which is how a project decides for itself what blocks a build:
+Every comparison check can be re-graded, so a project decides for itself what blocks a build:
 
 ```bash
 chki18n ./locales --levels EMPTY_VALUE=error,DUPLICATE_VALUE=info
@@ -562,7 +562,7 @@ Levels are `error`, `warn` and `info`. Only `error` fails a run, so demoting a c
 
 ## Reading the codes from code
 
-The codes and their metadata are exported, so a user interface never has to hard-code a string:
+The codes and their metadata are exported, so a user interface does not have to hard-code a string:
 
 ::: lang js
 

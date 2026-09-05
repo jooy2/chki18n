@@ -4,7 +4,7 @@ title: createAnalyzer
 
 # `createAnalyzer`
 
-Returns a reusable analyzer bound to one set of options. Its `checkEntry` compares a single key across locales in about two microseconds, which is what an editor needs to validate on every keystroke without holding a second copy of the values.
+Returns a reusable analyzer bound to one set of options. Its `checkEntry` compares a single key across locales in about two microseconds, which suits an editor that validates on every keystroke without holding a second copy of the values.
 
 ## Signature
 
@@ -55,9 +55,9 @@ class Analyzer:
 
 :::
 
-## Why not just call `analyzeTranslations`
+## What reusing an analyzer saves
 
-Options, the enabled check set and the interpolation delimiters are resolved once, when the analyzer is built. Calling [`analyzeTranslations`](./analyze-translations) in a loop re-resolves all of it on every call. For one check it makes no difference; for a check that runs on every keystroke it is the whole cost.
+Options, the enabled check set and the interpolation delimiters are resolved once, when the analyzer is built. Calling [`analyzeTranslations`](./analyze-translations) in a loop re-resolves all of it on every call. For one check that makes no difference. For a check that runs on every keystroke, resolving the options is most of the cost.
 
 ## `checkEntry`
 
@@ -234,17 +234,17 @@ analyzer.check_entry(Entry(key="a", values={"en": "Hello"}, locales=["en", "ko"]
 
 :::
 
-An editor's grid usually has a cell for every language, empty ones included, which is why the default is the other way round: an empty cell is an `EMPTY_VALUE`, not a `NO_KEY`.
+An editor's grid usually has a cell for every language, empty ones included, so the default is the other way round: an empty cell is reported as `EMPTY_VALUE`.
 
 ### What it will not report
 
 Only checks that can be decided from one key. `DUPLICATE_VALUE` needs to see a whole locale at once and is never reported here; the codes with that property are in `CROSS_KEY_CHECK_CODES`.
 
-Everything else agrees exactly with a full analysis of the same data — same codes, same order.
+Everything else matches a full analysis of the same data, in the same codes and the same order.
 
 ## Linting an editor grid
 
-The shape this exists for. Your application owns the values; chki18n only judges them:
+This is the arrangement the function was built for. Your application owns the values, and chki18n only judges them:
 
 ::: lang js
 
@@ -327,7 +327,7 @@ def lint_row(row):
 
 :::
 
-No copy of the data lives inside chki18n, so there is nothing to keep in step — which is the reason to prefer this over a [session](./load-translations) when your application is already the owner.
+No copy of the data lives inside chki18n, so there is nothing to keep in step. That is the reason to prefer this over a [session](./load-translations) when your application already owns the values.
 
 ## `analyze`
 
@@ -368,7 +368,7 @@ analyzer.check_entry(Entry(key=key, values=values))  # one key, on every keystro
 
 :::
 
-Running a full analysis on open and `checkEntry` on each edit is the usual pairing.
+The usual arrangement is a full analysis when the project opens and `checkEntry` on each edit.
 
 ## `options` and `optionIssues`
 
@@ -399,7 +399,7 @@ analyzer.option_issues  # anything unusable in what you passed, as INVALID_OPTIO
 
 :::
 
-<Lang js="optionIssues" dart="optionIssues" py="option_issues" code /> is replayed into every result `analyze` produces, so a typo in an option is reported once per result rather than swallowed.
+<Lang js="optionIssues" dart="optionIssues" py="option_issues" code /> is replayed into every result `analyze` produces, so a typo in an option is reported once per result instead of being dropped.
 
 ## Performance
 
@@ -413,12 +413,12 @@ Measured on 5,000 keys across 5 locales:
 | `checkEntry`                | ~2.2µs |
 | `session.checkKey`          | ~0.9µs |
 
-`checkKey` is faster because the [session](./load-translations) builds the value set itself rather than being handed one. Either is far below a frame budget.
+`checkKey` is faster because the [session](./load-translations) builds the value set itself instead of being handed one. Both are far shorter than the time it takes to draw a frame.
 
 :::
 
 ::: lang dart py
 
-A single key is compared in microseconds, which is far below a frame budget — checking on every keystroke is what this call is for. A full `analyze` is proportional to the number of keys times the number of locales, and is fast enough to run on a file watcher.
+A single key is compared in microseconds, which is what makes checking on every keystroke practical. A full `analyze` is proportional to the number of keys times the number of locales, and is fast enough to run on a file watcher.
 
 :::

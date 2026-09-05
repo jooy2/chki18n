@@ -4,7 +4,7 @@ title: API
 
 # API
 
-chki18n has four entry points, and which one you want depends on who owns the translations and how often you check them. They share one comparison engine, one option set and one result shape, so moving between them changes how the data arrives and nothing else. Every package has all four.
+chki18n has four entry points. Which one you want depends on who owns the translations and how often you check them. They share one comparison engine, one option set and one result shape, so moving between them changes only how the data arrives. Every package has all four.
 
 ## Which entry point
 
@@ -15,17 +15,17 @@ chki18n has four entry points, and which one you want depends on who owns the tr
 | Read a directory once, then check it repeatedly | [`loadTranslations`](./load-translations) | once |
 | Your own application owns the values and needs only a verdict | [`createAnalyzer`](./create-analyzer) | no |
 
-The two that do no file system work are also published on their own as <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />, which reaches no file system at all — see [The core entry point](./core).
+`analyzeTranslations` and `createAnalyzer` are also published on their own as <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />, which reaches no file system at all. See [The core entry point](./core).
 
 Every name below is written in its JavaScript spelling. Dart uses the same one; Python is snake_case, so `analyzeTranslations` is `analyze_translations`. [Getting started](/guide/getting-started#how-the-names-map) states that mapping once.
 
 ## Who owns the values
 
-The one decision worth making deliberately. A [session](./load-translations) holds its own copy of every string, which is what lets `session.set` and `session.checkKey` work from memory. If your application is _also_ holding those strings — a translation editor, a form bound to the values a user is typing — then two copies exist and every edit has to reach both. That is a bug waiting to happen.
+This is usually what decides between the four. A [session](./load-translations) holds its own copy of every string, so `session.set` and `session.checkKey` work from memory. If your application is _also_ holding those strings, as a translation editor or a form bound to what a user is typing does, then two copies exist and every edit has to reach both. They drift apart easily.
 
 In that case use [`createAnalyzer().checkEntry`](./create-analyzer) instead: you pass the values in on each call, your application stays the single source of truth, and the check costs about two microseconds.
 
-When chki18n _is_ the owner — a script, a watcher, a CI step that checks the same folder twice — the session is the simpler thing by a wide margin.
+When chki18n owns the values, as it does in a script, a file watcher or a CI step that checks the same folder twice, the session is much simpler.
 
 ## Everything else that is exported
 

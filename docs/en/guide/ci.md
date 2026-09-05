@@ -4,27 +4,27 @@ title: Continuous integration
 
 # Continuous integration
 
-A translation file breaks quietly. Nothing crashes, no test fails, and the missing key ships — it is only noticed when someone opens the app in that language. Running chki18n on every pull request is what turns that into a red build.
+A translation file that no longer lines up does not break a build. Nothing crashes and no test fails, so the missing key ships and is only noticed when someone opens the app in that language. Running chki18n on every pull request catches it before then.
 
-There is nothing to configure: a path, a target language, and the exit code does the rest. This page has jobs you can paste for GitHub Actions and Bitbucket Pipelines, in all three languages.
+There is nothing to configure: give it a path and a target language, and the exit code does the rest. This page has jobs you can paste for GitHub Actions and Bitbucket Pipelines, in all three languages.
 
-## What CI relies on
+## What CI reads
 
 | Exit code | Meaning                                                             |
 | --------- | ------------------------------------------------------------------- |
 | `0`       | No error level issue. Warnings may still have been printed.         |
 | `1`       | At least one error level issue, or the directory could not be read. |
 
-Warnings never fail a build. That is deliberate — a warning is worth fixing, not worth blocking a release — and it is what makes the tool safe to add to an existing project without a day of cleanup first. Promote the ones your project treats as blockers with [`--levels`](./options#levels).
+Warnings never fail a build. That is deliberate: a warning is worth fixing but not worth blocking a release, which is what makes the tool safe to add to an existing project without a day of cleanup first. Promote the ones your project treats as blockers with [`--levels`](./options#levels).
 
-Four reporters matter here:
+Four reporters are useful here:
 
-| Reporter   | Where it earns its place                                             |
+| Reporter   | Where it is used                                                     |
 | ---------- | -------------------------------------------------------------------- |
 | `github`   | GitHub Actions. Each issue becomes an annotation on the file itself. |
 | `markdown` | A job summary, or a report kept with the build.                      |
-| `list`     | One line per issue, which is what a plain log wants.                 |
-| `json`     | Another tool reads it — a dashboard, a bot, a gate of your own.      |
+| `list`     | One line per issue, which suits a plain log.                         |
+| `json`     | Another tool reads it: a dashboard, a bot, a gate of your own.       |
 
 ## GitHub Actions
 
@@ -84,7 +84,7 @@ jobs:
           dart pub global run chki18n ./locales --target en
 ```
 
-`dart pub global run` is used rather than the bare `chki18n` because whether the pub cache's `bin` is on the runner's path is not something to depend on. If it is on yours, call the command by name.
+`dart pub global run` is used instead of the bare `chki18n` because the pub cache's `bin` is not reliably on a runner's path. If it is on yours, call the command by name.
 
 :::
 
@@ -132,7 +132,7 @@ chki18n ./locales --target en --reporter github
 ::warning file=locales/ko.json,title=chki18n EMPTY_VALUE::ko attr.open The key is defined but its value is an empty string. (en: "Open")
 ```
 
-An `error` becomes an error annotation, a `warn` a warning, an `info` a notice. There is no line number to give — the checks work on parsed translations, and the commonest finding of all is a key that is not in the file at all — so an annotation points at the file.
+An `error` becomes an error annotation, a `warn` a warning, an `info` a notice. An annotation points at the file rather than a line, because the checks work on parsed translations and the commonest finding is a key that is not in the file at all.
 
 Annotations need permission to write checks when the workflow runs with a restricted token:
 
@@ -164,7 +164,7 @@ The report is written before the command exits, so the summary is there whether 
     path: translation-report.md
 ```
 
-`if: always()` is the point of it: without that line the upload is skipped exactly when the report is worth reading.
+Without `if: always()` the upload is skipped exactly when the report is worth reading.
 
 ### Only when translations change
 
@@ -298,7 +298,7 @@ chki18n ./locales --target en --reporter list
 
 ### Caching the install
 
-Not required — the install is small — but it takes a second off every run:
+The install is small, so this is optional, but it takes a second off every run:
 
 ::: lang js
 
@@ -369,7 +369,7 @@ A step can be told which paths it cares about:
 
 ## Adopting it on a project that has translations already
 
-Turning this on for the first time on a real project usually reports more than anyone wants to fix that afternoon. Nothing about that has to block the build.
+Turning this on for the first time on a real project usually reports more than anyone can fix in one sitting. None of it has to block the build.
 
 Start with the checks you already agree with, and add to the list as you clear them:
 
@@ -377,7 +377,7 @@ Start with the checks you already agree with, and add to the list as you clear t
 chki18n ./locales --target en --checks NO_KEY,NO_INTERPOLATION_KEY
 ```
 
-Or start from everything and drop what is noisy in your project:
+Or start with every check and drop the ones that are noisy in your project:
 
 ```bash
 chki18n ./locales --target en --ignore-checks DUPLICATE_VALUE
@@ -393,7 +393,7 @@ Every check, and what each one is for, is on [Checks](./checks). All three flags
 
 ## When a command is not enough
 
-If the gate your project wants is not "did anything fail" — a threshold, a per-language rule, a comment posted somewhere — read the result instead of the exit code:
+If your project needs a finer gate than "did anything fail", such as a threshold, a per-language rule or a comment posted somewhere, read the result instead of the exit code:
 
 ::: lang js
 

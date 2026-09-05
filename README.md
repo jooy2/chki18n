@@ -32,7 +32,7 @@ The JavaScript package is the reference implementation, and the other two are he
 
 ## Quick start
 
-Check a folder from the command line — in CI, or before a commit:
+Check a folder from the command line, in CI or before a commit:
 
 ```bash
 # JavaScript
