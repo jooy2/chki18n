@@ -325,6 +325,7 @@ class Chki18nTextOptions {
     this.ignoreChecks,
     this.levels,
     this.exclude,
+    this.excludeFiles,
     this.translateFunctions,
     this.keyCase,
     this.maxKeyDepth,
@@ -346,8 +347,11 @@ class Chki18nTextOptions {
   /// `CODE=level` pairs, e.g. `EMPTY_VALUE=error`.
   final String? levels;
 
-  /// Directory names to skip while scanning.
+  /// Directory names or paths to skip while scanning.
   final String? exclude;
+
+  /// File name patterns never read as translations.
+  final String? excludeFiles;
 
   /// Names a translation call goes by.
   final String? translateFunctions;
@@ -388,6 +392,7 @@ class Chki18nOptions {
     this.interpolationPrefix,
     this.interpolationSuffix,
     this.exclude,
+    this.excludeFiles,
     this.source,
     this.translateFunctions,
     this.keyCase,
@@ -432,8 +437,14 @@ class Chki18nOptions {
   /// Closing delimiter of an interpolation placeholder. Default `}`.
   final String? interpolationSuffix;
 
-  /// Directory names skipped while scanning. Replaces the default list.
+  /// Directories skipped while scanning. Replaces the default list. An entry of
+  /// one segment names a directory at any depth (`node_modules`); an entry with
+  /// a separator names a path from the scanned root (`src/legacy`).
   final List<String>? exclude;
+
+  /// File names never read as translations, as `*` glob patterns matched case
+  /// insensitively. Replaces the default list.
+  final List<String>? excludeFiles;
 
   /// Directory of source files to search for key usages. Without it neither
   /// `UNUSED_KEY` nor `UNDEFINED_KEY` has anything to go on.
@@ -509,6 +520,7 @@ class Chki18nOptions {
     String? interpolationPrefix,
     String? interpolationSuffix,
     List<String>? exclude,
+    List<String>? excludeFiles,
     String? source,
     List<String>? translateFunctions,
     Chki18nKeyCase? keyCase,
@@ -535,6 +547,7 @@ class Chki18nOptions {
     interpolationPrefix: interpolationPrefix ?? this.interpolationPrefix,
     interpolationSuffix: interpolationSuffix ?? this.interpolationSuffix,
     exclude: exclude ?? this.exclude,
+    excludeFiles: excludeFiles ?? this.excludeFiles,
     source: source ?? this.source,
     translateFunctions: translateFunctions ?? this.translateFunctions,
     keyCase: keyCase ?? this.keyCase,
@@ -566,6 +579,7 @@ class Chki18nResolvedOptions {
     required this.interpolationPrefix,
     required this.interpolationSuffix,
     required this.exclude,
+    required this.excludeFiles,
     required this.source,
     required this.translateFunctions,
     required this.keyCase,
@@ -605,8 +619,11 @@ class Chki18nResolvedOptions {
   /// Closing delimiter of an interpolation placeholder.
   final String interpolationSuffix;
 
-  /// Directory names skipped while scanning.
+  /// Directories skipped while scanning, by name or by path from the root.
   final Set<String> exclude;
+
+  /// File name patterns never read as translations.
+  final Set<String> excludeFiles;
 
   /// Directory of source files to search for key usages, or `null`.
   final String? source;
@@ -669,6 +686,7 @@ class Chki18nResolvedOptions {
     'interpolationPrefix': interpolationPrefix,
     'interpolationSuffix': interpolationSuffix,
     'exclude': exclude.toList(),
+    'excludeFiles': excludeFiles.toList(),
     'source': source,
     'translateFunctions': translateFunctions,
     'keyCase': keyCase?.name,

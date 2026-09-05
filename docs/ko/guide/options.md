@@ -21,6 +21,7 @@ title: 옵션
 | `interpolationPrefix` | `--interpolation-prefix` | `string` | `'{'` |
 | `interpolationSuffix` | `--interpolation-suffix` | `string` | `'}'` |
 | `exclude` | `--exclude` | `string[]` 또는 쉼표로 구분된 문자열 | 아래 참고 |
+| `excludeFiles` | `--exclude-files` | `string[]` 또는 쉼표로 구분된 문자열 | 아래 참고 |
 | `source` | `--source` | `string` | — |
 | `translateFunctions` | `--translate-functions` | `string[]` 또는 쉼표로 구분된 문자열 | 아래 참고 |
 | `keyCase` | `--key-case` | `'kebab' \| 'camel' \| 'snake'` | — |
@@ -88,7 +89,7 @@ chki18n ./locales --format folder
 
 ### `exclude`
 
-검사 중 건너뛸 디렉토리 이름입니다. 기본 목록에 추가하는 것이 아니라 **대체**합니다.
+검사 중 건너뛸 디렉토리입니다. 기본 목록에 추가하는 것이 아니라 **대체**합니다.
 
 ```text
 node_modules  dist  build  out  coverage
@@ -134,7 +135,63 @@ check_translation_files(".", Options(exclude=[*DEFAULT_EXCLUDE_DIRS, "fixtures"]
 
 :::
 
+한 조각짜리 항목은 어느 깊이에 있든 그 이름의 디렉토리를 가리킵니다. `node_modules`가 트리 안의 모든 `node_modules`를 뜻하는 이유입니다. 구분자가 들어간 항목은 검사 루트에서 시작하는 경로를 가리키며, 그 디렉토리와 그 아래 전부가 대상입니다. 다른 곳의 `legacy`는 남겨둔 채 프로젝트 자신의 `src/legacy`만 뺄 수 있습니다.
+
+```bash
+chki18n . --exclude node_modules,src/legacy
+```
+
 이름이 `.`으로 시작하는 항목은 이 설정과 무관하게 항상 건너뜁니다.
+
+### `excludeFiles`
+
+번역 파일로 읽지 않을 파일 이름입니다. `*`는 임의의 문자열을 뜻하고 대소문자는 구분하지 않습니다. 기본 목록에 추가하는 것이 아니라 **대체**합니다.
+
+```text
+package.json  tsconfig.json  tsconfig.*.json  eslintrc.json
+*-lock.json   *-config.json  *.config.json
+```
+
+애플리케이션 루트에 흔한 설정 파일과 잠금 파일입니다. 로케일 폴더가 아니라 이 루트를 chki18n에 넘기면 실행할 때마다 그 파일을 전부 읽고 파싱했고, 그 비용이 비교 자체보다 컸습니다.
+
+```bash
+chki18n . --exclude-files '*-lock.json,*.config.json,messages.json'
+```
+
+대체가 아니라 확장하고 싶다면 기본 목록이 <Lang js="DEFAULT_EXCLUDE_FILES" dart="defaultExcludeFiles" py="DEFAULT_EXCLUDE_FILES" code />로 공개되어 있습니다.
+
+::: lang js
+
+```javascript
+import { DEFAULT_EXCLUDE_FILES } from 'chki18n';
+
+await checkTranslationFiles('.', { excludeFiles: [...DEFAULT_EXCLUDE_FILES, 'messages.json'] });
+```
+
+:::
+
+::: lang dart
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+await checkTranslationFiles(
+  path: '.',
+  options: const Chki18nOptions(excludeFiles: [...defaultExcludeFiles, 'messages.json']),
+);
+```
+
+:::
+
+::: lang py
+
+```python
+from chki18n import DEFAULT_EXCLUDE_FILES, Options, check_translation_files
+
+check_translation_files(".", Options(exclude_files=[*DEFAULT_EXCLUDE_FILES, "messages.json"]))
+```
+
+:::
 
 ### `source`
 
@@ -144,7 +201,7 @@ check_translation_files(".", Options(exclude=[*DEFAULT_EXCLUDE_DIRS, "fixtures"]
 chki18n ./locales --target en --source ./src
 ```
 
-텍스트 파일만 읽고 5MB를 넘는 파일은 건너뛰며, `exclude`도 함께 적용됩니다. 프로젝트 자신의 번역 파일은 검색하지 않습니다.
+텍스트 파일만 읽고 5MB를 넘는 파일은 건너뛰며, `exclude`와 `excludeFiles`도 함께 적용됩니다. 프로젝트 자신의 번역 파일은 검색하지 않습니다.
 
 같은 디렉토리를 [`UNDEFINED_KEY`](./checks#undefined-key)도 씁니다. 반대 질문을 하는 검사입니다. 소스가 부르는데 어느 언어 파일에도 없는 키를 찾습니다.
 

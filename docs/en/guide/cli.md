@@ -73,7 +73,8 @@ chki18n --path ./locales --target en
   --levels <code=level>           Report a check at another severity, e.g. `EMPTY_VALUE=error`
   --interpolation-prefix <str>    Opening delimiter of an interpolation key (default: `{`)
   --interpolation-suffix <str>    Closing delimiter of an interpolation key (default: `}`)
-  --exclude <dirs>                Comma separated directory names to skip while scanning
+  --exclude <dirs>                Comma separated directory names or paths to skip while scanning
+  --exclude-files <globs>         Comma separated file name patterns never read as translations
   --source <dir>                  Source files to read for key usages (enables `UNUSED_KEY` and `UNDEFINED_KEY`)
   --translate-functions <names>   Comma separated names a translation call goes by (default: `t`, `$t`, `translate`)
   --key-case <case>               Case every key segment has to use: `kebab`, `camel`, `snake`

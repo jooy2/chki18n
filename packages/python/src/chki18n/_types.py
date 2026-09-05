@@ -283,8 +283,14 @@ class Options:
     interpolation_prefix: str | None = None
     #: Closing delimiter of an interpolation placeholder. Default ``}``.
     interpolation_suffix: str | None = None
-    #: Directory names skipped while scanning. Replaces the default list.
+    #: Directories skipped while scanning. Replaces the default list. An entry
+    #: of one segment names a directory at any depth (``node_modules``); an
+    #: entry with a separator names a path from the scanned root
+    #: (``src/legacy``).
     exclude: Sequence[str] | str | None = None
+    #: File names never read as translations, as ``*`` glob patterns matched
+    #: case insensitively. Replaces the default list.
+    exclude_files: Sequence[str] | str | None = None
     #: Directory of source files to search for key usages. Without it neither
     #: `UNUSED_KEY` nor `UNDEFINED_KEY` has anything to go on.
     source: str | None = None
@@ -346,8 +352,10 @@ class ResolvedOptions:
     interpolation_prefix: str
     #: Closing delimiter of an interpolation placeholder.
     interpolation_suffix: str
-    #: Directory names skipped while scanning.
+    #: Directories skipped while scanning, by name or by path from the root.
     exclude: frozenset[str]
+    #: File name patterns never read as translations.
+    exclude_files: frozenset[str]
     #: Directory of source files to search for key usages, or ``None``.
     source: str | None
     #: Names a translation call goes by.
@@ -392,6 +400,7 @@ class ResolvedOptions:
             "interpolationPrefix": self.interpolation_prefix,
             "interpolationSuffix": self.interpolation_suffix,
             "exclude": list(self.exclude),
+            "excludeFiles": list(self.exclude_files),
             "source": self.source,
             "translateFunctions": list(self.translate_functions),
             "keyCase": self.key_case,

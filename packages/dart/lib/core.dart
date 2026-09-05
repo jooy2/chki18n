@@ -20,6 +20,7 @@ export 'package:chki18n/src/constants.dart'
         checkMeta,
         crossKeyCheckCodes,
         defaultExcludeDirs,
+        defaultExcludeFiles,
         defaultGroupBy,
         defaultInterpolationPrefix,
         defaultInterpolationSuffix,
@@ -36,6 +37,8 @@ export 'package:chki18n/src/core/analyzer.dart'
     show Chki18nAnalyzer, analyzeTranslations, collectKeys, createAnalyzer, prepareGroups;
 export 'package:chki18n/src/core/duplicate.dart'
     show collectFlatKeys, findDuplicateKeys, flattenTranslations, keySeparator;
+export 'package:chki18n/src/core/exclude.dart'
+    show createFileExcluder, createPathExcluder, matchesNamePattern, pathSegments;
 export 'package:chki18n/src/core/interpolation.dart' show extractInterpolationKeys;
 export 'package:chki18n/src/core/issue.dart'
     show applyLevelOverrides, createIssue, groupIssuesByCode, hasError, summarizeIssues;

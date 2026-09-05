@@ -63,7 +63,8 @@ Everything the root does **except** the parts that read files:
 | `CHECK_CODE`, `CHECK_META`, `ANALYZE_CHECK_CODES`, `CROSS_KEY_CHECK_CODES`, `FILE_FORMAT` | `scanTranslationDirectory` |
 | `groupIssuesByCode`, `summarizeIssues`, `createIssue`, `buildResult` | `findUnusedKeys` |
 | `resolveOptions`, `argsToOptions`, `buildUsageText`, `OPTION_DEFINITIONS` |  |
-| `isLocaleCode`, `extractInterpolationKeys`, and every type |  |
+| `isLocaleCode`, `extractInterpolationKeys`, `createPathExcluder` |  |
+| `createFileExcluder`, and every type |  |
 
 The root re-exports all of it, so `import { createAnalyzer } from 'chki18n'` works too — reach for the subpath when the bundle must not carry the scanner.
 
@@ -78,7 +79,8 @@ The root re-exports all of it, so `import { createAnalyzer } from 'chki18n'` wor
 | `Chki18nCheckCode`, `checkMeta`, `analyzeCheckCodes`, `crossKeyCheckCodes`, `Chki18nFileFormat` | `scanTranslationDirectory` |
 | `groupIssuesByCode`, `summarizeIssues`, `createIssue`, `buildResult` | `findUnusedKeys` |
 | `resolveOptions`, `optionsFromArgs`, `buildUsageText`, `optionDefinitions` | `formatResult` |
-| `isLocaleCode`, `extractInterpolationKeys`, and every type |  |
+| `isLocaleCode`, `extractInterpolationKeys`, `createPathExcluder` |  |
+| `createFileExcluder`, and every type |  |
 
 `package:chki18n/chki18n.dart` re-exports all of it, so one import covers both — reach for `core.dart` when the build must not pull `dart:io` in.
 
@@ -93,7 +95,8 @@ The root re-exports all of it, so `import { createAnalyzer } from 'chki18n'` wor
 | `CHECK_CODES`, `CHECK_META`, `ANALYZE_CHECK_CODES`, `CROSS_KEY_CHECK_CODES`, `FILE_FORMATS` | `scan_translation_directory` |
 | `group_issues_by_code`, `summarize_issues`, `create_issue`, `build_result` | `find_unused_keys` |
 | `resolve_options`, `options_from_args`, `build_usage_text`, `OPTION_DEFINITIONS` | `format_result` |
-| `is_locale_code`, `extract_interpolation_keys`, and every type |  |
+| `is_locale_code`, `extract_interpolation_keys`, `create_path_excluder` |  |
+| `create_file_excluder`, and every type |  |
 
 `chki18n` re-exports all of it, so `from chki18n import create_analyzer` works too — reach for `chki18n.core` when the module must not touch the disk.
 

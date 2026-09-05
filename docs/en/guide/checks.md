@@ -302,7 +302,7 @@ The search is for a key's **leaf segment** — `desc.hello` is looked up as `hel
 
 That also decides the severity. A leaf like `name` or `title` will turn up in almost any codebase whether or not the key is used, so this is a hint rather than a finding: it is reported at `info`, it never fails a run, and it is worth reading as "start looking here" rather than "delete this".
 
-The project's own translation files are never searched — a key appears verbatim in the file that defines it, so reading them would mark every key used. Only text files are read (source, styles, templates, docs), skipping anything over 5MB, and the `exclude` list applies here too.
+The project's own translation files are never searched — a key appears verbatim in the file that defines it, so reading them would mark every key used. Only text files are read (source, styles, templates, docs), skipping anything over 5MB, and the `exclude` and `excludeFiles` lists apply here too.
 
 If you already know the answer — an editor that has scanned the project itself — hand it over instead of having it worked out again:
 

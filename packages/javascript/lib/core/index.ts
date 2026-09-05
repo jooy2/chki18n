@@ -13,6 +13,7 @@ export {
 	CHECK_META,
 	CROSS_KEY_CHECK_CODES,
 	DEFAULT_EXCLUDE_DIRS,
+	DEFAULT_EXCLUDE_FILES,
 	DEFAULT_GROUP_BY,
 	DEFAULT_INTERPOLATION_PREFIX,
 	DEFAULT_INTERPOLATION_SUFFIX,
@@ -28,6 +29,12 @@ export {
 export { analyzeTranslations, createAnalyzer } from './analyzer.js';
 export type { Chki18nAnalyzer } from './analyzer.js';
 export { collectFlatKeys, findDuplicateKeys } from './duplicate.js';
+export {
+	createFileExcluder,
+	createPathExcluder,
+	matchesNamePattern,
+	pathSegments
+} from './exclude.js';
 export { extractInterpolationKeys } from './interpolation.js';
 export { checkKeyShape } from './key.js';
 export {

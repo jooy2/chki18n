@@ -2,6 +2,7 @@ import {
 	ANALYZE_CHECK_CODES,
 	CHECK_CODE,
 	DEFAULT_EXCLUDE_DIRS,
+	DEFAULT_EXCLUDE_FILES,
 	DEFAULT_GROUP_BY,
 	DEFAULT_INTERPOLATION_PREFIX,
 	DEFAULT_INTERPOLATION_SUFFIX,
@@ -104,7 +105,14 @@ export const OPTION_DEFINITIONS: {
 		option: 'exclude',
 		type: 'list',
 		valueName: '<dirs>',
-		description: 'Comma separated directory names to skip while scanning'
+		description: 'Comma separated directory names or paths to skip while scanning'
+	},
+	{
+		flag: 'exclude-files',
+		option: 'excludeFiles',
+		type: 'list',
+		valueName: '<globs>',
+		description: 'Comma separated file name patterns never read as translations'
 	},
 	{
 		flag: 'source',
@@ -382,6 +390,7 @@ export function resolveOptions(
 	const interpolationSuffix = raw.interpolationSuffix || DEFAULT_INTERPOLATION_SUFFIX;
 
 	const excludeList = toList(raw.exclude);
+	const excludeFileList = toList(raw.excludeFiles);
 	const translateFunctionList = toList(raw.translateFunctions);
 	const output = raw.output || null;
 
@@ -466,6 +475,7 @@ export function resolveOptions(
 			interpolationPrefix,
 			interpolationSuffix,
 			exclude: new Set(excludeList.length > 0 ? excludeList : DEFAULT_EXCLUDE_DIRS),
+			excludeFiles: new Set(excludeFileList.length > 0 ? excludeFileList : DEFAULT_EXCLUDE_FILES),
 			source: raw.source || null,
 			translateFunctions:
 				translateFunctionList.length > 0 ? translateFunctionList : TRANSLATION_FUNCTIONS,

@@ -17,6 +17,7 @@ from chki18n.constants import (
     ANALYZE_CHECK_CODES,
     CHECK_CODES,
     DEFAULT_EXCLUDE_DIRS,
+    DEFAULT_EXCLUDE_FILES,
     DEFAULT_GROUP_BY,
     DEFAULT_INTERPOLATION_PREFIX,
     DEFAULT_INTERPOLATION_SUFFIX,
@@ -128,7 +129,14 @@ OPTION_DEFINITIONS: Final[tuple[OptionDefinition, ...]] = (
         option="exclude",
         type="list",
         value_name="<dirs>",
-        description="Comma separated directory names to skip while scanning",
+        description="Comma separated directory names or paths to skip while scanning",
+    ),
+    OptionDefinition(
+        flag="exclude-files",
+        option="exclude_files",
+        type="list",
+        value_name="<globs>",
+        description="Comma separated file name patterns never read as translations",
     ),
     OptionDefinition(
         flag="source",
@@ -465,6 +473,7 @@ def resolve_options(
             invalid(f"Unknown `key_case` value `{raw_key_case}`. Key names were not checked.")
 
     exclude_list = split_option_list(pick("exclude"))
+    exclude_file_list = split_option_list(pick("exclude_files"))
     translate_function_list = split_option_list(pick("translate_functions"))
     output = pick("output") or None
     raw_reporter = pick("reporter")
@@ -485,6 +494,7 @@ def resolve_options(
             interpolation_prefix=pick("interpolation_prefix") or DEFAULT_INTERPOLATION_PREFIX,
             interpolation_suffix=pick("interpolation_suffix") or DEFAULT_INTERPOLATION_SUFFIX,
             exclude=frozenset(exclude_list or DEFAULT_EXCLUDE_DIRS),
+            exclude_files=frozenset(exclude_file_list or DEFAULT_EXCLUDE_FILES),
             source=pick("source") or None,
             translate_functions=tuple(translate_function_list or TRANSLATION_FUNCTIONS),
             key_case=key_case,

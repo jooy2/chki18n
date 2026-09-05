@@ -28,6 +28,7 @@ from chki18n.constants import (
     CHECK_META,
     CROSS_KEY_CHECK_CODES,
     DEFAULT_EXCLUDE_DIRS,
+    DEFAULT_EXCLUDE_FILES,
     DEFAULT_GROUP_BY,
     DEFAULT_INTERPOLATION_PREFIX,
     DEFAULT_INTERPOLATION_SUFFIX,
@@ -67,6 +68,12 @@ from chki18n.core.duplicate import (
     collect_flat_keys,
     find_duplicate_keys,
     flatten_translations,
+)
+from chki18n.core.exclude import (
+    create_file_excluder,
+    create_path_excluder,
+    matches_name_pattern,
+    path_segments,
 )
 from chki18n.core.interpolation import extract_interpolation_keys
 from chki18n.core.issue import (
@@ -112,6 +119,7 @@ __all__ = [
     "CHECK_META",
     "CROSS_KEY_CHECK_CODES",
     "DEFAULT_EXCLUDE_DIRS",
+    "DEFAULT_EXCLUDE_FILES",
     "DEFAULT_GROUP_BY",
     "DEFAULT_INTERPOLATION_PREFIX",
     "DEFAULT_INTERPOLATION_SUFFIX",
@@ -165,7 +173,9 @@ __all__ = [
     "collect_flat_keys",
     "collect_keys",
     "create_analyzer",
+    "create_file_excluder",
     "create_issue",
+    "create_path_excluder",
     "create_session",
     "display_width",
     "extract_interpolation_keys",
@@ -178,8 +188,10 @@ __all__ = [
     "has_error",
     "has_translatable_text",
     "is_locale_code",
+    "matches_name_pattern",
     "name_of_invisible_character",
     "options_from_args",
+    "path_segments",
     "plural_base_of",
     "plural_categories_of",
     "plural_parts_of",

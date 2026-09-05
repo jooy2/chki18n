@@ -14,6 +14,7 @@ library;
 import 'dart:io';
 
 import 'package:chki18n/src/constants.dart';
+import 'package:chki18n/src/core/exclude.dart';
 import 'package:chki18n/src/core/plural.dart';
 import 'package:chki18n/src/loader/paths.dart';
 import 'package:chki18n/src/types.dart';
@@ -164,9 +165,11 @@ Future<Chki18nUsageScan> findUnusedKeys(
   // handful of files, and every later file costs one search per remaining leaf.
   final remaining = keysByLeaf.keys.toSet();
   final skip = skipFiles.toSet();
+  final isExcludedDirectory = createPathExcluder(options.exclude);
+  final isExcludedFile = createFileExcluder(options.excludeFiles);
   var scannedFileCount = 0;
 
-  Future<void> walk(String directory) async {
+  Future<void> walk(String directory, List<String> segments) async {
     if (remaining.isEmpty && !wantsUndefined) {
       return;
     }
@@ -187,18 +190,27 @@ Future<Chki18nUsageScan> findUnusedKeys(
 
       final name = basenameOf(entry.path);
 
-      if (name.startsWith('.') || options.exclude.contains(name)) {
+      if (name.startsWith('.')) {
         continue;
       }
 
       final path = joinPath(directory, name);
 
       if (entry is Directory) {
-        await walk(path);
+        if (!isExcludedDirectory([...segments, name])) {
+          await walk(path, [...segments, name]);
+        }
+
         continue;
       }
 
-      if (!_isScannableName(name) || skip.contains(path)) {
+      // The path excluder answers for a file too, because this walk has always
+      // let `exclude` name one; `excludeFiles` is the pattern form of the same
+      // question.
+      if (!_isScannableName(name) ||
+          isExcludedDirectory([...segments, name]) ||
+          isExcludedFile(name) ||
+          skip.contains(path)) {
         continue;
       }
 
@@ -234,7 +246,7 @@ Future<Chki18nUsageScan> findUnusedKeys(
   }
 
   // Absolute from here on, so `skipFiles` (which are absolute) compare equal.
-  await walk(absolutePath(sourcePath));
+  await walk(absolutePath(sourcePath), const []);
 
   final unusedKeys = <String>[];
 

@@ -22,6 +22,7 @@ from typing import Final
 
 from chki18n._types import KeyUsage, ResolvedOptions
 from chki18n.constants import SOURCE_EXTENSIONS, SOURCE_MAX_FILE_BYTES
+from chki18n.core.exclude import create_file_excluder, create_path_excluder
 from chki18n.core.plural import plural_base_of
 
 _EXTENSIONS: Final[frozenset[str]] = frozenset(SOURCE_EXTENSIONS)
@@ -169,9 +170,11 @@ def find_unused_keys(
     # order of the unused keys, and a set would shuffle it between runs.
     remaining: dict[str, None] = dict.fromkeys(keys_by_leaf)
     skip = set(skip_files)
+    is_excluded_directory = create_path_excluder(options.exclude)
+    is_excluded_file = create_file_excluder(options.exclude_files)
     scanned_file_count = 0
 
-    def walk(directory: str) -> None:
+    def walk(directory: str, segments: tuple[str, ...]) -> None:
         nonlocal scanned_file_count
 
         if not remaining and not wants_undefined:
@@ -187,16 +190,26 @@ def find_unused_keys(
             if not remaining and not wants_undefined:
                 return
 
-            if entry.name.startswith(".") or entry.name in options.exclude:
+            if entry.name.startswith("."):
                 continue
 
             path = os.path.join(directory, entry.name)
 
             if entry.is_dir():
-                walk(path)
+                if not is_excluded_directory((*segments, entry.name)):
+                    walk(path, (*segments, entry.name))
+
                 continue
 
-            if not _is_scannable_name(entry.name) or path in skip:
+            # The path excluder answers for a file too, because this walk has
+            # always let `exclude` name one; `exclude_files` is the pattern form
+            # of the same question.
+            if (
+                not _is_scannable_name(entry.name)
+                or is_excluded_directory((*segments, entry.name))
+                or is_excluded_file(entry.name)
+                or path in skip
+            ):
                 continue
 
             try:
@@ -224,7 +237,7 @@ def find_unused_keys(
                 undefined_keys.append(KeyUsage(key=key, file=path))
 
     # Absolute from here on, so `skip_files` (which are absolute) compare equal.
-    walk(os.path.abspath(source_path))
+    walk(os.path.abspath(source_path), ())
 
     unused_keys: list[str] = []
 

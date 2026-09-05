@@ -116,7 +116,14 @@ final List<Chki18nOptionDefinition> optionDefinitions = [
     option: 'exclude',
     type: Chki18nOptionType.list,
     valueName: '<dirs>',
-    description: 'Comma separated directory names to skip while scanning',
+    description: 'Comma separated directory names or paths to skip while scanning',
+  ),
+  const Chki18nOptionDefinition(
+    flag: 'exclude-files',
+    option: 'excludeFiles',
+    type: Chki18nOptionType.list,
+    valueName: '<globs>',
+    description: 'Comma separated file name patterns never read as translations',
   ),
   const Chki18nOptionDefinition(
     flag: 'source',
@@ -308,6 +315,7 @@ Chki18nOptions optionsFromArgs(Map<String, Object?> args) {
       ignoreChecks: readString('ignore-checks'),
       levels: readString('levels'),
       exclude: readString('exclude'),
+      excludeFiles: readString('exclude-files'),
       translateFunctions: readString('translate-functions'),
       keyCase: readString('key-case'),
       maxKeyDepth: readString('max-key-depth'),
@@ -538,6 +546,8 @@ Chki18nResolvedResult resolveOptions([Chki18nOptions? options, Chki18nOptions? d
   }
 
   final excludeList = raw.exclude ?? base.exclude ?? splitOptionList(text?.exclude);
+  final excludeFileList =
+      raw.excludeFiles ?? base.excludeFiles ?? splitOptionList(text?.excludeFiles);
   final translateFunctionList =
       raw.translateFunctions ??
       base.translateFunctions ??
@@ -563,6 +573,7 @@ Chki18nResolvedResult resolveOptions([Chki18nOptions? options, Chki18nOptions? d
         defaultInterpolationSuffix,
       ),
       exclude: {...excludeList.isNotEmpty ? excludeList : defaultExcludeDirs},
+      excludeFiles: {...excludeFileList.isNotEmpty ? excludeFileList : defaultExcludeFiles},
       source: (raw.source ?? base.source)?.isEmpty ?? true ? null : (raw.source ?? base.source),
       translateFunctions:
           translateFunctionList.isNotEmpty ? translateFunctionList : translationFunctions,

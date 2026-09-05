@@ -200,7 +200,8 @@ export async function checkTranslationFiles(
 		`Options: ${objToPrettyStr({
 			...session.options,
 			enabledChecks: [...session.options.enabledChecks],
-			exclude: [...session.options.exclude]
+			exclude: [...session.options.exclude],
+			excludeFiles: [...session.options.excludeFiles]
 		})}`
 	);
 	logger.debug(`Detected file format: ${session.fileFormat}`);

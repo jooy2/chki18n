@@ -122,8 +122,17 @@ export type Chki18nOptions = {
 	interpolationPrefix?: string;
 	/** Closing delimiter of an interpolation placeholder. Default `}`. */
 	interpolationSuffix?: string;
-	/** Directory names skipped while scanning. Replaces the default list. */
+	/**
+	 * Directories skipped while scanning. Replaces the default list. An entry of
+	 * one segment names a directory at any depth (`node_modules`); an entry with
+	 * a separator names a path from the scanned root (`src/legacy`).
+	 */
 	exclude?: string[] | string;
+	/**
+	 * File names never read as translations, as `*` glob patterns matched case
+	 * insensitively. Replaces the default list.
+	 */
+	excludeFiles?: string[] | string;
 	/**
 	 * Directory of source files to search for key usages. Without it neither
 	 * `UNUSED_KEY` nor `UNDEFINED_KEY` has anything to go on.
@@ -191,6 +200,7 @@ export type Chki18nResolvedOptions = {
 	interpolationPrefix: string;
 	interpolationSuffix: string;
 	exclude: Set<string>;
+	excludeFiles: Set<string>;
 	source: string | null;
 	translateFunctions: string[];
 	keyCase: Chki18nKeyCase | null;

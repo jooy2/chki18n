@@ -165,7 +165,7 @@ check_translation_files("./locales", Options(exclude=["tmp", "vendor"]))
 
 :::
 
-Note that `exclude` **replaces** the default list rather than adding to it, so include the defaults you still want.
+Note that `exclude` **replaces** the default list rather than adding to it, so include the defaults you still want. An entry with a separator names a path from the scanned root (`src/legacy`) rather than a name at any depth, and `excludeFiles` does the same for file names.
 
 A file that is read but does not belong to a locale is skipped silently; `--debug` names every one of them, which is the fastest way to find out why a scan came back empty.
 

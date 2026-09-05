@@ -1,5 +1,19 @@
 # Changelog
 
+## vNext (2026--)
+
+> A scan can be pointed at an application's root rather than at a folder of locales. It skips the configuration and lock files that root is full of, and an exclude can name a path rather than a bare directory name.
+
+### Added
+
+- `exclude_files` names the files a scan never reads, as patterns where `*` stands for any run of characters and case is ignored. It defaults to the configuration and lock files no project keeps translations in — `package.json`, `tsconfig.json`, `tsconfig.*.json`, `eslintrc.json`, `*-lock.json`, `*-config.json` and `*.config.json` — which a scan of an application root used to read and parse in full on every run. The default list is exported as `DEFAULT_EXCLUDE_FILES`, and `--exclude-files` is the flag
+- `create_path_excluder` and `create_file_excluder` build the two tests a scan applies, so an application that shows a user which folders are excluded can ask the same question the scan asks
+
+### Changed
+
+- `exclude` accepts a path as well as a name. One segment still names a directory at any depth, so `node_modules` means every `node_modules` there is; an entry with a separator names a path from the scanned root, so `src/legacy` excludes that folder and everything under it without touching a `legacy` belonging to something else
+- Both exclude lists apply to the source tree `source` names as well as to the translation directory
+
 ## 1.1.0 (2026-09-04)
 
 > The target language is checked too. Everything else is compared against it, so it sat outside every check, and a mistake typed into the source language stayed there however often the files were checked.

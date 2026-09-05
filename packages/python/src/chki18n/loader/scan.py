@@ -13,6 +13,7 @@ from typing import Any
 
 from chki18n._types import Issue, ResolvedOptions, SourceFile, TranslationGroups, TranslationMap
 from chki18n.constants import SUPPORTED_EXTENSIONS, FileFormat
+from chki18n.core.exclude import create_file_excluder, create_path_excluder
 from chki18n.core.issue import create_issue
 from chki18n.core.locale import is_locale_code
 from chki18n.loader.json_duplicates import JsonDuplicateKey, find_duplicate_json_keys
@@ -72,6 +73,8 @@ def _collect_files(
 ) -> list[_ScannedFile]:
     """Read every supported file below `root`, parsed and in a stable order."""
     files: list[_ScannedFile] = []
+    is_excluded_directory = create_path_excluder(options.exclude)
+    is_excluded_file = create_file_excluder(options.exclude_files)
 
     def walk(directory: str, segments: tuple[str, ...]) -> None:
         try:
@@ -97,12 +100,14 @@ def _collect_files(
             path = os.path.join(directory, entry.name)
 
             if entry.is_dir():
-                if entry.name not in options.exclude:
+                if not is_excluded_directory((*segments, entry.name)):
                     walk(path, (*segments, entry.name))
 
                 continue
 
-            if _extension_of(entry.name) not in SUPPORTED_EXTENSIONS:
+            if _extension_of(entry.name) not in SUPPORTED_EXTENSIONS or is_excluded_file(
+                entry.name
+            ):
                 continue
 
             relative_path = "/".join((*segments, entry.name))

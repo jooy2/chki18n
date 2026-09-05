@@ -15,6 +15,7 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { CHECK_CODE, SOURCE_EXTENSIONS, SOURCE_MAX_FILE_BYTES } from '../constants.js';
+import { createFileExcluder, createPathExcluder } from '../core/exclude.js';
 import { pluralBaseOf } from '../core/plural.js';
 import type { Chki18nKeyUsage, Chki18nResolvedOptions } from '../_types/global.js';
 
@@ -170,9 +171,11 @@ export async function findUnusedKeys(
 	// handful of files, and every later file costs one search per remaining leaf.
 	const remaining = new Set(keysByLeaf.keys());
 	const skip = new Set(skipFiles);
+	const isExcludedDirectory = createPathExcluder(options.exclude);
+	const isExcludedFile = createFileExcluder(options.excludeFiles);
 	let scannedFileCount = 0;
 
-	const walk = async (directory: string): Promise<void> => {
+	const walk = async (directory: string, segments: string[]): Promise<void> => {
 		if (remaining.size < 1 && !wantsUndefined) {
 			return;
 		}
@@ -191,18 +194,29 @@ export async function findUnusedKeys(
 				return;
 			}
 
-			if (entry.name.startsWith('.') || options.exclude.has(entry.name)) {
+			if (entry.name.startsWith('.')) {
 				continue;
 			}
 
 			const path = join(directory, entry.name);
 
 			if (entry.isDirectory()) {
-				await walk(path);
+				if (!isExcludedDirectory([...segments, entry.name])) {
+					await walk(path, [...segments, entry.name]);
+				}
+
 				continue;
 			}
 
-			if (!isScannableName(entry.name) || skip.has(path)) {
+			// The path excluder answers for a file too, because this walk has always
+			// let `exclude` name one; `excludeFiles` is the pattern form of the
+			// same question.
+			if (
+				!isScannableName(entry.name) ||
+				isExcludedDirectory([...segments, entry.name]) ||
+				isExcludedFile(entry.name) ||
+				skip.has(path)
+			) {
 				continue;
 			}
 
@@ -242,7 +256,7 @@ export async function findUnusedKeys(
 	};
 
 	// Absolute from here on, so `skipFiles` (which are absolute) compare equal.
-	await walk(resolve(sourcePath));
+	await walk(resolve(sourcePath), []);
 
 	const unusedKeys: string[] = [];
 

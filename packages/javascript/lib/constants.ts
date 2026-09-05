@@ -273,6 +273,24 @@ export const DEFAULT_EXCLUDE_DIRS = [
 	'.cache'
 ];
 
+/**
+ * File names that are never translation files, as `*` glob patterns.
+ *
+ * Configuration and lock files, in other words. The scanner is often pointed at
+ * an application's root rather than at a folder of locales, where reading and
+ * parsing a `package-lock.json` on every run costs more than everything else
+ * the scan does put together. Hidden files are skipped whatever this holds.
+ */
+export const DEFAULT_EXCLUDE_FILES = [
+	'package.json',
+	'tsconfig.json',
+	'tsconfig.*.json',
+	'eslintrc.json',
+	'*-lock.json',
+	'*-config.json',
+	'*.config.json'
+];
+
 /** File extensions the scanner reads. */
 export const SUPPORTED_EXTENSIONS = ['json'];
 

@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:chki18n/src/constants.dart';
+import 'package:chki18n/src/core/exclude.dart';
 import 'package:chki18n/src/core/issue.dart';
 import 'package:chki18n/src/core/locale.dart';
 import 'package:chki18n/src/loader/json_duplicates.dart';
@@ -58,6 +59,7 @@ class _ScannedFile {
 
   /// Keys written twice in the text, which parsing has since collapsed.
   final List<Chki18nJsonDuplicateKey> duplicateKeys;
+
 }
 
 /// Top level keys of a file that name a locale, as the `nested` layout does.
@@ -79,6 +81,8 @@ Future<List<_ScannedFile>> _collectFiles(
   List<Chki18nIssue> issues,
 ) async {
   final files = <_ScannedFile>[];
+  final isExcludedDirectory = createPathExcluder(options.exclude);
+  final isExcludedFile = createFileExcluder(options.excludeFiles);
 
   Future<void> walk(String directory, List<String> segments) async {
     List<FileSystemEntity> entries;
@@ -113,14 +117,14 @@ Future<List<_ScannedFile>> _collectFiles(
       final path = joinPath(directory, name);
 
       if (entry is Directory) {
-        if (!options.exclude.contains(name)) {
+        if (!isExcludedDirectory([...segments, name])) {
           await walk(path, [...segments, name]);
         }
 
         continue;
       }
 
-      if (!supportedExtensions.contains(extensionOf(name))) {
+      if (!supportedExtensions.contains(extensionOf(name)) || isExcludedFile(name)) {
         continue;
       }
 

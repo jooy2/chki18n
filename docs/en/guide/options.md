@@ -21,6 +21,7 @@ Option names are written here in their JavaScript spelling. Dart uses the same o
 | `interpolationPrefix` | `--interpolation-prefix` | `string` | `'{'` |
 | `interpolationSuffix` | `--interpolation-suffix` | `string` | `'}'` |
 | `exclude` | `--exclude` | `string[]` or a comma separated string | see below |
+| `excludeFiles` | `--exclude-files` | `string[]` or a comma separated string | see below |
 | `source` | `--source` | `string` | — |
 | `translateFunctions` | `--translate-functions` | `string[]` or a comma separated string | see below |
 | `keyCase` | `--key-case` | `'kebab' \| 'camel' \| 'snake'` | — |
@@ -88,7 +89,7 @@ See [File layouts](./file-layouts) for what each value means.
 
 ### `exclude`
 
-Directory names to skip while scanning. **Replaces** the default list rather than adding to it:
+Directories to skip while scanning. **Replaces** the default list rather than adding to it:
 
 ```text
 node_modules  dist  build  out  coverage
@@ -134,7 +135,63 @@ check_translation_files(".", Options(exclude=[*DEFAULT_EXCLUDE_DIRS, "fixtures"]
 
 :::
 
+An entry of one segment names a directory wherever it appears, which is what makes `node_modules` mean every `node_modules` in the tree. An entry with a separator names a path from the scanned root, matching that directory and everything under it, so a project can drop its own `src/legacy` without dropping a `legacy` belonging to something else:
+
+```bash
+chki18n . --exclude node_modules,src/legacy
+```
+
 Hidden entries — anything starting with `.` — are always skipped, whatever this is set to.
+
+### `excludeFiles`
+
+File names never read as translations, as patterns where `*` stands for any run of characters and case is ignored. **Replaces** the default list rather than adding to it:
+
+```text
+package.json  tsconfig.json  tsconfig.*.json  eslintrc.json
+*-lock.json   *-config.json  *.config.json
+```
+
+These are the configuration and lock files an application root is full of. Pointing chki18n at that root rather than at a folder of locales used to mean reading and parsing every one of them on every run, which cost more than the comparison did.
+
+```bash
+chki18n . --exclude-files '*-lock.json,*.config.json,messages.json'
+```
+
+The default list is exported as <Lang js="DEFAULT_EXCLUDE_FILES" dart="defaultExcludeFiles" py="DEFAULT_EXCLUDE_FILES" code /> if you would rather extend it than replace it:
+
+::: lang js
+
+```javascript
+import { DEFAULT_EXCLUDE_FILES } from 'chki18n';
+
+await checkTranslationFiles('.', { excludeFiles: [...DEFAULT_EXCLUDE_FILES, 'messages.json'] });
+```
+
+:::
+
+::: lang dart
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+await checkTranslationFiles(
+  path: '.',
+  options: const Chki18nOptions(excludeFiles: [...defaultExcludeFiles, 'messages.json']),
+);
+```
+
+:::
+
+::: lang py
+
+```python
+from chki18n import DEFAULT_EXCLUDE_FILES, Options, check_translation_files
+
+check_translation_files(".", Options(exclude_files=[*DEFAULT_EXCLUDE_FILES, "messages.json"]))
+```
+
+:::
 
 ### `source`
 
@@ -144,7 +201,7 @@ A directory of source files to search for key usages, which is what the [`UNUSED
 chki18n ./locales --target en --source ./src
 ```
 
-Only text files are read, anything over 5MB is skipped, and `exclude` applies here as well. The project's own translation files are never searched.
+Only text files are read, anything over 5MB is skipped, and both `exclude` and `excludeFiles` apply here as well. The project's own translation files are never searched.
 
 The same directory answers [`UNDEFINED_KEY`](./checks#undefined-key), which asks the opposite question: which keys the source calls for that no language file defines.
 

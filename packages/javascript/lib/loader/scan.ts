@@ -1,6 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { CHECK_CODE, FILE_FORMAT, SUPPORTED_EXTENSIONS } from '../constants.js';
+import { createFileExcluder, createPathExcluder } from '../core/exclude.js';
 import { createIssue } from '../core/issue.js';
 import { isLocaleCode } from '../core/locale.js';
 import { findDuplicateJsonKeys, type JsonDuplicateKey } from './jsonDuplicates.js';
@@ -49,6 +50,8 @@ async function collectFiles(
 	issues: Chki18nIssue[]
 ): Promise<ScannedFile[]> {
 	const files: ScannedFile[] = [];
+	const isExcludedDirectory = createPathExcluder(options.exclude);
+	const isExcludedFile = createFileExcluder(options.excludeFiles);
 
 	const walk = async (directory: string, segments: string[]): Promise<void> => {
 		let entries;
@@ -78,7 +81,7 @@ async function collectFiles(
 			const path = join(directory, entry.name);
 
 			if (entry.isDirectory()) {
-				if (!options.exclude.has(entry.name)) {
+				if (!isExcludedDirectory([...segments, entry.name])) {
 					await walk(path, [...segments, entry.name]);
 				}
 
@@ -87,7 +90,7 @@ async function collectFiles(
 
 			const extension = entry.name.split('.').pop()?.toLowerCase() ?? '';
 
-			if (!SUPPORTED_EXTENSIONS.includes(extension)) {
+			if (!SUPPORTED_EXTENSIONS.includes(extension) || isExcludedFile(entry.name)) {
 				continue;
 			}
 
