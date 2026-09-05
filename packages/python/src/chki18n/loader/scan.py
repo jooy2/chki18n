@@ -323,9 +323,7 @@ def _build_groups(
     return groups, sources, skipped
 
 
-def _detected_interpolation_of(
-    files: list[_ScannedFile], skipped: list[str]
-) -> Delimiters | None:
+def _detected_interpolation_of(files: list[_ScannedFile], skipped: list[str]) -> Delimiters | None:
     """The delimiters the whole tree looks like it is written with.
 
     The files are read as one text rather than voted on: a project writing

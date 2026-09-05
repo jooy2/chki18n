@@ -142,9 +142,7 @@ _OPENERS: Final = frozenset("{[(<")
 #: name is spelled everywhere else in this library. Deliberately narrow: it is
 #: what tells ``{name}`` apart from the ``{"`` of the JSON holding it, which is
 #: the whole reason this can be pointed at a file's raw text.
-_KEY_START: Final = frozenset(
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$"
-)
+_KEY_START: Final = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$")
 
 
 def detect_interpolation_delimiters(text: str) -> Delimiters | None:

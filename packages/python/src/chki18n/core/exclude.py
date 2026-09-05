@@ -19,9 +19,7 @@ _SEPARATOR: Final = re.compile(r"[/\\]")
 
 def path_segments(path: str) -> list[str]:
     """A path as segments, with empty ones and `.` dropped."""
-    return [
-        segment for segment in _SEPARATOR.split(path) if segment != "" and segment != "."
-    ]
+    return [segment for segment in _SEPARATOR.split(path) if segment != "" and segment != "."]
 
 
 def matches_name_pattern(name: str, pattern: str) -> bool:
@@ -90,8 +88,7 @@ def create_path_excluder(
                 return True
 
         return any(
-            len(path) <= len(segments) and list(segments[: len(path)]) == path
-            for path in paths
+            len(path) <= len(segments) and list(segments[: len(path)]) == path for path in paths
         )
 
     return excluded
@@ -114,8 +111,6 @@ def create_file_excluder(patterns: Iterable[str]) -> Callable[[str], bool]:
     def excluded(name: str) -> bool:
         subject = name.lower()
 
-        return subject in exact or any(
-            matches_name_pattern(subject, pattern) for pattern in globs
-        )
+        return subject in exact or any(matches_name_pattern(subject, pattern) for pattern in globs)
 
     return excluded
