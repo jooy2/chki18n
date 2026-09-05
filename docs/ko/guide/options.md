@@ -6,7 +6,7 @@ title: 옵션
 
 커맨드라인과 API는 같은 옵션을 받습니다. 모든 CLI 플래그는 같은 이름의 API 옵션이며, 하나의 정의에서 해석됩니다. 그래서 플래그와 옵션이 서로 어긋날 수 없고, CI에서 통과하는 것은 빌드 스크립트에서도 통과합니다.
 
-옵션 이름은 JavaScript 표기로 적습니다. Dart도 같은 표기를 쓰고, Python은 전부 snake_case이므로 `ignoreChecks`는 `ignore_checks`, `maxKeyDepth`는 `max_key_depth`입니다. 이 대응은 [시작하기](./getting-started#이름은-이렇게-대응됩니다)에 한 번 정리해 두었습니다.
+옵션 이름은 JavaScript 표기로 적습니다. Dart도 같은 표기를 쓰고, Python은 전부 snake_case이므로 `ignoreChecks`는 `ignore_checks`, `maxKeyDepth`는 `max_key_depth`입니다. 이 대응은 [시작하기](./getting-started#언어별-이름-규칙)에 한 번 정리해 두었습니다.
 
 ## 전체 목록
 
@@ -63,7 +63,7 @@ chki18n ./locales
 chki18n --path ./locales
 ```
 
-상대 경로는 현재 작업 디렉터리를 기준으로 해석됩니다. 코드에서는 첫 번째 인자이며, `path` 옵션으로도 받습니다. 둘 다 주면 옵션이 이깁니다. CLI가 기대는 동작입니다.
+상대 경로는 현재 작업 디렉터리를 기준으로 해석됩니다. 코드에서는 첫 번째 인자이며, `path` 옵션으로도 받습니다. 둘 다 주면 옵션이 우선하며, CLI가 위치 인자를 넘길 때 이 동작에 의존합니다.
 
 ### `target`
 
@@ -79,7 +79,7 @@ chki18n ./locales --target ko
 
 ### `format`
 
-어떤 디스크 구조로 읽을지 지정합니다. `auto`는 경로에서 판단하며 거의 항상 맞습니다. 감지가 잘못되거나 구조 불일치를 명시적으로 실패시키고 싶을 때 지정하세요.
+어떤 파일 구조로 읽을지 지정합니다. `auto`는 경로를 보고 판단하며 거의 항상 맞습니다. 감지가 잘못되거나, 구조가 어긋났을 때 분명하게 실패하도록 만들고 싶다면 직접 지정하세요.
 
 ```bash
 chki18n ./locales --format folder
@@ -203,7 +203,7 @@ chki18n ./locales --target en --source ./src
 
 텍스트 파일만 읽고 5MB를 넘는 파일은 건너뛰며, `exclude`와 `excludeFiles`도 함께 적용됩니다. 프로젝트 자신의 번역 파일은 검색하지 않습니다.
 
-같은 디렉터리를 [`UNDEFINED_KEY`](./checks#undefined-key)도 씁니다. 반대 질문을 하는 검사입니다. 소스가 부르는데 어느 언어 파일에도 없는 키를 찾습니다.
+[`UNDEFINED_KEY`](./checks#undefined-key)도 같은 디렉터리를 씁니다. 이쪽은 반대로, 소스가 부르는데 어느 언어 파일에도 없는 키를 찾습니다.
 
 ### `translateFunctions`
 
@@ -213,17 +213,17 @@ chki18n ./locales --target en --source ./src
 t  $t  translate
 ```
 
-이 셋이 i18next, react-i18next, vue-i18n을 함께 덮습니다. 이름이 끝나는 자리에서 호출을 찾으므로 `i18n.t`와 `useTranslation`이 넘겨준 `t`도 포함됩니다. `<Trans>` 컴포넌트의 `i18nKey` 속성은 항상 읽습니다.
+이 셋으로 i18next, react-i18next, vue-i18n을 모두 처리할 수 있습니다. 이름이 끝나는 자리에서 호출을 찾으므로 `i18n.t`와 `useTranslation`이 넘겨준 `t`도 포함됩니다. `<Trans>` 컴포넌트의 `i18nKey` 속성은 항상 읽습니다.
 
 ```bash
 chki18n ./locales --source ./src --translate-functions t,trans,__
 ```
 
-기본 목록은 `TRANSLATION_FUNCTIONS`로 공개되어 있습니다. 대체하는 대신 확장하고 싶다면 쓰면 됩니다.
+대체가 아니라 확장하고 싶다면 기본 목록이 `TRANSLATION_FUNCTIONS`로 공개되어 있습니다.
 
 ## 키와 값의 기준
 
-세 옵션은 검사에 비교 대상을 주기 위해서만 있습니다. 각각 값을 주기 전까지 꺼져 있습니다. 셋 다 정답이 따로 없고 프로젝트가 고른 기준만 있기 때문입니다.
+아래 세 옵션은 검사에 비교 기준을 주는 역할만 합니다. 값을 주기 전까지 해당 검사는 꺼져 있습니다. 셋 다 정답이 따로 없고 프로젝트가 정한 기준만 있기 때문입니다.
 
 ### `keyCase`
 
@@ -251,7 +251,7 @@ chki18n ./locales --max-key-depth 2
 chki18n ./locales --length-ratio 4
 ```
 
-길이는 글자 수가 아니라 칸 수로 셉니다. 한국어나 일본어 값이 그냥 짧게 나오지 않으며, 원문이 여덟 칸 미만이면 건너뜁니다.
+길이는 글자 수가 아니라 칸 수로 세므로 한국어나 일본어 값이 무조건 짧게 나오지는 않습니다. 원문이 여덟 칸 미만이면 건너뜁니다.
 
 ## 검사 선택
 
@@ -351,7 +351,7 @@ check_translation_files("./locales", Options(levels={"EMPTY_VALUE": "error"}))
 chki18n ./locales --interpolation-prefix "{{" --interpolation-suffix "}}"
 ```
 
-이 값을 잘못 지정하면 틀린 답이 나오는 것이 아니라 아무 답도 나오지 않습니다. 자리 표시자가 인식되지 않아 두 보간 검사가 아무것도 찾지 못하고 조용히 통과합니다.
+이 값을 잘못 지정하면 자리 표시자가 인식되지 않습니다. 그러면 두 보간 검사가 아무것도 찾지 못한 채 조용히 통과합니다.
 
 ## 출력
 

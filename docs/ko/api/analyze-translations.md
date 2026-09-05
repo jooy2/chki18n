@@ -4,7 +4,7 @@ title: analyzeTranslations
 
 # `analyzeTranslations`
 
-이미 메모리에 가지고 있는 번역 데이터를 비교합니다. 파일 시스템을 전혀 사용하지 않으므로 그 언어가 도는 곳이라면 어디서든 실행됩니다. 브라우저, Flutter 웹 빌드, 워커, 디스크가 없는 샌드박스가 모두 해당합니다. 다른 무언가가 이미 파일을 읽어둔 상황에서 쓰는 진입점입니다.
+이미 메모리에 가지고 있는 번역 데이터를 비교합니다. 파일 시스템을 전혀 사용하지 않으므로 그 언어가 실행되는 곳이라면 어디서든 동작합니다. 브라우저, Flutter 웹 빌드, 워커, 디스크가 없는 샌드박스가 모두 해당합니다. 다른 무언가가 이미 파일을 읽어 둔 상황에서 쓰는 진입점입니다.
 
 ## 시그니처
 
@@ -177,7 +177,7 @@ analyze_translations(
 
 ## 평탄화 건너뛰기
 
-키가 이미 평탄한 형태라면 그렇다고 알려주세요. 전달한 객체가 그대로 사용되며, 아무것도 복사하거나 다시 만들지 않습니다.
+키가 이미 평탄한 형태라면 그렇게 알려주세요. 전달한 객체를 그대로 사용하므로 복사하거나 다시 만들지 않습니다.
 
 ::: lang js
 
@@ -273,7 +273,7 @@ class Input:
 
 :::
 
-`files`는 그룹과 로케일을 원본 파일에 연결해, 이슈가 `file` 경로를 담을 수 있게 합니다. `issues`는 입력을 만들어낸 쪽이 자신이 발견한 문제를 같은 결과에 실어 보내는 통로입니다. 디렉터리 검사에서 읽지 못한 파일 오류가 비교 결과와 한 목록에 담기는 것도 이 방식입니다. <Lang js="fileFormat" dart="fileFormat" py="file_format" code />은 결과로 그대로 전달되며, 마지막 두 필드는 [`UNUSED_KEY`](/ko/guide/checks#unused-key)와 [`UNDEFINED_KEY`](/ko/guide/checks#undefined-key)의 답을 이미 알고 있는 애플리케이션을 위한 것입니다.
+`files`는 그룹과 로케일을 원본 파일에 연결해, 이슈가 `file` 경로를 담을 수 있게 합니다. `issues`에는 입력을 만든 쪽이 이미 발견한 문제를 함께 넣을 수 있습니다. 디렉터리 스캔에서 읽지 못한 파일 오류가 비교 결과와 한 목록에 담기는 것도 이 방식입니다. <Lang js="fileFormat" dart="fileFormat" py="file_format" code />은 결과로 그대로 전달되며, 마지막 두 필드는 [`UNUSED_KEY`](/ko/guide/checks#unused-key)와 [`UNDEFINED_KEY`](/ko/guide/checks#undefined-key)의 답을 이미 알고 있는 애플리케이션을 위한 것입니다.
 
 ## 결과가 말해주는 것
 
@@ -330,7 +330,7 @@ analyzeTranslations({ locales: { en: { a: 'A' }, ko: null } }, { target: 'en' })
 
 ::: lang dart
 
-Dart에서는 타입 시스템이 실행 전에 정리합니다. `Chki18nInput.locales`가 `Map<String, TranslationMap>`이므로 키의 맵이 아닌 값은 애초에 넣을 수 없습니다. 디스크의 파일이 다른 것을 담고 있다면 검사기가 `INVALID_FILE`로 보고합니다.
+Dart에서는 타입 시스템이 실행 전에 걸러냅니다. `Chki18nInput.locales`가 `Map<String, TranslationMap>`이므로 키의 맵이 아닌 값은 애초에 넣을 수 없습니다. 디스크의 파일이 다른 것을 담고 있다면 스캐너가 `INVALID_FILE`로 보고합니다.
 
 :::
 
@@ -346,4 +346,4 @@ analyze_translations(Input(locales={"en": {"a": "A"}, "ko": None}), Options(targ
 ## 함께 보기
 
 - [`createAnalyzer`](./create-analyzer) — 분석기를 재사용하고 키 하나만 검사하기.
-- [코어 진입점](./core) — 검사기가 필요로 하는 파일 시스템 없이 이 함수만.
+- [코어 진입점](./core) — 스캐너가 필요로 하는 파일 시스템 없이 이 함수만.

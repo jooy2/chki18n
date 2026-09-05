@@ -88,11 +88,11 @@ class Result:
 | <Lang js="fileFormat" dart="fileFormat" py="file_format" code /> | `single`, `folder`, `nested`, 또는 메모리 입력이면 <Lang js="`null`" dart="`null`" py="`None`" />. |
 | <Lang js="elapsedMs" dart="elapsedMs" py="elapsed_ms" code /> | 호출 전체에 걸린 시간. 파일을 읽었다면 그 시간도 포함합니다. |
 
-<Lang js="`issues`와 `issuesByCode`" dart="`issues`와 `issuesByCode`" py="`issues`와 `issues_by_code`" />는 사본이 아니라 같은 객체를 담고 있습니다. 묶은 것은 사본이 아니라 관점입니다.
+<Lang js="`issues`와 `issuesByCode`" dart="`issues`와 `issuesByCode`" py="`issues`와 `issues_by_code`" />는 같은 객체를 담고 있습니다. 코드별로 묶어도 이슈가 복사되지는 않습니다.
 
 ::: lang dart py
 
-검사 하나의 결과만 꺼내는 일이 잦아서 전용 메서드가 있습니다. 비어 있는 경우를 매번 적지 않아도 됩니다.
+검사 하나의 결과만 꺼내는 일이 잦아 전용 메서드를 두었습니다. 결과가 없는 경우를 매번 처리하지 않아도 됩니다.
 
 :::
 
@@ -202,7 +202,7 @@ class Issue:
 
 ::: lang dart py
 
-값이 없는 선택적 필드는 <Lang dart="`null`" py="`None`" />이며, <Lang dart="`toJson`" py="`to_json`" code />은 `null`로 쓰는 대신 아예 생략합니다. `json` 리포터의 출력이 다른 패키지와 같아지는 근거입니다.
+값이 없는 선택적 필드는 <Lang dart="`null`" py="`None`" />이며, <Lang dart="`toJson`" py="`to_json`" code />은 이를 `null`로 쓰지 않고 생략합니다. 그래서 `json` 리포터의 출력이 세 패키지에서 똑같습니다.
 
 :::
 
@@ -305,7 +305,7 @@ result.summary
 
 ## 결과를 화면에 그리기
 
-모든 이슈가 자신의 `message`를 들고 있고 검사 메타데이터가 각 검사를 설명하므로, UI가 문자열을 하드코딩할 일이 없습니다.
+모든 이슈가 자신의 `message`를 들고 있고 검사 메타데이터가 각 검사를 설명하므로, UI에 문자열을 하드코딩하지 않아도 됩니다.
 
 ::: lang js
 
@@ -439,7 +439,7 @@ summarize_issues(visible)
 
 :::
 
-로케일 필터나 심각도 토글 뒤에서, 화면의 집계와 화면의 내용을 맞춰야 할 때 쓸모가 있습니다.
+로케일 필터나 심각도 토글을 붙였을 때, 화면에 보이는 집계와 목록을 맞추는 데 씁니다.
 
 ## 다른 기준으로 묶기
 

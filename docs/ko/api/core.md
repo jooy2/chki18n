@@ -4,7 +4,7 @@ title: 코어 진입점
 
 # 코어 진입점
 
-디렉터리 검사기를 뺀 비교 엔진 그 자체입니다. 읽을 파일 시스템이 없는 곳에서도 돌아갑니다.
+디렉터리 스캐너를 뺀 비교 엔진입니다. 읽을 파일 시스템이 없는 곳에서도 실행됩니다.
 
 패키지마다 이름이 다릅니다.
 
@@ -14,11 +14,11 @@ title: 코어 진입점
 | Dart       | `import 'package:chki18n/core.dart'` |
 | Python     | `from chki18n.core import …`         |
 
-## 왜 따로 있나
+## 루트 진입점과의 차이
 
-패키지 루트는 디렉터리를 읽기 때문에 파일 시스템에 손을 뻗습니다. <Lang js="`node:fs`, `node:path`, `node:os`" dart="`dart:io`" py="`os`와 `shutil`" />입니다. 이것들을 제공하지 못하는 빌드는 실패하거나, 실행될 일 없는 코드를 위해 폴리필 더미를 끌어옵니다.
+패키지 루트는 디렉터리를 읽으므로 파일 시스템 모듈을 가져옵니다. <Lang js="`node:fs`, `node:path`, `node:os`" dart="`dart:io`" py="`os`와 `shutil`" />입니다. 이 모듈을 제공하지 못하는 빌드는 실패하거나, 실행되지 않을 코드를 위해 폴리필을 잔뜩 끌어옵니다.
 
-비교 자체는 그런 것들이 필요했던 적이 없습니다. 코어 진입점은 파일 시스템을 뺀 같은 엔진입니다.
+비교 자체는 이 모듈을 쓰지 않습니다. 코어 진입점은 파일을 읽는 부분만 덜어낸 같은 엔진입니다.
 
 ::: lang js
 
@@ -26,7 +26,7 @@ title: 코어 진입점
 import { analyzeTranslations, createAnalyzer, CHECK_META } from 'chki18n/core';
 ```
 
-빌드마다 이 서브패스의 import 그래프를 따라가며 Node 내장 모듈이 나타나는지 검사하는 테스트가 있으므로, 이는 의도가 아니라 보장입니다.
+빌드할 때마다 이 서브패스의 import 그래프를 따라가며 Node 내장 모듈이 섞이지 않았는지 테스트가 확인합니다.
 
 :::
 
@@ -36,7 +36,7 @@ import { analyzeTranslations, createAnalyzer, CHECK_META } from 'chki18n/core';
 import 'package:chki18n/core.dart';
 ```
 
-실행할 때마다 이 진입점의 import 그래프를 따라가며 `dart:io`가 나타나는지 검사하는 테스트가 있으므로, 이는 의도가 아니라 보장입니다. Flutter 웹 빌드에서 비교를 쓸 수 있는 근거이기도 합니다.
+실행할 때마다 이 진입점의 import 그래프를 따라가며 `dart:io`가 섞이지 않았는지 테스트가 확인합니다. Flutter 웹 빌드에서 비교를 쓸 수 있는 근거이기도 합니다.
 
 :::
 
@@ -46,11 +46,11 @@ import 'package:chki18n/core.dart';
 from chki18n.core import CHECK_META, analyze_translations, create_analyzer
 ```
 
-실행할 때마다 이 모듈의 import 그래프를 따라가며 `os`, `pathlib`, `shutil`이 나타나는지 검사하는 테스트가 있으므로, 이는 의도가 아니라 보장입니다.
+실행할 때마다 이 모듈의 import 그래프를 따라가며 `os`, `pathlib`, `shutil`이 섞이지 않았는지 테스트가 확인합니다.
 
 :::
 
-## 무엇이 들어 있나
+## 공개 대상
 
 파일을 읽는 부분을 **제외한** 루트의 모든 것입니다.
 
@@ -66,7 +66,7 @@ from chki18n.core import CHECK_META, analyze_translations, create_analyzer
 | `isLocaleCode`, `extractInterpolationKeys`, `detectInterpolationDelimiters` |  |
 | `createPathExcluder`, `createFileExcluder`, 그리고 모든 타입 |  |
 
-루트가 이 전부를 다시 내보내므로 `import { createAnalyzer } from 'chki18n'`도 동작합니다. 번들에 검사기가 들어가면 안 될 때 서브패스를 쓰세요.
+루트가 이 전부를 다시 내보내므로 `import { createAnalyzer } from 'chki18n'`도 동작합니다. 번들에 스캐너가 들어가면 안 될 때 서브패스를 쓰세요.
 
 :::
 
@@ -102,9 +102,9 @@ from chki18n.core import CHECK_META, analyze_translations, create_analyzer
 
 :::
 
-## 어디에 쓸모가 있나
+## 사용 예
 
-그 환경이 이미 쓰고 있는 방식으로 파일을 읽은 뒤, 파싱된 객체를 넘기면 됩니다.
+환경이 이미 쓰는 방식으로 파일을 읽은 뒤, 파싱된 객체를 넘기면 됩니다.
 
 ::: lang js
 
@@ -155,7 +155,7 @@ result = analyze_translations(Input(locales={"en": en, "ko": ko}), Options(targe
 
 ## 편집기에서
 
-이 진입점이 만들어진 이유인 조합입니다. 프로젝트를 열 때 전체 검사, 수정할 때마다 키 하나.
+프로젝트를 열 때 전체를 한 번 검사하고, 수정할 때마다 키 하나만 다시 검사합니다.
 
 ::: lang js
 
@@ -196,7 +196,7 @@ analyzer.check_entry(Entry(key=key, values=values, locales=locales))  # 매 입�
 
 :::
 
-전체 패턴과, chki18n이 값의 사본을 들고 있게 하는 것보다 값을 넘기는 편이 나은 이유는 [`createAnalyzer`](./create-analyzer)를 참고하세요.
+전체 흐름과, chki18n에 사본을 맡기는 대신 값을 직접 넘기는 편이 나은 이유는 [`createAnalyzer`](./create-analyzer)에 정리되어 있습니다.
 
 ## 의존성
 
