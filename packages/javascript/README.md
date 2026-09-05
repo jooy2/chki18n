@@ -4,19 +4,19 @@
 
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/jooy2/chki18n/blob/main/LICENSE) [![npm latest package](https://img.shields.io/npm/v/chki18n/latest.svg)](https://www.npmjs.com/package/chki18n) [![npm downloads](https://img.shields.io/npm/dm/chki18n.svg)](https://www.npmjs.com/package/chki18n)
 
-### 📘 [**chki18n.cdget.com**](https://chki18n.cdget.com)
+### [chki18n.cdget.com](https://chki18n.cdget.com)
 
-Every check, every option and every example. This README is just the quick start.
+The documentation site has every check, every option and every example. This README is the quick start.
 
 ---
 
-**chki18n** checks that your i18n translation files agree with each other. Point it at a folder of JSON, name the language everything is compared against, and it reports what is missing, what was never translated and what quietly broke.
+**chki18n** checks that your i18n translation files agree with each other. Point it at a folder of JSON, name the language everything is compared against, and it reports what is missing, what was never translated and what broke without anyone noticing.
 
-- **Twenty-five checks** — missing keys, a language file nobody created, keys defined twice, empty values, untranslated strings, mismatched interpolation placeholders, dropped markup, changed numbers, invisible characters, drifting terminology, missing plural forms, and — pointed at your sources — keys nothing references and keys nothing defines.
+- **Twenty-five checks** — missing keys, empty values, strings nobody translated, mismatched interpolation placeholders, drifting terminology, and, pointed at your sources, keys nothing references and keys nothing defines. [The full list](https://chki18n.cdget.com/guide/checks) is on the documentation site.
 - **Every layout** — one file per locale, one folder per locale, or one file holding them all.
 - **CLI and library** share one set of checks and one set of options.
-- **A report you can act on** — grouped by language, check, file or nothing; rendered for a terminal, for `grep`, as JSON, as Markdown or as GitHub Actions annotations; saved to a file on request.
-- **ESM, typed, and fast** — an in-memory comparison of 5,000 keys across 5 locales takes about 17ms.
+- **A report in the shape you need** — grouped by language, check, file or nothing; rendered for a terminal, for `grep`, as JSON, as Markdown or as GitHub Actions annotations; saved to a file on request.
+- **ESM and typed**, with four small runtime dependencies. An in-memory comparison of 5,000 keys across 5 locales takes about 17ms.
 
 ## Install
 

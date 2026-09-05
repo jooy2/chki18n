@@ -4,21 +4,21 @@
 
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/jooy2/chki18n/blob/main/LICENSE) [![npm latest package](https://img.shields.io/npm/v/chki18n/latest.svg)](https://www.npmjs.com/package/chki18n) [![pub package](https://img.shields.io/pub/v/chki18n.svg)](https://pub.dev/packages/chki18n) [![PyPI](https://img.shields.io/pypi/v/chki18n.svg)](https://pypi.org/project/chki18n/) ![Commit Count](https://img.shields.io/github/commit-activity/y/jooy2/chki18n) ![Stars](https://img.shields.io/github/stars/jooy2/chki18n?style=social)
 
-### 📘 [**chki18n.cdget.com**](https://chki18n.cdget.com)
+### [chki18n.cdget.com](https://chki18n.cdget.com)
 
-Every check, every option and every example, for all three packages on one page. This README is the map; each package has a quick start of its own.
+The documentation site has every check, every option and every example for all three packages. This README is the map, and each package has a quick start of its own.
 
 ---
 
-**chki18n** checks that your translation files agree with each other. Point it at a folder of i18n JSON, name the language everything is compared against, and it reports what is missing, what was never translated and what quietly broke.
+**chki18n** checks that your translation files agree with each other. Point it at a folder of i18n JSON, name the language everything is compared against, and it reports what is missing, what was never translated and what broke without anyone noticing.
 
-- **Twenty-five checks.** Missing keys, a whole language file nobody created, keys defined twice, empty values, untranslated strings, interpolation placeholders that do not match in name or in number, markup a translation dropped, numbers it changed, characters nothing will draw, terminology that drifted between two screens, plural forms a language needs, and — pointed at your sources — keys nothing references and keys nothing defines.
-- **Every layout.** One file per locale (`en.json`), one folder per locale (`en/common.json`), or one file holding them all. Files that share keys are compared as a group, so a key missing from `errors.json` is never confused with one missing from `common.json`.
-- **Three languages, one library.** The JavaScript, Dart and Python packages run the same checks in the same order and print the same report, byte for byte. Pick the one your project already speaks.
-- **From the command line or from code.** The same checks and the same options either way — a CLI flag and its API option are one definition, so the two can never disagree.
-- **Fast enough to run on every keystroke.** Comparing 5,000 keys across 5 locales takes about 17ms, and re-checking a single edited key takes about 2µs. An editor can lint as the user types.
-- **A report you can act on.** Grouped by language, by check, by file or not at all; rendered for a terminal, for `grep`, as JSON, as Markdown or as GitHub Actions annotations; and written to a file when you want to keep it.
-- **No configuration file.** Nothing to set up: a path and a target language are the whole contract.
+- **Twenty-five checks.** Missing keys, empty values, strings nobody translated, interpolation placeholders that do not match, terminology that drifted between two screens, and, pointed at your sources, keys nothing references and keys nothing defines. [The full list](https://chki18n.cdget.com/guide/checks) is on the documentation site.
+- **Every layout.** One file per locale (`en.json`), one folder per locale (`en/common.json`), or one file holding them all. Files that share keys are compared as a group, so a key missing from `errors.json` is never reported against `common.json`.
+- **Three languages, one library.** The JavaScript, Dart and Python packages run the same checks in the same order and print the same report, character for character. A parity test in CI compares their output on every pull request.
+- **From the command line or from code.** A CLI flag and its API option come from a single definition, so the two cannot disagree.
+- **A report in the shape you need.** Grouped by language, by check, by file or not at all; rendered for a terminal, for `grep`, as JSON, as Markdown or as GitHub Actions annotations; written to a file when you want to keep it.
+- **Measured in milliseconds.** Comparing 5,000 keys across 5 locales takes about 17ms in memory, and re-checking one edited key about 2µs.
+- **No configuration file.** A path and a target language are all it needs.
 
 ## Packages
 

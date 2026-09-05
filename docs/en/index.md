@@ -3,12 +3,12 @@ layout: home
 
 title: chki18n
 titleTemplate: Check and verify your i18n translation files
-description: Find the missing keys, the empty values and the broken interpolation in your i18n translation files. One check engine for the command line, for CI and for your own code — in JavaScript, Dart or Python, fast enough to lint as you type.
+description: Find the missing keys, the empty values and the broken interpolation in your i18n translation files. One check engine for the command line, for CI and for your own code, in JavaScript, Dart or Python.
 
 hero:
   name: chki18n
   text: Your translation files, checked
-  tagline: Missing keys, empty values, strings never translated, interpolation that no longer matches. Twenty-five checks over every i18n JSON layout, from the command line or from your own code — in JavaScript, Dart or Python.
+  tagline: Twenty-five checks over every i18n JSON layout, run from the command line, in CI, or from your own code. JavaScript, Dart and Python.
   actions:
     - theme: brand
       text: Get started
@@ -25,7 +25,7 @@ hero:
 
 features:
   - title: Twenty-five checks, one report
-    details: Missing keys, a language file nobody created, empty values, untranslated strings, interpolation that does not match in name or in number, markup a translation dropped, numbers it changed, invisible characters, terminology that drifted. Every comparison check reports at a severity you can override.
+    details: Missing keys, empty values, strings nobody translated, interpolation that does not match, invisible characters, terminology that drifted between two screens. Every comparison check reports at a severity you can override.
     link: /guide/checks
     linkText: What it checks
   - title: Every layout you already use

@@ -3,12 +3,12 @@ layout: home
 
 title: chki18n
 titleTemplate: i18n 번역 파일 검사 도구
-description: i18n 번역 파일에서 누락된 키, 비어 있는 값, 어긋난 보간 키를 찾아냅니다. 커맨드라인과 CI, 직접 호출하는 코드가 같은 검사 엔진을 씁니다. JavaScript, Dart, Python 중에서 고르면 됩니다.
+description: i18n 번역 파일에서 누락된 키, 비어 있는 값, 어긋난 보간 키를 찾아냅니다. 커맨드라인과 CI, 직접 호출하는 코드가 모두 같은 검사 엔진을 사용하며, JavaScript와 Dart, Python으로 제공합니다.
 
 hero:
   name: chki18n
-  text: 번역 파일, 제대로 검사하기
-  tagline: 누락된 키, 비어 있는 값, 번역되지 않은 문자열, 더 이상 맞지 않는 보간 키. 모든 i18n JSON 구조에 대해 25가지를 검사하며, 커맨드라인에서도 코드에서도 동작합니다. JavaScript, Dart, Python으로 씁니다.
+  text: 번역 파일이 서로 맞는지 검사합니다
+  tagline: 모든 i18n JSON 구조를 25가지 항목으로 검사합니다. 커맨드라인과 CI, 직접 호출하는 코드 어디에서든 JavaScript, Dart, Python으로 실행합니다.
   actions:
     - theme: brand
       text: 시작하기
@@ -25,7 +25,7 @@ hero:
 
 features:
   - title: 25가지 검사, 하나의 리포트
-    details: 누락된 키, 아무도 만들지 않은 언어 파일, 비어 있는 값, 번역되지 않은 문자열, 이름도 횟수도 어긋난 보간 키, 번역이 빠뜨린 마크업, 바뀐 숫자, 보이지 않는 문자, 화면마다 흔들린 용어까지. 비교 검사의 심각도는 프로젝트에 맞게 조정할 수 있습니다.
+    details: 누락된 키, 비어 있는 값, 번역되지 않은 문자열, 어긋난 보간 키, 보이지 않는 문자, 화면마다 달라진 용어까지 찾아냅니다. 비교 검사의 심각도는 프로젝트에 맞게 조정할 수 있습니다.
     link: /ko/guide/checks
     linkText: 검사 항목
   - title: 이미 쓰고 있는 파일 구조 그대로
