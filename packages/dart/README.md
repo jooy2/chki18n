@@ -106,7 +106,7 @@ createAnalyzer(options: const Chki18nOptions(target: 'en')).checkEntry(
 // [NO_INTERPOLATION_KEY error ko desc.hello: ...]
 ```
 
-The last two do no file system work and are also published as `package:chki18n/core.dart`, which imports no `dart:io` and runs in a Flutter web build or anywhere else the file system is not there.
+`analyzeTranslations` and `createAnalyzer` do no file system work and are also published as `package:chki18n/core.dart`, which imports no `dart:io` and runs in a Flutter web build or anywhere else the file system is not there.
 
 Every option is one object with named parameters, so a flag and its Dart counterpart are the same thing:
 

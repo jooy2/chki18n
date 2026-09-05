@@ -172,10 +172,10 @@ const navFor = (lang: string, labels: { guide: string; reference: string; packag
 
 /** The site's own sentence. Read twice: once by a crawler, once by `llms.txt`. */
 const siteDescription =
-	'Find the missing keys, the empty values and the broken interpolation in your i18n translation files. One check engine for the command line, for CI and for your own JavaScript — fast enough to lint as you type.';
+	'Find the missing keys, the empty values and the broken interpolation in your i18n translation files. One check engine for the command line, for CI and for your own code, in JavaScript, Dart or Python.';
 
 const siteDescriptionKo =
-	'i18n 번역 파일에서 누락된 키, 비어 있는 값, 어긋난 보간 키를 찾아냅니다. 커맨드라인과 CI, 그리고 직접 호출하는 JavaScript API가 같은 검사 엔진을 사용하며, 편집 중 실시간 검사에 쓸 수 있을 만큼 빠릅니다.';
+	'i18n 번역 파일에서 누락된 키, 비어 있는 값, 어긋난 보간 키를 찾아냅니다. 커맨드라인과 CI, 직접 호출하는 코드가 모두 같은 검사 엔진을 사용하며, JavaScript와 Dart, Python으로 제공합니다.';
 
 const vitePressI18nConfig: VitePressI18nOptions = {
 	locales: supportLocales,

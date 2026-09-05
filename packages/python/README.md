@@ -101,7 +101,7 @@ create_analyzer(Options(target="en")).check_entry(
 # [Issue(code='NO_INTERPOLATION_KEY', level='error', locale='ko', ...)]
 ```
 
-The last two do no file system work and are also importable as `chki18n.core`, which reaches no file system at all.
+`analyze_translations` and `create_analyzer` do no file system work and are also importable as `chki18n.core`, which reaches no file system at all.
 
 Every option is one keyword-only object, so a flag and its Python counterpart are the same thing. The loose forms a command line writes are accepted here too:
 

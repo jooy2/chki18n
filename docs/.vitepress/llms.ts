@@ -85,7 +85,7 @@ function flatten(markdown: string): string {
 const PREAMBLE = [
 	'chki18n compares a set of i18n translation files against one target language and reports what',
 	'is wrong with them: keys one locale is missing, values left empty, strings still identical to',
-	'the original, interpolation placeholders that do not match, and twenty more checks.',
+	'the original, and interpolation placeholders that do not match. Twenty-five checks in all.',
 	'',
 	'It runs from the command line and from code, and both share one definition of every check and',
 	'every option. The comparison itself does no file system work, so it also runs where there is no',

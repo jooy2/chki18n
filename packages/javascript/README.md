@@ -98,7 +98,7 @@ createAnalyzer({ target: 'en' }).checkEntry({
 // [{ code: 'NO_INTERPOLATION_KEY', level: 'error', locale: 'ko', ... }]
 ```
 
-The last two do no file system work and are also published as `chki18n/core`, which imports no Node built-in and bundles for a browser or an editor's renderer process.
+`analyzeTranslations` and `createAnalyzer` do no file system work and are also published as `chki18n/core`, which imports no Node built-in and bundles for a browser or an editor's renderer process.
 
 [**The documentation site**](https://chki18n.cdget.com) covers every check, every option and how to render a result.
 
