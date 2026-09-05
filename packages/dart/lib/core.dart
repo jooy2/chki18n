@@ -39,7 +39,12 @@ export 'package:chki18n/src/core/duplicate.dart'
     show collectFlatKeys, findDuplicateKeys, flattenTranslations, keySeparator;
 export 'package:chki18n/src/core/exclude.dart'
     show createFileExcluder, createPathExcluder, matchesNamePattern, pathSegments;
-export 'package:chki18n/src/core/interpolation.dart' show extractInterpolationKeys;
+export 'package:chki18n/src/core/interpolation.dart'
+    show
+        Chki18nDelimiters,
+        detectInterpolationDelimiters,
+        extractInterpolationKeys,
+        interpolationDelimiters;
 export 'package:chki18n/src/core/issue.dart'
     show applyLevelOverrides, createIssue, groupIssuesByCode, hasError, summarizeIssues;
 export 'package:chki18n/src/core/key.dart' show checkKeyShape;

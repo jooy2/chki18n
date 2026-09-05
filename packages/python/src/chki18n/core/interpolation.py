@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from typing import Any, Final
 
 #: A placeholder name is written by a developer, so it is spelled the way an
@@ -108,3 +109,96 @@ def extract_interpolation_keys(value: Any, prefix: str, suffix: str) -> list[str
         at = close_at + suffix_length
 
     return found
+
+
+@dataclass(frozen=True, slots=True)
+class Delimiters:
+    """An opening and closing delimiter pair, as `interpolation_prefix` takes them."""
+
+    #: Opening delimiter, e.g. ``{{``.
+    prefix: str
+    #: Closing delimiter, e.g. ``}}``.
+    suffix: str
+
+
+#: The delimiter pairs `detect_interpolation_delimiters` knows, in the order it
+#: believes them. A doubled pair comes before its single form, or ``{{name}}``
+#: would be read as ``{`` wrapped around ``{name``.
+INTERPOLATION_DELIMITERS: Final[tuple[Delimiters, ...]] = (
+    Delimiters("{{", "}}"),
+    Delimiters("{", "}"),
+    Delimiters("[[", "]]"),
+    Delimiters("[", "]"),
+    Delimiters("((", "))"),
+    Delimiters("(", ")"),
+    Delimiters("<<", ">>"),
+    Delimiters("<", ">"),
+)
+
+#: The opening characters of every pair above.
+_OPENERS: Final = frozenset("{[(<")
+
+#: Characters an interpolation key can start with, which is how a placeholder
+#: name is spelled everywhere else in this library. Deliberately narrow: it is
+#: what tells ``{name}`` apart from the ``{"`` of the JSON holding it, which is
+#: the whole reason this can be pointed at a file's raw text.
+_KEY_START: Final = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$"
+)
+
+
+def detect_interpolation_delimiters(text: str) -> Delimiters | None:
+    """Guess which delimiters a text writes its interpolation keys with.
+
+    ``None`` when nothing in it looks like one.
+
+    This is a suggestion to offer a user, not a decision to act on: a text that
+    uses none can only be guessed at, and one that mixes two answers with the
+    first pair of `INTERPOLATION_DELIMITERS` that it holds. Reach for it when a
+    project is being set up and `interpolation_prefix` has nobody to ask.
+    """
+    # One pass over the text, then the priority order is applied to what it saw.
+    # Probing the candidates one at a time would read a large file eight times.
+    seen: set[str] = set()
+    length = len(text)
+    at = 0
+
+    while at < length:
+        opener = text[at]
+
+        if opener not in _OPENERS:
+            at += 1
+            continue
+
+        end = at + 1
+
+        while end < length and text[end] == opener:
+            end += 1
+
+        key = end
+
+        # `{{ name }}` is as common as `{{name}}`, and the space belongs to the
+        # style rather than to the delimiter.
+        while key < length and text[key] == " ":
+            key += 1
+
+        if key < length and text[key] in _KEY_START:
+            # A run of three or more is read as the doubled form, the way a run
+            # of one is read as the single one.
+            seen.add(opener * 2 if end - at > 1 else opener)
+
+            # Nothing later in the text can outrank the first candidate, so a
+            # file written in it is answered by its first placeholder.
+            if INTERPOLATION_DELIMITERS[0].prefix in seen:
+                break
+
+        at = end
+
+    if not seen:
+        return None
+
+    for candidate in INTERPOLATION_DELIMITERS:
+        if candidate.prefix in seen:
+            return candidate
+
+    return None

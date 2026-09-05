@@ -75,7 +75,12 @@ from chki18n.core.exclude import (
     matches_name_pattern,
     path_segments,
 )
-from chki18n.core.interpolation import extract_interpolation_keys
+from chki18n.core.interpolation import (
+    INTERPOLATION_DELIMITERS,
+    Delimiters,
+    detect_interpolation_delimiters,
+    extract_interpolation_keys,
+)
 from chki18n.core.issue import (
     apply_level_overrides,
     create_issue,
@@ -128,6 +133,7 @@ __all__ = [
     "DEFAULT_TARGET_LOCALE",
     "FILE_FORMATS",
     "GROUP_BYS",
+    "INTERPOLATION_DELIMITERS",
     "KEY_CASES",
     "KEY_SEPARATOR",
     "LEVELS",
@@ -143,6 +149,7 @@ __all__ = [
     "Analyzer",
     "CheckCode",
     "CheckMeta",
+    "Delimiters",
     "Entry",
     "FileFormat",
     "GroupBy",
@@ -177,6 +184,7 @@ __all__ = [
     "create_issue",
     "create_path_excluder",
     "create_session",
+    "detect_interpolation_delimiters",
     "display_width",
     "extract_interpolation_keys",
     "extract_numbers",

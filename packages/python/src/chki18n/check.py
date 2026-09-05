@@ -20,6 +20,7 @@ from chki18n._types import (
 )
 from chki18n.constants import MAX_MEASURED_REPORT_WIDTH
 from chki18n.core.duplicate import collect_flat_keys
+from chki18n.core.interpolation import Delimiters
 from chki18n.core.issue import create_issue
 from chki18n.core.result import build_result
 from chki18n.core.session import Session
@@ -32,13 +33,14 @@ from chki18n.reporter import ReportInit, format_result
 class FileSession(Session):
     """A session over translations read from a directory, which can be read again."""
 
-    __slots__ = ("_skipped", "path")
+    __slots__ = ("_detected_interpolation", "_skipped", "path")
 
     def __init__(self, path: str, options: Options) -> None:
         """Create a session pointed at `path`. Call `reload` to fill it."""
         #: Absolute path the translations were read from. Empty when none was given.
         self.path = path
         self._skipped: list[str] = []
+        self._detected_interpolation: Delimiters | None = None
 
         super().__init__(Input(), options)
 
@@ -47,10 +49,20 @@ class FileSession(Session):
         """Files that were read but did not belong to any locale."""
         return self._skipped
 
+    @property
+    def detected_interpolation(self) -> Delimiters | None:
+        """Interpolation delimiters the files look like they are written with.
+
+        ``None`` when nothing in them does. What the scan saw, not what it used:
+        `options.interpolation_prefix` is what every check ran with.
+        """
+        return self._detected_interpolation
+
     def reload(self) -> None:
         """Read the directory again, replacing everything the session holds."""
         if not self.path:
             self._skipped = []
+            self._detected_interpolation = None
             self.reset(
                 Input(
                     issues=[
@@ -68,6 +80,7 @@ class FileSession(Session):
         usage = self._usage_of(scan.groups, scan.files)
 
         self._skipped = scan.skipped
+        self._detected_interpolation = scan.detected_interpolation
         self.reset(
             Input(
                 groups=scan.groups,

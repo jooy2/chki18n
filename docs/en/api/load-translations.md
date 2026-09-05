@@ -169,6 +169,7 @@ session.files; // the files they were read from
 session.fileFormat; // 'single' | 'folder' | 'nested'
 session.path; // the absolute path that was scanned
 session.skipped; // files read but not belonging to any locale
+session.detectedInterpolation; // { prefix: '{{', suffix: '}}' } — what the files look like
 ```
 
 :::
@@ -183,6 +184,7 @@ session.files; // the files they were read from
 session.fileFormat; // Chki18nFileFormat.single, .folder or .nested
 session.path; // the absolute path that was scanned
 session.skipped; // files read but not belonging to any locale
+session.detectedInterpolation; // Chki18nDelimiters('{{', '}}') — what the files look like
 ```
 
 :::
@@ -197,9 +199,12 @@ session.files  # the files they were read from
 session.file_format  # 'single' | 'folder' | 'nested'
 session.path  # the absolute path that was scanned
 session.skipped  # files read but not belonging to any locale
+session.detected_interpolation  # Delimiters('{{', '}}') — what the files look like
 ```
 
 :::
+
+<Lang js="detectedInterpolation" dart="detectedInterpolation" py="detected_interpolation" code /> is a guess offered to whoever is setting a project up, read off the raw text of the files the scan accepted. It is <Lang js="null" dart="null" py="None" code /> when none of them holds anything that looks like a placeholder, and it never changes what the run itself compared — that is `interpolationPrefix`, which the checks used whatever the files turned out to look like.
 
 ## Writing
 

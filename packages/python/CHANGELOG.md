@@ -2,11 +2,12 @@
 
 ## vNext (2026--)
 
-> A scan can be pointed at an application's root rather than at a folder of locales. It skips the configuration and lock files that root is full of, and an exclude can name a path rather than a bare directory name.
+> A scan can be pointed at an application's root rather than at a folder of locales. It skips the configuration and lock files that root is full of, an exclude can name a path rather than a bare directory name, and it reports which interpolation delimiters the files it read appear to use.
 
 ### Added
 
 - `exclude_files` names the files a scan never reads, as patterns where `*` stands for any run of characters and case is ignored. It defaults to the configuration and lock files no project keeps translations in — `package.json`, `tsconfig.json`, `tsconfig.*.json`, `eslintrc.json`, `*-lock.json`, `*-config.json` and `*.config.json` — which a scan of an application root used to read and parse in full on every run. The default list is exported as `DEFAULT_EXCLUDE_FILES`, and `--exclude-files` is the flag
+- `detect_interpolation_delimiters` guesses which delimiters a text writes its interpolation keys with: `{{name}}` before `{name}`, and `[[ ]]`, `(( ))` and `<< >>` after them. `ScanResult.detected_interpolation` reports what a whole scan saw, which `load_translations` carries as `session.detected_interpolation`. It is a suggestion for a project being set up, never what the run compared with — that stays `interpolation_prefix`. The pairs it knows are exported in order as `INTERPOLATION_DELIMITERS`
 - `create_path_excluder` and `create_file_excluder` build the two tests a scan applies, so an application that shows a user which folders are excluded can ask the same question the scan asks
 
 ### Changed

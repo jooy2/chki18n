@@ -63,8 +63,8 @@ from chki18n.core import CHECK_META, analyze_translations, create_analyzer
 | `CHECK_CODE`, `CHECK_META`, `ANALYZE_CHECK_CODES`, `CROSS_KEY_CHECK_CODES`, `FILE_FORMAT` | `scanTranslationDirectory` |
 | `groupIssuesByCode`, `summarizeIssues`, `createIssue`, `buildResult` | `findUnusedKeys` |
 | `resolveOptions`, `argsToOptions`, `buildUsageText`, `OPTION_DEFINITIONS` |  |
-| `isLocaleCode`, `extractInterpolationKeys`, `createPathExcluder` |  |
-| `createFileExcluder`, 그리고 모든 타입 |  |
+| `isLocaleCode`, `extractInterpolationKeys`, `detectInterpolationDelimiters` |  |
+| `createPathExcluder`, `createFileExcluder`, 그리고 모든 타입 |  |
 
 루트가 이 전부를 다시 내보내므로 `import { createAnalyzer } from 'chki18n'`도 동작합니다. 번들에 검사기가 들어가면 안 될 때 서브패스를 쓰세요.
 
@@ -79,8 +79,8 @@ from chki18n.core import CHECK_META, analyze_translations, create_analyzer
 | `Chki18nCheckCode`, `checkMeta`, `analyzeCheckCodes`, `crossKeyCheckCodes`, `Chki18nFileFormat` | `scanTranslationDirectory` |
 | `groupIssuesByCode`, `summarizeIssues`, `createIssue`, `buildResult` | `findUnusedKeys` |
 | `resolveOptions`, `optionsFromArgs`, `buildUsageText`, `optionDefinitions` | `formatResult` |
-| `isLocaleCode`, `extractInterpolationKeys`, `createPathExcluder` |  |
-| `createFileExcluder`, 그리고 모든 타입 |  |
+| `isLocaleCode`, `extractInterpolationKeys`, `detectInterpolationDelimiters` |  |
+| `createPathExcluder`, `createFileExcluder`, 그리고 모든 타입 |  |
 
 `package:chki18n/chki18n.dart`가 이 전부를 다시 내보내므로 하나만 가져와도 둘 다 쓸 수 있습니다. 빌드가 `dart:io`를 끌어오면 안 될 때 `core.dart`를 쓰세요.
 
@@ -95,8 +95,8 @@ from chki18n.core import CHECK_META, analyze_translations, create_analyzer
 | `CHECK_CODES`, `CHECK_META`, `ANALYZE_CHECK_CODES`, `CROSS_KEY_CHECK_CODES`, `FILE_FORMATS` | `scan_translation_directory` |
 | `group_issues_by_code`, `summarize_issues`, `create_issue`, `build_result` | `find_unused_keys` |
 | `resolve_options`, `options_from_args`, `build_usage_text`, `OPTION_DEFINITIONS` | `format_result` |
-| `is_locale_code`, `extract_interpolation_keys`, `create_path_excluder` |  |
-| `create_file_excluder`, 그리고 모든 타입 |  |
+| `is_locale_code`, `extract_interpolation_keys`, `detect_interpolation_delimiters` |  |
+| `create_path_excluder`, `create_file_excluder`, 그리고 모든 타입 |  |
 
 `chki18n`이 이 전부를 다시 내보내므로 `from chki18n import create_analyzer`도 동작합니다. 모듈이 디스크에 닿으면 안 될 때 `chki18n.core`를 쓰세요.
 

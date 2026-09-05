@@ -5,6 +5,7 @@ import { CHECK_CODE, MAX_MEASURED_REPORT_WIDTH } from './constants.js';
 import { collectFlatKeys } from './core/duplicate.js';
 import { createIssue } from './core/issue.js';
 import { buildResult } from './core/result.js';
+import type { Chki18nDelimiters } from './core/interpolation.js';
 import { createSession, type Chki18nSession } from './core/session.js';
 import { scanTranslationDirectory } from './loader/scan.js';
 import { findUnusedKeys } from './loader/unusedKeys.js';
@@ -24,6 +25,12 @@ export type Chki18nFileSession = Chki18nSession & {
 	readonly path: string;
 	/** Files that were read but did not belong to any locale. */
 	readonly skipped: string[];
+	/**
+	 * Interpolation delimiters the files look like they are written with, or
+	 * `null` when nothing in them does. What the scan saw, not what it used:
+	 * `options.interpolationPrefix` is what every check ran with.
+	 */
+	readonly detectedInterpolation: Chki18nDelimiters | null;
 	/** Read the directory again, replacing everything the session holds. */
 	reload: () => Promise<void>;
 };
@@ -48,6 +55,7 @@ export async function loadTranslations(
 	const scanPath = resolvedPath ? resolve(resolvedPath) : '';
 
 	let skipped: string[] = [];
+	let detectedInterpolation: Chki18nDelimiters | null = null;
 
 	/**
 	 * What the source tree says about the keys: the ones nothing refers to, and
@@ -86,6 +94,7 @@ export async function loadTranslations(
 	const reload = async (): Promise<void> => {
 		if (!scanPath) {
 			skipped = [];
+			detectedInterpolation = null;
 			session.reset({
 				issues: [
 					createIssue(CHECK_CODE.INVALID_OPTIONS, {
@@ -101,6 +110,7 @@ export async function loadTranslations(
 		const usage = await usageOf(scan.groups, scan.files);
 
 		skipped = scan.skipped;
+		detectedInterpolation = scan.detectedInterpolation;
 		session.reset({
 			groups: scan.groups,
 			files: scan.files,
@@ -118,6 +128,9 @@ export async function loadTranslations(
 		reload,
 		get skipped() {
 			return skipped;
+		},
+		get detectedInterpolation() {
+			return detectedInterpolation;
 		}
 	});
 }

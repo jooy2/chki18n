@@ -169,6 +169,7 @@ session.files; // 읽어들인 파일들
 session.fileFormat; // 'single' | 'folder' | 'nested'
 session.path; // 검사한 절대 경로
 session.skipped; // 읽었지만 로케일에 속하지 않은 파일들
+session.detectedInterpolation; // { prefix: '{{', suffix: '}}' } — 파일이 쓰는 것으로 보이는 구분자
 ```
 
 :::
@@ -183,6 +184,7 @@ session.files; // 읽어들인 파일들
 session.fileFormat; // Chki18nFileFormat.single, .folder, .nested
 session.path; // 검사한 절대 경로
 session.skipped; // 읽었지만 로케일에 속하지 않은 파일들
+session.detectedInterpolation; // Chki18nDelimiters('{{', '}}') — 파일이 쓰는 것으로 보이는 구분자
 ```
 
 :::
@@ -197,9 +199,12 @@ session.files  # 읽어들인 파일들
 session.file_format  # 'single' | 'folder' | 'nested'
 session.path  # 검사한 절대 경로
 session.skipped  # 읽었지만 로케일에 속하지 않은 파일들
+session.detected_interpolation  # Delimiters('{{', '}}') — 파일이 쓰는 것으로 보이는 구분자
 ```
 
 :::
+
+<Lang js="detectedInterpolation" dart="detectedInterpolation" py="detected_interpolation" code />는 프로젝트를 처음 설정하는 사람에게 건네는 추측입니다. 검사가 받아들인 파일의 원문에서 읽어냅니다. 어느 파일에도 자리표시자로 보이는 것이 없으면 <Lang js="null" dart="null" py="None" code />이며, 실제 비교에 쓰인 값은 바꾸지 않습니다. 검사는 파일이 어떻게 생겼든 `interpolationPrefix`로 돌아갑니다.
 
 ## 쓰기
 

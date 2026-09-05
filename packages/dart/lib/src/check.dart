@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'package:chki18n/src/constants.dart';
 import 'package:chki18n/src/core/duplicate.dart';
+import 'package:chki18n/src/core/interpolation.dart';
 import 'package:chki18n/src/core/issue.dart';
 import 'package:chki18n/src/core/result.dart';
 import 'package:chki18n/src/core/session.dart';
@@ -32,10 +33,18 @@ class Chki18nFileSession extends Chki18nSession {
   /// Files that were read but did not belong to any locale.
   List<String> get skipped => _skipped;
 
+  Chki18nDelimiters? _detectedInterpolation;
+
+  /// Interpolation delimiters the files look like they are written with, or
+  /// `null` when nothing in them does. What the scan saw, not what it used:
+  /// `options.interpolationPrefix` is what every check ran with.
+  Chki18nDelimiters? get detectedInterpolation => _detectedInterpolation;
+
   /// Reads the directory again, replacing everything the session holds.
   Future<void> reload() async {
     if (path.isEmpty) {
       _skipped = const [];
+      _detectedInterpolation = null;
       reset(
         Chki18nInput(
           issues: [
@@ -54,6 +63,7 @@ class Chki18nFileSession extends Chki18nSession {
     final usage = await _usageOf(scan.groups, scan.files);
 
     _skipped = scan.skipped;
+    _detectedInterpolation = scan.detectedInterpolation;
     reset(
       Chki18nInput(
         groups: scan.groups,

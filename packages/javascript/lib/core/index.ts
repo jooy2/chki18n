@@ -35,7 +35,12 @@ export {
 	matchesNamePattern,
 	pathSegments
 } from './exclude.js';
-export { extractInterpolationKeys } from './interpolation.js';
+export {
+	detectInterpolationDelimiters,
+	extractInterpolationKeys,
+	INTERPOLATION_DELIMITERS
+} from './interpolation.js';
+export type { Chki18nDelimiters } from './interpolation.js';
 export { checkKeyShape } from './key.js';
 export {
 	PLURAL_CATEGORIES,

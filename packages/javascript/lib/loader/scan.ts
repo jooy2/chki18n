@@ -2,6 +2,11 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { CHECK_CODE, FILE_FORMAT, SUPPORTED_EXTENSIONS } from '../constants.js';
 import { createFileExcluder, createPathExcluder } from '../core/exclude.js';
+import {
+	detectInterpolationDelimiters,
+	INTERPOLATION_DELIMITERS,
+	type Chki18nDelimiters
+} from '../core/interpolation.js';
 import { createIssue } from '../core/issue.js';
 import { isLocaleCode } from '../core/locale.js';
 import { findDuplicateJsonKeys, type JsonDuplicateKey } from './jsonDuplicates.js';
@@ -21,6 +26,12 @@ export type Chki18nScanResult = {
 	files: Chki18nSourceFile[];
 	/** Files that were read but did not belong to any locale. */
 	skipped: string[];
+	/**
+	 * Interpolation delimiters the files appear to be written with, or `null`
+	 * when nothing in them looks like one. A guess to offer a user setting a
+	 * project up; the run itself uses `interpolationPrefix` either way.
+	 */
+	detectedInterpolation: Chki18nDelimiters | null;
 	issues: Chki18nIssue[];
 };
 
@@ -32,6 +43,8 @@ type ScannedFile = {
 	json: any;
 	/** Keys written twice in the text, which parsing has since collapsed. */
 	duplicateKeys: JsonDuplicateKey[];
+	/** Delimiters this file's own text looks like it is written with. */
+	interpolation: Chki18nDelimiters | null;
 };
 
 const stemOf = (fileName: string): string => fileName.replace(/\.[^.]+$/, '');
@@ -142,7 +155,8 @@ async function collectFiles(
 				// Read off the text, because `JSON.parse` has already discarded it.
 				duplicateKeys: options.enabledChecks.has(CHECK_CODE.DUPLICATE_KEY)
 					? findDuplicateJsonKeys(content)
-					: []
+					: [],
+				interpolation: detectInterpolationDelimiters(content)
 			});
 		}
 	};
@@ -266,6 +280,30 @@ function buildGroups(
 }
 
 /**
+ * The delimiters the whole tree looks like it is written with.
+ *
+ * The files are read as one text rather than voted on: a project writing
+ * `{{name}}` anywhere is a project whose delimiters are `{{` and `}}`, however
+ * many of its other files happen to hold no placeholder at all. Files that
+ * belong to no locale are left out — they are not this project's translations.
+ */
+function detectedInterpolationOf(
+	files: ScannedFile[],
+	skipped: string[]
+): Chki18nDelimiters | null {
+	const ignored = new Set(skipped);
+	const seen = new Set<string>();
+
+	for (const file of files) {
+		if (file.interpolation && !ignored.has(file.relativePath)) {
+			seen.add(file.interpolation.prefix);
+		}
+	}
+
+	return INTERPOLATION_DELIMITERS.find((candidate) => seen.has(candidate.prefix)) ?? null;
+}
+
+/**
  * Read a directory of translation files into the shape the analyzer compares.
  * This is the only part of the library that touches the file system.
  */
@@ -289,5 +327,10 @@ export async function scanTranslationDirectory(
 		);
 	}
 
-	return { fileFormat, ...built, issues };
+	return {
+		fileFormat,
+		...built,
+		detectedInterpolation: detectedInterpolationOf(files, built.skipped),
+		issues
+	};
 }

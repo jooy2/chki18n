@@ -134,3 +134,118 @@ List<String> extractInterpolationKeys(Object? value, String prefix, String suffi
 
   return found;
 }
+
+/// An opening and closing delimiter pair, as `interpolationPrefix` takes them.
+class Chki18nDelimiters {
+  /// Creates a delimiter pair.
+  const Chki18nDelimiters({required this.prefix, required this.suffix});
+
+  /// Opening delimiter, e.g. `{{`.
+  final String prefix;
+
+  /// Closing delimiter, e.g. `}}`.
+  final String suffix;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Chki18nDelimiters && other.prefix == prefix && other.suffix == suffix;
+
+  @override
+  int get hashCode => Object.hash(prefix, suffix);
+
+  @override
+  String toString() => 'Chki18nDelimiters($prefix, $suffix)';
+}
+
+/// The delimiter pairs [detectInterpolationDelimiters] knows, in the order it
+/// believes them. A doubled pair comes before its single form, or `{{name}}`
+/// would be read as `{` wrapped around `{name`.
+const List<Chki18nDelimiters> interpolationDelimiters = [
+  Chki18nDelimiters(prefix: '{{', suffix: '}}'),
+  Chki18nDelimiters(prefix: '{', suffix: '}'),
+  Chki18nDelimiters(prefix: '[[', suffix: ']]'),
+  Chki18nDelimiters(prefix: '[', suffix: ']'),
+  Chki18nDelimiters(prefix: '((', suffix: '))'),
+  Chki18nDelimiters(prefix: '(', suffix: ')'),
+  Chki18nDelimiters(prefix: '<<', suffix: '>>'),
+  Chki18nDelimiters(prefix: '<', suffix: '>'),
+];
+
+/// The opening characters of every pair above, as one test per character.
+bool _isOpener(String character) =>
+    character == '{' || character == '[' || character == '(' || character == '<';
+
+/// Whether [character] can start an interpolation key, which is how a
+/// placeholder name is spelled everywhere else in this library.
+///
+/// Deliberately narrow: it is what tells `{name}` apart from the `{"` of the
+/// JSON holding it, which is the whole reason this can be pointed at a file's
+/// raw text.
+bool _isKeyStart(String character) =>
+    (character.compareTo('a') >= 0 && character.compareTo('z') <= 0) ||
+    (character.compareTo('A') >= 0 && character.compareTo('Z') <= 0) ||
+    (character.compareTo('0') >= 0 && character.compareTo('9') <= 0) ||
+    character == '_' ||
+    character == r'$';
+
+/// Guesses which delimiters a text writes its interpolation keys with, or
+/// `null` when nothing in it looks like one.
+///
+/// This is a suggestion to offer a user, not a decision to act on: a text that
+/// uses none can only be guessed at, and one that mixes two answers with the
+/// first pair of [interpolationDelimiters] that it holds. Reach for it when a
+/// project is being set up and `interpolationPrefix` has nobody to ask.
+Chki18nDelimiters? detectInterpolationDelimiters(String text) {
+  // One pass over the text, then the priority order is applied to what it saw.
+  // Probing the candidates one at a time would read a large file eight times.
+  final seen = <String>{};
+  final length = text.length;
+
+  for (var at = 0; at < length; at += 1) {
+    final open = text[at];
+
+    if (!_isOpener(open)) {
+      continue;
+    }
+
+    var end = at + 1;
+
+    while (end < length && text[end] == open) {
+      end += 1;
+    }
+
+    var key = end;
+
+    // `{{ name }}` is as common as `{{name}}`, and the space belongs to the
+    // style rather than to the delimiter.
+    while (key < length && text[key] == ' ') {
+      key += 1;
+    }
+
+    if (key < length && _isKeyStart(text[key])) {
+      // A run of three or more is read as the doubled form, the way a run of
+      // one is read as the single one.
+      seen.add(end - at > 1 ? '$open$open' : open);
+
+      // Nothing later in the text can outrank the first candidate, so a file
+      // written in it is answered by its first placeholder.
+      if (seen.contains(interpolationDelimiters.first.prefix)) {
+        break;
+      }
+    }
+
+    at = end - 1;
+  }
+
+  if (seen.isEmpty) {
+    return null;
+  }
+
+  for (final candidate in interpolationDelimiters) {
+    if (seen.contains(candidate.prefix)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}

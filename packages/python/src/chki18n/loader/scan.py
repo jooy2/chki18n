@@ -14,6 +14,11 @@ from typing import Any
 from chki18n._types import Issue, ResolvedOptions, SourceFile, TranslationGroups, TranslationMap
 from chki18n.constants import SUPPORTED_EXTENSIONS, FileFormat
 from chki18n.core.exclude import create_file_excluder, create_path_excluder
+from chki18n.core.interpolation import (
+    INTERPOLATION_DELIMITERS,
+    Delimiters,
+    detect_interpolation_delimiters,
+)
 from chki18n.core.issue import create_issue
 from chki18n.core.locale import is_locale_code
 from chki18n.loader.json_duplicates import JsonDuplicateKey, find_duplicate_json_keys
@@ -31,6 +36,10 @@ class ScanResult:
     files: list[SourceFile]
     #: Files that were read but did not belong to any locale.
     skipped: list[str]
+    #: Interpolation delimiters the files appear to be written with, or ``None``
+    #: when nothing in them looks like one. A guess to offer a user setting a
+    #: project up; the run itself uses `interpolation_prefix` either way.
+    detected_interpolation: Delimiters | None
     #: Everything that could not be read, as `INVALID_FILE` issues.
     issues: list[Issue]
 
@@ -42,6 +51,8 @@ class _ScannedFile:
     #: Path segments relative to the scan root, file name last.
     segments: tuple[str, ...]
     data: Any
+    #: Delimiters this file's own text looks like it is written with.
+    interpolation: Delimiters | None = None
     #: Keys written twice in the text, which parsing has since collapsed.
     duplicate_keys: list[JsonDuplicateKey] = field(default_factory=list)
 
@@ -166,6 +177,7 @@ def _collect_files(
                     relative_path=relative_path,
                     segments=(*segments, entry.name),
                     data=data,
+                    interpolation=detect_interpolation_delimiters(content),
                     # Read off the text, because the decoder has already
                     # discarded it.
                     duplicate_keys=(
@@ -311,6 +323,31 @@ def _build_groups(
     return groups, sources, skipped
 
 
+def _detected_interpolation_of(
+    files: list[_ScannedFile], skipped: list[str]
+) -> Delimiters | None:
+    """The delimiters the whole tree looks like it is written with.
+
+    The files are read as one text rather than voted on: a project writing
+    ``{{name}}`` anywhere is a project whose delimiters are ``{{`` and ``}}``,
+    however many of its other files happen to hold no placeholder at all. Files
+    that belong to no locale are left out — they are not this project's
+    translations.
+    """
+    ignored = set(skipped)
+    seen = {
+        file.interpolation.prefix
+        for file in files
+        if file.interpolation is not None and file.relative_path not in ignored
+    }
+
+    for candidate in INTERPOLATION_DELIMITERS:
+        if candidate.prefix in seen:
+            return candidate
+
+    return None
+
+
 def scan_translation_directory(path: str, options: ResolvedOptions) -> ScanResult:
     """Read a directory of translation files into the shape the analyzer compares."""
     issues: list[Issue] = []
@@ -337,5 +374,6 @@ def scan_translation_directory(path: str, options: ResolvedOptions) -> ScanResul
         groups=groups,
         files=sources,
         skipped=skipped,
+        detected_interpolation=_detected_interpolation_of(files, skipped),
         issues=issues,
     )

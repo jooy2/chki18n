@@ -8,6 +8,7 @@ import 'dart:io';
 
 import 'package:chki18n/src/constants.dart';
 import 'package:chki18n/src/core/exclude.dart';
+import 'package:chki18n/src/core/interpolation.dart';
 import 'package:chki18n/src/core/issue.dart';
 import 'package:chki18n/src/core/locale.dart';
 import 'package:chki18n/src/loader/json_duplicates.dart';
@@ -22,6 +23,7 @@ class Chki18nScanResult {
     required this.groups,
     required this.files,
     required this.skipped,
+    required this.detectedInterpolation,
     required this.issues,
   });
 
@@ -37,6 +39,11 @@ class Chki18nScanResult {
   /// Files that were read but did not belong to any locale.
   final List<String> skipped;
 
+  /// Interpolation delimiters the files appear to be written with, or `null`
+  /// when nothing in them looks like one. A guess to offer a user setting a
+  /// project up; the run itself uses `interpolationPrefix` either way.
+  final Chki18nDelimiters? detectedInterpolation;
+
   /// Everything that could not be read, as `INVALID_FILE` issues.
   final List<Chki18nIssue> issues;
 }
@@ -48,6 +55,7 @@ class _ScannedFile {
     required this.segments,
     required this.json,
     required this.duplicateKeys,
+    required this.interpolation,
   });
 
   final String path;
@@ -60,6 +68,8 @@ class _ScannedFile {
   /// Keys written twice in the text, which parsing has since collapsed.
   final List<Chki18nJsonDuplicateKey> duplicateKeys;
 
+  /// Delimiters this file's own text looks like it is written with.
+  final Chki18nDelimiters? interpolation;
 }
 
 /// Top level keys of a file that name a locale, as the `nested` layout does.
@@ -184,6 +194,7 @@ Future<List<_ScannedFile>> _collectFiles(
               options.enabledChecks.contains(Chki18nCheckCode.duplicateKey)
                   ? findDuplicateJsonKeys(content)
                   : const [],
+          interpolation: detectInterpolationDelimiters(content),
         ),
       );
     }
@@ -343,6 +354,31 @@ _BuiltGroups _buildGroups(
   return _BuiltGroups(groups, sources, skipped);
 }
 
+/// The delimiters the whole tree looks like it is written with.
+///
+/// The files are read as one text rather than voted on: a project writing
+/// `{{name}}` anywhere is a project whose delimiters are `{{` and `}}`, however
+/// many of its other files happen to hold no placeholder at all. Files that
+/// belong to no locale are left out — they are not this project's translations.
+Chki18nDelimiters? _detectedInterpolationOf(List<_ScannedFile> files, List<String> skipped) {
+  final ignored = skipped.toSet();
+  final seen = <String>{};
+
+  for (final file in files) {
+    if (file.interpolation != null && !ignored.contains(file.relativePath)) {
+      seen.add(file.interpolation!.prefix);
+    }
+  }
+
+  for (final candidate in interpolationDelimiters) {
+    if (seen.contains(candidate.prefix)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
 /// Reads a directory of translation files into the shape the analyzer compares.
 Future<Chki18nScanResult> scanTranslationDirectory(
   String path,
@@ -373,6 +409,7 @@ Future<Chki18nScanResult> scanTranslationDirectory(
     groups: built.groups,
     files: built.files,
     skipped: built.skipped,
+    detectedInterpolation: _detectedInterpolationOf(files, built.skipped),
     issues: issues,
   );
 }
