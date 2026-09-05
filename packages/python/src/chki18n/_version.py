@@ -11,7 +11,7 @@ from __future__ import annotations
 from importlib.metadata import PackageNotFoundError, version
 
 #: The version `chki18n --version` prints.
-PACKAGE_VERSION = "1.1.0"
+PACKAGE_VERSION = "1.2.0"
 
 
 def installed_version() -> str:

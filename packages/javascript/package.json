@@ -1,7 +1,7 @@
 {
 	"name": "chki18n",
 	"type": "module",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"description": "Check and verify your i18n translation files, from the command line or from JavaScript.",
 	"author": "Jooy2 <jooy2.contact@gmail.com>",
 	"license": "MIT",

@@ -1,6 +1,6 @@
 # Changelog
 
-## vNext (2026--)
+## 1.2.0 (2026-09-05)
 
 > A scan can be pointed at an application's root rather than at a folder of locales. It skips the configuration and lock files that root is full of, an exclude can name a path rather than a bare directory name, and it reports which interpolation delimiters the files it read appear to use.
 
