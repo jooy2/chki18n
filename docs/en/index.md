@@ -20,7 +20,7 @@ hero:
       text: API
       link: /api/
   image:
-    src: /512x512.png
+    src: /640x640.png
     alt: chki18n
 
 features:

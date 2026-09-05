@@ -499,7 +499,13 @@ const vitePressConfig: UserConfig = {
 		}
 	},
 	themeConfig: {
-		logo: { src: '/logo-32.png', width: 24, height: 24 },
+		/*
+		 * 64 pixels for a 24-pixel slot, and not the `logo-32.png` the favicon
+		 * links use: the navbar draws the mark at 24 CSS pixels, which is 48 device
+		 * pixels on the retina screens most readers are on, and a 32-pixel file
+		 * gets stretched to reach them.
+		 */
+		logo: { src: '/logo-64.png', width: 24, height: 24 },
 		/**
 		 * `h2` and `h3`, nested. A reference page is one `h2` — Options — with a
 		 * dozen `h3`s under it, and at the default depth the outline lists four

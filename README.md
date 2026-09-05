@@ -1,4 +1,4 @@
-<img src="docs/public/128x128.png" alt="chki18n" width="96" height="96" />
+<img src="docs/public/256x256.png" alt="chki18n" width="96" height="96" />
 
 # chki18n
 
