@@ -44,7 +44,7 @@ const STRINGS = {
 		title: '변경 내역',
 		order: 3,
 		lede: 'chki18n의 모든 릴리스를 최신순으로 정리했습니다. 각 패키지는 독립적으로 버전을 관리하므로, 한쪽의 릴리스가 다른 쪽의 릴리스를 의미하지는 않습니다.',
-		source: (registry, name) => `${registry}에 \`${name}\`(으)로 배포됩니다.`
+		source: (registry, name) => `${registry}의 \`${name}\` 패키지입니다.`
 	}
 };
 
