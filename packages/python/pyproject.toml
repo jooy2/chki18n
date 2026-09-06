@@ -12,7 +12,7 @@ license-files = ["LICENSE"]
 # 3.10 is where `X | Y` in annotations and `dataclass(slots=True)` both landed,
 # and 3.9 reached end of life in October 2025.
 requires-python = ">=3.10"
-authors = [{ name = "CDGet", email = "jooy2.contact@gmail.com" }]
+authors = [{ name = "CDGet" }]
 keywords = [
     "i18n",
     "internationalization",

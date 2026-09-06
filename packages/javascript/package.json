@@ -3,7 +3,7 @@
 	"type": "module",
 	"version": "1.2.0",
 	"description": "Check and verify your i18n translation files, from the command line or from JavaScript.",
-	"author": "Jooy2 <jooy2.contact@gmail.com>",
+	"author": "CDGet (https://cdget.com)",
 	"license": "MIT",
 	"homepage": "https://chki18n.cdget.com",
 	"repository": {
