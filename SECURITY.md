@@ -4,7 +4,7 @@
 
 To report a security vulnerability, open a draft security advisory: https://github.com/jooy2/chki18n/security/advisories/new
 
-You can also email the maintainer first. Do not report a vulnerability as a public issue.
+You can also reach the maintainers at https://cdget.com/contact first. Do not report a vulnerability as a public issue.
 
 ## Security compliance
 
@@ -18,4 +18,4 @@ Use the latest release. It carries the fixes for every vulnerability reported so
 
 ## Contact
 
-- Administrator: jooy2.contact@gmail.com
+- Maintainers: https://cdget.com/contact

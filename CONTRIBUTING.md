@@ -6,7 +6,7 @@ This project adheres to version 2.1 of the Contributor Covenant, which is reprod
 
 ## Issues
 
-Open an issue at https://github.com/jooy2/chki18n/issues. You can email the maintainer instead, but GitHub Issues is where progress is tracked.
+Open an issue at https://github.com/jooy2/chki18n/issues. You can reach the maintainers at https://cdget.com/contact instead, but GitHub Issues is where progress is tracked.
 
 When you open one, keep the following in mind:
 
