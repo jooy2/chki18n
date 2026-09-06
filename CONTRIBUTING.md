@@ -17,6 +17,8 @@ When you open one, keep the following in mind:
 - Write everything in English.
 - Describe the environment the issue occurs in, including the package and the language version.
 
+A security vulnerability is the exception. Report one through [SECURITY.md](SECURITY.md) rather than as a public issue.
+
 ## How to contribute (Pull Requests)
 
 ### Making the change

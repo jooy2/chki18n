@@ -11,6 +11,7 @@ Read `README.md`, `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md` in the root of this
 - If an issue tracks this change, add `(fixes #{ISSUE_NUMBER})` to the end of the commit description, with the issue number in place of `{ISSUE_NUMBER}`.
 - If the change affects the documentation, update it. `docs/` ships in English and Korean, so update both; write the content in your own language rather than leaving a page out.
 - Add or update tests where the code has them, and confirm they pass.
+- If the change touches a check or its output, run `node tools/parity/run.mjs` so the three packages still print the same report.
 - Keep the pull request in draft while it is unfinished. If it is no longer valid, close it with an explanation.
 
 <!--

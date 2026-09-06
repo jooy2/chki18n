@@ -116,9 +116,48 @@ result.issues  # every issue, with its level, key, locale and file
 
 Every issue carries the words to describe it, so a build script, a dashboard or a translation editor can render the result without hard-coding a single string. The quick start for each package has the rest: [JavaScript](packages/javascript/README.md), [Dart](packages/dart/README.md), [Python](packages/python/README.md).
 
+## Repository layout
+
+```text
+packages/
+  javascript/   # npm package `chki18n` (TypeScript in lib/, built to dist/)
+  dart/         # pub package `chki18n` (library in lib/, command line in bin/)
+  python/       # PyPI package `chki18n` (src/chki18n/)
+docs/           # VitePress documentation site, English and Korean
+tools/parity/   # runs the three command lines over the same samples
+```
+
+Each package carries its own `README.md`, `CHANGELOG.md` and `LICENSE`.
+
+## Development
+
+Work inside the package you are changing:
+
+| Package                           | Install                   | Test        | Lint and format                  |
+| --------------------------------- | ------------------------- | ----------- | -------------------------------- |
+| [JavaScript](packages/javascript) | `npm install`             | `npm test`  | `npx eslint .`, `npm run format` |
+| [Dart](packages/dart)             | `dart pub get`            | `dart test` | `dart analyze`, `dart format .`  |
+| [Python](packages/python)         | `pip install -e ".[dev]"` | `pytest`    | `ruff check .`, `ruff format .`  |
+
+A change to a check touches all three packages, so run the parity test before you open a pull request. It needs `node`, `dart`, a Python 3 and the JavaScript package built:
+
+```bash
+node tools/parity/run.mjs
+```
+
+The documentation site needs Node.js 20.19 or later:
+
+```bash
+cd docs && npm install && npm run dev
+```
+
 ## Contributing
 
-Anyone can contribute by reporting an issue or opening a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Anyone can contribute by reporting an issue or opening a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md). Taking part means you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+To report a security vulnerability, follow [SECURITY.md](SECURITY.md) instead of opening an issue.
+
+If the project is useful to you, the Sponsor button at the top of this repository lists the ways to support it.
 
 ## License
 
