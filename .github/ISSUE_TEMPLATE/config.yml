@@ -1,1 +1,11 @@
 blank_issues_enabled: true
+contact_links:
+  - name: 'Documentation'
+    url: https://chki18n.cdget.com
+    about: Every check, every option and every example, in English and Korean.
+  - name: 'Report a security vulnerability'
+    url: https://github.com/jooy2/chki18n/security/advisories/new
+    about: Open a draft security advisory instead of a public issue.
+  - name: 'Contact the maintainers'
+    url: https://cdget.com/contact
+    about: Ask something that does not belong in an issue.
