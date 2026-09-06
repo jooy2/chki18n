@@ -1,0 +1,4201 @@
+# chki18n — full documentation
+
+> Find the missing keys, the empty values and the broken interpolation in your i18n translation files. One check engine for the command line, for CI and for your own code, in JavaScript, Dart or Python.
+
+chki18n compares a set of i18n translation files against one target language and reports what
+is wrong with them: keys one locale is missing, values left empty, strings still identical to
+the original, and interpolation placeholders that do not match. Twenty-five checks in all.
+
+It runs from the command line and from code, and both share one definition of every check and
+every option. The comparison itself does no file system work, so it also runs where there is no
+file system: `chki18n/core` in JavaScript, `package:chki18n/core.dart` in Dart and
+`chki18n.core` in Python are the same engine with the directory scanner left out.
+
+The library ships for **JavaScript, Dart and Python**. The code below is the JavaScript one.
+The other two are the same functions under their own spelling: `checkTranslationFiles` is
+`check_translation_files` in Python, and an option named `interpolationPrefix` is
+`interpolation_prefix` there. Dart keeps the JavaScript spelling and takes its options as one
+`Chki18nOptions` object with named parameters.
+
+Every page below also exists in Korean at the same path under `/ko/`.
+
+---
+
+# Guide
+
+Source: https://chki18n.cdget.com/guide/
+
+chki18n reads a folder of i18n translation files, compares every language against one target language, and reports what does not line up. This section covers installing it, running it, the file layouts it understands, the checks it performs and the options that control them.
+
+## The pages in this section
+
+- [**Getting started**](https://chki18n.cdget.com/guide/getting-started) — pick a package, install it, and get a first report from the command line or from code.
+- [**Command line**](https://chki18n.cdget.com/guide/cli) — every flag, the exit code, and how to wire it into CI or a pre-commit hook.
+- [**Continuous integration**](https://chki18n.cdget.com/guide/ci) — jobs to paste, for GitHub Actions and Bitbucket Pipelines.
+- [**File layouts**](https://chki18n.cdget.com/guide/file-layouts) — one file per locale, one folder per locale, or one file holding them all, and how files are grouped for comparison.
+- [**Checks**](https://chki18n.cdget.com/guide/checks) — the twenty-five things it looks for, what each one means, and how to turn one off or change how seriously it is taken.
+- [**Options**](https://chki18n.cdget.com/guide/options) — the full option set, shared by the CLI and the API.
+
+## How it works
+
+One language is the **target**: the one you write first and translate from. Every other language is compared against it, key by key. A key the target has and a translation does not is an error, and a value identical to the target's is a warning that the string was never actually translated. Nothing is configured beyond a path and that target language. There is no config file to write and no rule set to assemble.
+
+## One library, three languages
+
+chki18n ships for JavaScript, Dart and Python, and the three are one library: the same checks in the same order, the same option names, and a report that matches to the column whichever package produced it. Every page here documents all three at once. Pick yours with the switch at the top of the sidebar, and the code samples follow.
+
+## What it does not do
+
+It does not translate anything, and it does not edit your files. Every entry point reads and reports, and writing the fix back is yours to do. Automatic correction for some of the checks is planned but not available yet.
+
+---
+
+# Getting started
+
+Source: https://chki18n.cdget.com/guide/getting-started
+
+Install chki18n, point it at the folder your translation files live in, and name the language everything else is compared against. There is no configuration file: a path and a target language are all it takes.
+
+## Pick a package
+
+chki18n ships for three languages, and the three are one library: the same twenty-five checks in the same order, the same option names, the same report to the column, and the same exit code. Pick the one your project already speaks. The switch at the top of the sidebar rewrites every code sample on this site to match.
+
+| Language | Registry | Install | Requires |
+| --- | --- | --- | --- |
+| JavaScript | [npm](https://www.npmjs.com/package/chki18n) | `npm install chki18n` | Node.js 18 or newer |
+| Dart | [pub.dev](https://pub.dev/packages/chki18n) | `dart pub add chki18n` | Dart 3.7 or newer |
+| Python | [PyPI](https://pypi.org/project/chki18n/) | `pip install chki18n` | Python 3.10 or newer |
+
+### How the names map
+
+Every function and every option is documented under its **JavaScript spelling**, because a heading and an anchor have to read the same for every reader. The other two follow one rule each, and this is the only place it is stated:
+
+- **Dart** keeps the JavaScript spelling: `checkTranslationFiles`, `interpolationPrefix`, `maxKeyDepth`. What differs is the shape. Options are one `Chki18nOptions` object built with named parameters, and the closed value sets are enums, so `Chki18nCheckCode.noKey` stands in for `'NO_KEY'`. Its `code` is still `NO_KEY`.
+- **Python** is snake_case throughout. `check_translation_files`, `interpolation_prefix`, `max_key_depth`. The check codes, the severities and the option choices stay the strings they are everywhere else: `"NO_KEY"`, `"error"`, `"kebab"`.
+
+## Install
+
+Run it without installing anything, the usual form for a CI job:
+
+```bash
+npx chki18n ./locales --target en
+```
+
+Or add it to the project when you are going to call it from code:
+
+```bash
+npm install chki18n
+```
+
+```bash
+pnpm add chki18n
+```
+
+```bash
+yarn add chki18n
+```
+
+The package is ESM with type declarations and has four small runtime dependencies.
+
+Install the command once and it is on your path:
+
+```bash
+dart pub global activate chki18n
+```
+
+Or add it to the project when you are going to call it from code:
+
+```bash
+dart pub add chki18n
+```
+
+In a Flutter project that is `flutter pub add chki18n`. Inside a project that already depends on it, `dart run chki18n` runs the command without installing it globally. The package has no dependencies.
+
+Run it without installing anything, the usual form for a CI job:
+
+```bash
+pipx run chki18n ./locales --target en
+```
+
+Or add it to the project when you are going to call it from code:
+
+```bash
+pip install chki18n
+```
+
+```bash
+uv add chki18n
+```
+
+The package is fully typed, ships `py.typed`, and has no dependencies.
+
+## Your first check
+
+Say your project holds two translation files:
+
+```text
+locales/
+  en.json
+  ko.json
+```
+
+```json
+// locales/en.json
+{
+	"desc": { "hello": "Hello {name}", "bye": "Goodbye" },
+	"attr": { "folder": "Folder" }
+}
+```
+
+```json
+// locales/ko.json
+{
+	"desc": { "hello": "안녕하세요", "bye": "안녕히 계세요" }
+}
+```
+
+Run it:
+
+```bash
+npx chki18n ./locales --target en
+```
+
+```bash
+chki18n ./locales --target en
+```
+
+```text
+  Path     ./locales
+  Target   en
+  Locales  en, ko
+  Layout   single, 1 group, 3 keys
+
+ ko ─────────────────────────────────────────────────────────────────────────────────── 2 errors
+
+  ERROR  NO_KEY (1)
+         The key exists in the target language but is missing here.
+    attr.folder  en: "Folder"
+
+  ERROR  NO_INTERPOLATION_KEY (1)
+    desc.hello   en: "Hello {name}"
+      The interpolation key `{name}` of the target language is missing from this value.
+
+ Summary ───────────────────────────────────────────────────────────────────────────────────────
+
+  Compared 3 keys across 2 locales in 1 group. (2ms)
+  2 errors
+  Clean: en
+
+  By check
+    NO_INTERPOLATION_KEY  1 error
+    NO_KEY                1 error
+
+  FAIL  2 errors must be fixed before this passes.
+```
+
+Two real problems: the Korean translation dropped the `{name}` placeholder, and it is missing a key entirely. The command exits with `1`, so a CI job fails here.
+
+[Command line](https://chki18n.cdget.com/guide/cli) has the rest: every flag, the exit code, and how to wire it into CI.
+
+## From code
+
+The same check, as a value you can act on:
+
+```javascript
+import { checkTranslationFiles } from 'chki18n';
+
+const result = await checkTranslationFiles('./locales', { target: 'en' });
+
+if (!result.success) {
+	for (const issue of result.issues) {
+		console.log(`${issue.level} ${issue.locale} ${issue.key}: ${issue.message}`);
+	}
+}
+```
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+final result = await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(target: 'en'),
+);
+
+if (!result.success) {
+  for (final issue in result.issues) {
+    print('${issue.level.name} ${issue.locale} ${issue.key}: ${issue.message}');
+  }
+}
+```
+
+```python
+from chki18n import Options, check_translation_files
+
+result = check_translation_files("./locales", Options(target="en"))
+
+if not result.success:
+    for issue in result.issues:
+        print(f"{issue.level} {issue.locale} {issue.key}: {issue.message}")
+```
+
+## Which entry point
+
+Four functions, depending on who owns the translations and how often you check them:
+
+| Situation | Use |
+| --- | --- |
+| Check a directory once — CI, a script, a pre-commit hook | [`checkTranslationFiles`](https://chki18n.cdget.com/api/check-translation-files) |
+| Check data you already have in memory, once | [`analyzeTranslations`](https://chki18n.cdget.com/api/analyze-translations) |
+| Read a directory once, then check it repeatedly | [`loadTranslations`](https://chki18n.cdget.com/api/load-translations) |
+| Your own application owns the values and needs only a verdict | [`createAnalyzer().checkEntry`](https://chki18n.cdget.com/api/create-analyzer) |
+
+`checkTranslationFiles` and `loadTranslations` read a directory. `analyzeTranslations` and `createAnalyzer` do no file system work at all, and are also published on their own as <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />, which runs where there is no disk to read. See [The core entry point](https://chki18n.cdget.com/api/core).
+
+## Next
+
+- [What it checks](https://chki18n.cdget.com/guide/checks) — the twenty-five checks, and how to switch one off.
+- [File layouts](https://chki18n.cdget.com/guide/file-layouts) — if your files are not one-per-locale.
+- [Options](https://chki18n.cdget.com/guide/options) — everything you can pass, from either side.
+
+---
+
+# Command line
+
+Source: https://chki18n.cdget.com/guide/cli
+
+The `chki18n` command checks a folder of translation files and prints what is wrong with them. It exits with `1` when it finds an error level issue, so it drops straight into a CI job or a pre-commit hook.
+
+Every package ships the same command, with the same flags and the same output. Only the way you get it onto your path differs.
+
+```bash
+# Run it without installing anything, which is what CI usually wants.
+npx chki18n ./locales --target en
+
+# Or install it, and the command is `chki18n`.
+npm install chki18n
+```
+
+```bash
+# Install the command once and it is on your path.
+dart pub global activate chki18n
+
+# Inside a project that already depends on it, without installing globally.
+dart run chki18n ./locales --target en
+```
+
+```bash
+# Run it without installing anything, which is what CI usually wants.
+pipx run chki18n ./locales --target en
+
+# Or install it, and the command is `chki18n`.
+pip install chki18n
+```
+
+## Usage
+
+```bash
+chki18n [options] <targetDirectory>
+```
+
+The directory can be given as a bare argument or with `--path`, and the two mean the same thing. A relative path is resolved against the current working directory.
+
+```bash
+chki18n ./locales
+```
+
+```bash
+chki18n --path ./locales --target en
+```
+
+## Flags
+
+```text
+  --path <dir>                    The directory where the files to be scanned are located (required)
+  --target <locale>               The language every other language is compared against (default: `en`)
+  --format <format>               Layout of the translation files: `auto`, `single`, `folder` or `nested`
+  --checks <codes>                Run only these comma separated check codes
+  --ignore-checks <codes>         Run every check except these comma separated check codes
+  --levels <code=level>           Report a check at another severity, e.g. `EMPTY_VALUE=error`
+  --interpolation-prefix <str>    Opening delimiter of an interpolation key (default: `{`)
+  --interpolation-suffix <str>    Closing delimiter of an interpolation key (default: `}`)
+  --exclude <dirs>                Comma separated directory names or paths to skip while scanning
+  --exclude-files <globs>         Comma separated file name patterns never read as translations
+  --source <dir>                  Source files to read for key usages (enables `UNUSED_KEY` and `UNDEFINED_KEY`)
+  --translate-functions <names>   Comma separated names a translation call goes by (default: `t`, `$t`, `translate`)
+  --key-case <case>               Case every key segment has to use: `kebab`, `camel`, `snake`
+  --max-key-depth <levels>        How many levels a key may be nested, e.g. `2` for `attr.folder`
+  --length-ratio <times>          Report a value more than this many times longer or shorter than the target
+  --reporter <name>               How to render the report: `pretty`, `list`, `json`, `markdown`, `github`
+  --group-by <axis>               Group the reported issues by `locale`, `code`, `group`, `file`, `none`
+  --output <file>                 Also write the report to this file, in the format its extension implies
+  --width <columns>               Lay the report out to this many columns instead of measuring the terminal
+  --no-color                      Do not colour the output
+  --no-info                       Do not show info messages
+  --no-warn                       Do not show warning messages
+  --debug                         Show debug messages
+  --help                          Show this message
+  --version                       Show the installed version
+```
+
+Every flag is also an API option with the same name, so `--ignore-checks` is <Lang js="ignoreChecks" dart="ignoreChecks" py="ignore_checks" code />. Both are resolved from one definition, and [Options](https://chki18n.cdget.com/guide/options) documents them once for both sides.
+
+## Reading the output
+
+```text
+  Path     ./locales
+  Target   en
+  Locales  en, ja, ko
+  Layout   single, 1 group, 5 keys
+
+ ko ─────────────────────────────────────────────────────────────────────── 2 errors · 1 warning
+
+  ERROR  NO_KEY (1)
+         The key exists in the target language but is missing here.
+    attr.folder  en: "Folder"
+
+  ERROR  NO_INTERPOLATION_KEY (1)
+    greeting     en: "Hello {name}"
+      The interpolation key `{name}` of the target language is missing from this value.
+
+  WARN   DUPLICATE_VALUE (1)
+    dup-b        en: "Beta"
+      The key `dup-a` in the same locale already uses this value.
+
+ Summary ───────────────────────────────────────────────────────────────────────────────────────
+
+  Compared 5 keys across 3 locales in 1 group. (3ms)
+  2 errors · 3 warnings
+
+  By check
+    NO_INTERPOLATION_KEY  1 error
+    NO_KEY                1 error
+    DUPLICATE_VALUE       3 warnings
+
+  FAIL  2 errors must be fixed before this passes.
+```
+
+One section per language, because that is the unit a translator works in. Inside it the findings are grouped by check, worst first, with the number of occurrences after the code and the check's meaning under it. Each line names the key and, beside it, the target language's own wording, which is what the translation is being compared against. A finding with something specific to add puts it on the line below. When a project has more than one comparable set of files, the group follows the key after an `@`.
+
+The summary counts the axis the sections do not use. Sections per language give a tally per check, and grouping by check swaps the two.
+
+## Choosing a format
+
+`--reporter` decides the shape of the report. Every one of them reports the same issues in the same order, and only the text around them changes.
+
+| Reporter   | What it is for                                                        |
+| ---------- | --------------------------------------------------------------------- |
+| `pretty`   | Reading in a terminal. Sections, colour and a summary. The default.   |
+| `list`     | One line per issue, for `grep`, an editor or a CI log.                |
+| `json`     | The whole result object, for another tool to read.                    |
+| `markdown` | Tables, for a pull request comment or a report kept with the project. |
+| `github`   | Workflow commands, so GitHub Actions annotates the files themselves.  |
+
+```bash
+chki18n ./locales --target en --reporter list
+```
+
+```text
+ko  error  NO_KEY                attr.folder  en: "Folder"
+ko  error  NO_INTERPOLATION_KEY  greeting     en: "Hello {name}"  The interpolation key `{name}` of the target language is missing from this value.
+ko  warn   DUPLICATE_VALUE       dup-b        en: "Beta"  The key `dup-a` in the same locale already uses this value.
+
+Found 2 errors, 3 warnings. Compared 5 keys across 3 locales in 1 group. (3ms)
+```
+
+Anything other than `pretty` prints the report and nothing else, with no banner and no progress lines, so it can be piped straight into another program:
+
+```bash
+chki18n ./locales --target en --reporter json > report.json
+```
+
+`--debug` writes to standard error rather than standard output, so it never lands in a piped report.
+
+## Fitting the terminal
+
+The report is laid out to the terminal's own width, or to what `COLUMNS` says when there is no terminal to measure, which is how a CI runner usually reports its log width. A measured width is capped at 120 columns, because past that the counts stop reading as part of the same line as their label.
+
+`--width` overrides all of it, and is not capped:
+
+```bash
+chki18n ./locales --width 72
+```
+
+Descriptions wrap instead of being cut short, so a narrow terminal loses no wording. A file written by `--output` ignores the terminal entirely and uses a fixed width, unless `--width` says otherwise.
+
+## Grouping the issues
+
+`--group-by` decides what a section is. The default is `locale`.
+
+| Axis     | One section per                                   |
+| -------- | ------------------------------------------------- |
+| `locale` | Language. What a translator fixes in one sitting. |
+| `code`   | Check. What a maintainer fixes in one pass.       |
+| `group`  | Comparable set of files, e.g. `common.json`.      |
+| `file`   | Translation file on disk.                         |
+| `none`   | Nothing. One list.                                |
+
+```bash
+chki18n ./locales --target en --group-by code
+```
+
+Sections are ordered worst first: those with an error, then those with only warnings, then the rest. Within a section the same order applies, then the check order, then the key. Two runs over unchanged files print the same lines in the same places, so two saved reports can be diffed.
+
+`list`, `json` and `markdown` follow the grouping too. For `list` that shows only in the ordering, since it has no sections.
+
+## Saving a report
+
+`--output` writes the report to a file as well as to the terminal. The extension picks the format: `.json` and `.md` have one of their own, and anything else is written as plain text.
+
+```bash
+chki18n ./locales --target en --output translation-report.md
+```
+
+Missing directories are created. The file never contains colour codes, and it is laid out to a fixed width instead of the terminal's, so the same run produces the same file anywhere.
+
+`--reporter` wins when both are given, so you can keep one format on screen and another on disk, or force a format the extension does not imply:
+
+```bash
+chki18n ./locales --target en --output report.txt --reporter list
+```
+
+A report that could not be written is an error like any other, so the run fails instead of claiming a file that is not there.
+
+## Exit code
+
+| Code | Meaning                                                             |
+| ---- | ------------------------------------------------------------------- |
+| `0`  | No error level issue. Warnings may still have been printed.         |
+| `1`  | At least one error level issue, or the directory could not be read. |
+
+Warnings never fail the run. If your project treats one of them as a blocker, promote it with `--levels`:
+
+```bash
+chki18n ./locales --target en --levels EMPTY_VALUE=error
+```
+
+## In CI
+
+A GitHub Actions step is one line. [Continuous integration](https://chki18n.cdget.com/guide/ci) has the whole job, and the Bitbucket Pipelines equivalent.
+
+```yaml
+- name: Check translations
+  run: npx chki18n ./locales --target en
+```
+
+```yaml
+- uses: dart-lang/setup-dart@v1
+- name: Check translations
+  run: |
+    dart pub global activate chki18n
+    dart pub global run chki18n ./locales --target en
+```
+
+```yaml
+- uses: actions/setup-python@v6
+- name: Check translations
+  run: |
+    pip install chki18n
+    chki18n ./locales --target en
+```
+
+```bash
+chki18n ./locales --target en --checks NO_KEY,NO_INTERPOLATION_KEY
+```
+
+Or the other way round, every check except the noisy one:
+
+```bash
+chki18n ./locales --target en --ignore-checks DUPLICATE_VALUE
+```
+
+`--reporter github` turns each finding into a workflow command, which GitHub shows as an annotation on the translation file itself rather than as a line in a log:
+
+```bash
+chki18n ./locales --target en --reporter github
+```
+
+```text
+::error file=locales/ko.json,title=chki18n NO_KEY::ko attr.folder The key exists in the target language but is missing here. (en: "Folder")
+::warning file=locales/ko.json,title=chki18n EMPTY_VALUE::ko attr.open The key is defined but its value is an empty string. (en: "Open")
+```
+
+An `error` becomes an error annotation, a `warn` a warning and an `info` a notice. An annotation points at the file rather than a line, because the checks work on parsed translations and the commonest finding is a key that is not in the file at all.
+
+The Markdown report is what a job summary wants:
+
+```bash
+chki18n ./locales --target en --output "$GITHUB_STEP_SUMMARY" --reporter markdown
+```
+
+To keep the result after the job is gone, write it out and upload it:
+
+```yaml
+- name: Check translations
+  run: chki18n ./locales --target en --output translation-report.md
+- uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: translation-report
+    path: translation-report.md
+```
+
+## In a pre-commit hook
+
+```bash
+#!/bin/sh
+chki18n ./locales --target en --no-info || exit 1
+```
+
+`--no-info` drops the heading block and the summary and leaves the issues, which suits a hook that should be quiet when everything passes. `--no-warn` goes further and leaves only what fails the run. Either way the report says how many issues it hid.
+
+## When a scan finds nothing
+
+`--debug` prints the resolved options, the layout that was detected, and every file that was read but did not belong to a locale:
+
+```bash
+chki18n ./locales --debug
+```
+
+If no file matched, the layout is usually the reason. See [File layouts](https://chki18n.cdget.com/guide/file-layouts), and force one with `--format`.
+
+---
+
+# Continuous integration
+
+Source: https://chki18n.cdget.com/guide/ci
+
+A translation file that no longer lines up does not break a build. Nothing crashes and no test fails, so the missing key ships and is only noticed when someone opens the app in that language. Running chki18n on every pull request catches it before then.
+
+There is nothing to configure: give it a path and a target language, and the exit code does the rest. This page has jobs you can paste for GitHub Actions and Bitbucket Pipelines, in all three languages.
+
+## What CI reads
+
+| Exit code | Meaning                                                             |
+| --------- | ------------------------------------------------------------------- |
+| `0`       | No error level issue. Warnings may still have been printed.         |
+| `1`       | At least one error level issue, or the directory could not be read. |
+
+Warnings never fail a build. That is deliberate: a warning is worth fixing but not worth blocking a release, which is what makes the tool safe to add to an existing project without a day of cleanup first. Promote the ones your project treats as blockers with [`--levels`](https://chki18n.cdget.com/guide/options#levels).
+
+Four reporters are useful here:
+
+| Reporter   | Where it is used                                                     |
+| ---------- | -------------------------------------------------------------------- |
+| `github`   | GitHub Actions. Each issue becomes an annotation on the file itself. |
+| `markdown` | A job summary, or a report kept with the build.                      |
+| `list`     | One line per issue, which suits a plain log.                         |
+| `json`     | Another tool reads it: a dashboard, a bot, a gate of your own.       |
+
+## GitHub Actions
+
+### The job
+
+Put this in `.github/workflows/translations.yml`. It runs on every pull request and on every push to the main branch.
+
+```yaml
+name: translations
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    name: Check translations
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Check translations
+        run: npx chki18n ./locales --target en
+```
+
+```yaml
+name: translations
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    name: Check translations
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dart-lang/setup-dart@v1
+      - name: Check translations
+        run: |
+          dart pub global activate chki18n
+          dart pub global run chki18n ./locales --target en
+```
+
+`dart pub global run` is used instead of the bare `chki18n` because the pub cache's `bin` is not reliably on a runner's path. If it is on yours, call the command by name.
+
+```yaml
+name: translations
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    name: Check translations
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Check translations
+        run: |
+          pip install chki18n
+          chki18n ./locales --target en
+```
+
+### Annotating the files
+
+`--reporter github` turns each issue into a workflow command, which GitHub renders as an annotation on the translation file itself rather than a line buried in a log:
+
+```bash
+chki18n ./locales --target en --reporter github
+```
+
+```text
+::error file=locales/ko.json,title=chki18n NO_KEY::ko attr.folder The key exists in the target language but is missing here. (en: "Folder")
+::warning file=locales/ko.json,title=chki18n EMPTY_VALUE::ko attr.open The key is defined but its value is an empty string. (en: "Open")
+```
+
+An `error` becomes an error annotation, a `warn` a warning, an `info` a notice. An annotation points at the file rather than a line, because the checks work on parsed translations and the commonest finding is a key that is not in the file at all.
+
+Annotations need permission to write checks when the workflow runs with a restricted token:
+
+```yaml
+permissions:
+  contents: read
+  checks: write
+```
+
+### A summary on the run
+
+`$GITHUB_STEP_SUMMARY` is a file; anything Markdown written to it appears on the run's own page. That is exactly the shape of the `markdown` reporter:
+
+```bash
+chki18n ./locales --target en --output "$GITHUB_STEP_SUMMARY" --reporter markdown
+```
+
+The report is written before the command exits, so the summary is there whether the run passed or failed.
+
+### Keeping the report
+
+```yaml
+- name: Check translations
+  run: chki18n ./locales --target en --output translation-report.md
+- uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: translation-report
+    path: translation-report.md
+```
+
+Without `if: always()` the upload is skipped exactly when the report is worth reading.
+
+### Only when translations change
+
+Scanning a folder takes milliseconds, so running it every time costs nothing. If you would rather not, a path filter is enough:
+
+```yaml
+on:
+  pull_request:
+    paths:
+      - 'locales/**'
+      - '.github/workflows/translations.yml'
+```
+
+Be careful making a required check conditional: a pull request that skips the job leaves the check pending rather than green, which blocks a merge on some branch protection settings.
+
+## Bitbucket Pipelines
+
+### The pipeline
+
+Bitbucket reads one file, `bitbucket-pipelines.yml`, at the root of the repository. The image at the top decides what the step has available.
+
+```yaml
+image: node:22
+
+pipelines:
+  pull-requests:
+    '**':
+      - step:
+          name: Check translations
+          script:
+            - npx chki18n ./locales --target en
+  branches:
+    main:
+      - step:
+          name: Check translations
+          script:
+            - npx chki18n ./locales --target en
+```
+
+```yaml
+image: dart:stable
+
+pipelines:
+  pull-requests:
+    '**':
+      - step:
+          name: Check translations
+          script:
+            - dart pub global activate chki18n
+            - dart pub global run chki18n ./locales --target en
+  branches:
+    main:
+      - step:
+          name: Check translations
+          script:
+            - dart pub global activate chki18n
+            - dart pub global run chki18n ./locales --target en
+```
+
+```yaml
+image: python:3.12-slim
+
+pipelines:
+  pull-requests:
+    '**':
+      - step:
+          name: Check translations
+          script:
+            - pip install chki18n
+            - chki18n ./locales --target en
+  branches:
+    main:
+      - step:
+          name: Check translations
+          script:
+            - pip install chki18n
+            - chki18n ./locales --target en
+```
+
+To write the two blocks once rather than twice, define the step and point both at it:
+
+```yaml
+definitions:
+  steps:
+    - step: &check-translations
+        name: Check translations
+        script:
+          - npx chki18n ./locales --target en
+
+pipelines:
+  pull-requests:
+    '**':
+      - step: *check-translations
+  branches:
+    main:
+      - step: *check-translations
+```
+
+### Keeping the report
+
+```yaml
+- step:
+    name: Check translations
+    script:
+      - npx chki18n ./locales --target en --output translation-report.md
+    artifacts:
+      - translation-report.md
+```
+
+The file is written before the command exits with `1`, so it exists whether the check passed or failed.
+
+`--reporter list` is what a Bitbucket log reads best. There are no annotations to produce here, so nothing is gained by the `github` reporter:
+
+```bash
+chki18n ./locales --target en --reporter list
+```
+
+### Caching the install
+
+The install is small, so this is optional, but it takes a second off every run:
+
+```yaml
+- step:
+    name: Check translations
+    caches:
+      - node
+    script:
+      - npx chki18n ./locales --target en
+```
+
+`node` is one of Bitbucket's own caches, so nothing has to be defined for it.
+
+```yaml
+definitions:
+  caches:
+    pub: ~/.pub-cache
+
+pipelines:
+  pull-requests:
+    '**':
+      - step:
+          name: Check translations
+          caches:
+            - pub
+          script:
+            - dart pub global activate chki18n
+            - dart pub global run chki18n ./locales --target en
+```
+
+```yaml
+- step:
+    name: Check translations
+    caches:
+      - pip
+    script:
+      - pip install chki18n
+      - chki18n ./locales --target en
+```
+
+`pip` is one of Bitbucket's own caches, so nothing has to be defined for it.
+
+### Only when translations change
+
+A step can be told which paths it cares about:
+
+```yaml
+- step:
+    name: Check translations
+    condition:
+      changesets:
+        includePaths:
+          - 'locales/**'
+    script:
+      - npx chki18n ./locales --target en
+```
+
+## Adopting it on a project that has translations already
+
+Turning this on for the first time on a real project usually reports more than anyone can fix in one sitting. None of it has to block the build.
+
+Start with the checks you already agree with, and add to the list as you clear them:
+
+```bash
+chki18n ./locales --target en --checks NO_KEY,NO_INTERPOLATION_KEY
+```
+
+Or start with every check and drop the ones that are noisy in your project:
+
+```bash
+chki18n ./locales --target en --ignore-checks DUPLICATE_VALUE
+```
+
+Or keep every check and decide what an error is:
+
+```bash
+chki18n ./locales --target en --levels EMPTY_VALUE=error,NOT_TRANSLATED_VALUE=info
+```
+
+Every check, and what each one is for, is on [Checks](https://chki18n.cdget.com/guide/checks). All three flags are on [Options](https://chki18n.cdget.com/guide/options).
+
+## When a command is not enough
+
+If your project needs a finer gate than "did anything fail", such as a threshold, a per-language rule or a comment posted somewhere, read the result instead of the exit code:
+
+```javascript
+import { checkTranslationFiles } from 'chki18n';
+
+const result = await checkTranslationFiles('./locales', { target: 'en' });
+const untranslated = result.summary.byCode.NOT_TRANSLATED_VALUE ?? 0;
+
+if (untranslated > 50) {
+	console.error(`${untranslated} strings are still untranslated.`);
+	process.exit(1);
+}
+```
+
+```dart
+import 'dart:io';
+
+import 'package:chki18n/chki18n.dart';
+
+final result = await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(target: 'en'),
+);
+final untranslated = result.summary.byCode[Chki18nCheckCode.notTranslatedValue] ?? 0;
+
+if (untranslated > 50) {
+  stderr.writeln('$untranslated strings are still untranslated.');
+  exitCode = 1;
+}
+```
+
+```python
+import sys
+
+from chki18n import Options, check_translation_files
+
+result = check_translation_files("./locales", Options(target="en"))
+untranslated = result.summary.by_code.get("NOT_TRANSLATED_VALUE", 0)
+
+if untranslated > 50:
+    print(f"{untranslated} strings are still untranslated.", file=sys.stderr)
+    sys.exit(1)
+```
+
+## See also
+
+- [Command line](https://chki18n.cdget.com/guide/cli) — every flag, and the report the job prints.
+- [Options](https://chki18n.cdget.com/guide/options) — the same options, from either side.
+- [Checks](https://chki18n.cdget.com/guide/checks) — what each check looks for, and its severity.
+
+---
+
+# File layouts
+
+Source: https://chki18n.cdget.com/guide/file-layouts
+
+Translation files are laid out in one of three ways, and chki18n recognises all of them without being told which. Files that hold the same keys in different languages are compared as a group, so a project split across several translation files is checked file by file instead of as one flat set of keys.
+
+## The three layouts
+
+### `single` — one file per locale
+
+The most common shape, and what most i18n setups start with:
+
+```text
+locales/
+  en.json
+  ko.json
+  ja.json
+```
+
+The file's name is the locale. Sub-folders are allowed, and each becomes its own group:
+
+```text
+locales/
+  en.json
+  ko.json
+  admin/
+    en.json
+    ko.json
+```
+
+### `folder` — one folder per locale
+
+What `next-i18next` and most namespace-based setups use:
+
+```text
+locales/
+  en/
+    common.json
+    errors.json
+  ko/
+    common.json
+    errors.json
+```
+
+The folder is the locale and the file is the namespace. `common.json` and `errors.json` are two groups: a key missing from one is never reported against the other.
+
+### `nested` — one file holding every locale
+
+```text
+locales/
+  translation.json
+```
+
+```json
+{
+	"en": { "desc": { "hello": "Hello" } },
+	"ko": { "desc": { "hello": "안녕하세요" } }
+}
+```
+
+The top-level keys are the locales. Several such files are allowed, each becoming its own group.
+
+## How the layout is detected
+
+Path shape alone is ambiguous, since `a/ko.json` and `ko/common.json` both have two segments. The decision is made by **which segment is a real locale code**:
+
+1. A file whose name is a locale (`ko.json`) means `single`.
+2. A folder whose name is a locale (`ko/`) means `folder`.
+3. Neither, but a file whose top-level keys are locales, means `nested`.
+
+A locale code is recognised by its base language subtag, so `en`, `en-US`, `pt_BR` and `zh-Hans` are all accepted.
+
+Force the answer when you need to:
+
+```bash
+chki18n ./locales --format folder
+```
+
+```javascript
+await checkTranslationFiles('./locales', { format: 'folder' });
+```
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(format: Chki18nFileFormat.folder),
+);
+```
+
+```python
+check_translation_files("./locales", Options(format="folder"))
+```
+
+## Groups
+
+A **group** is one set of files that hold the same keys in different languages. Every check runs inside a group and never across two.
+
+| Layout   | Path                   | Group               | Locale             |
+| -------- | ---------------------- | ------------------- | ------------------ |
+| `single` | `en.json`              | `` (the root)       | `en`               |
+| `single` | `admin/en.json`        | `admin`             | `en`               |
+| `folder` | `en/common.json`       | `common.json`       | `en`               |
+| `folder` | `admin/en/common.json` | `admin/common.json` | `en`               |
+| `nested` | `translation.json`     | `translation.json`  | each top-level key |
+
+This is what stops `errors.json` from being reported as missing every key that only `common.json` has. A project with one group, which is the usual `single` layout at a folder root, has the group name `''`, and the CLI leaves it off the line instead of printing an empty `@`.
+
+Groups appear on every issue as `issue.group`, and in the result as `result.groups`.
+
+## What gets scanned
+
+Only `.json` files are read. Hidden entries, meaning anything whose name starts with `.`, are skipped, and so are these directories:
+
+```text
+node_modules  dist  build  out  coverage
+.git  .next  .nuxt  .svelte-kit  .turbo  .cache
+```
+
+Replace that list with your own when the defaults do not fit:
+
+```bash
+chki18n ./locales --exclude tmp,vendor
+```
+
+```javascript
+await checkTranslationFiles('./locales', { exclude: ['tmp', 'vendor'] });
+```
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(exclude: ['tmp', 'vendor']),
+);
+```
+
+```python
+check_translation_files("./locales", Options(exclude=["tmp", "vendor"]))
+```
+
+A file that is read but does not belong to a locale is skipped without a message. `--debug` names every one of them, which is the fastest way to find out why a scan came back empty.
+
+## Nested keys
+
+Keys are flattened before they are compared, so a nested object and a dotted key are the same thing:
+
+```json
+{ "desc": { "hello": "Hello" } }
+```
+
+is compared as `desc.hello`. That is the form every issue reports, and the form [`session.get`](https://chki18n.cdget.com/api/load-translations) and [`checkEntry`](https://chki18n.cdget.com/api/create-analyzer) expect.
+
+---
+
+# Checks
+
+Source: https://chki18n.cdget.com/guide/checks
+
+Every problem chki18n reports has a check code, a severity and a sentence describing it. Errors fail the run; warnings are reported and do not. This page lists all of them, what each one looks for, and when it is worth switching one off.
+
+## At a glance
+
+| Level | Code | What it catches |
+| --- | --- | --- |
+| Error | `INVALID_FILE` | A file that could not be read, parsed or matched to a locale |
+| Error | `NO_KEY` | A key the target language has and this locale does not |
+| Error | `NO_INTERPOLATION_KEY` | A placeholder the target language has and this value does not |
+| Error | `EXTRA_INTERPOLATION_KEY` | A placeholder this value has and the target language does not |
+| Error | `DUPLICATE_KEY` | A key defined twice, so one of its two values is lost |
+| Warning | `DUMMY_KEY` | A key this locale has and the target language does not |
+| Warning | `EMPTY_VALUE` | A key defined with an empty string |
+| Warning | `NOT_TRANSLATED_VALUE` | A value identical to the target language's |
+| Warning | `DUPLICATE_VALUE` | Two keys in one locale with the same value |
+| Warning | `SURROUNDING_WHITESPACE` | A value that begins or ends with whitespace |
+| Warning | `MISSING_NUMBER` | Digits in the target language's value that the translation dropped |
+| Warning | `INVALID_VALUE_TYPE` | A value that is not a string |
+| Error | `NO_LOCALE` | A group with no file for a language the other groups have |
+| Error | `INTERPOLATION_COUNT` | A placeholder used a different number of times |
+| Warning | `TAG_MISMATCH` | Markup the target language has and this value does not |
+| Warning | `UNTRANSLATED_SCRIPT` | A value with no character of its language's script |
+| Warning | `INCONSISTENT_VALUE` | Two keys with one original translated two ways |
+| Warning | `INVISIBLE_CHARACTER` | A zero width, bidirectional or non-breaking character |
+| Warning | `NUMBER_MISMATCH` | A number the translation changed rather than dropped |
+| Warning | `KEY_NAMING` | A key not written in the case `keyCase` asks for |
+| Warning | `KEY_DEPTH` | A key nested deeper than `maxKeyDepth` allows |
+| Info | `SUSPICIOUS_LENGTH` | A value far longer or shorter than the target language's |
+| Info | `UNUSED_KEY` | A key nothing in the scanned source appears to reference |
+| Warning | `UNDEFINED_KEY` | A key the source asks for that no language file defines |
+| Warning | `NO_PLURAL_FORM` | A plural form a language needs and the file does not have |
+
+`KEY_NAMING`, `KEY_DEPTH` and `SUSPICIOUS_LENGTH` report nothing until `keyCase`, `maxKeyDepth` and `lengthRatio` say what the project wants, since none of the three has a right answer on its own. `UNUSED_KEY` and `UNDEFINED_KEY` need a `source` directory to search.
+
+`INVALID_OPTIONS` also appears in a result, at whatever level fits: `info` when an option simply fell back to its default, `error` when the target language is nowhere in the files and there is nothing to compare against.
+
+## The target language
+
+Every other language is compared against the target language, so most checks do not apply to the target itself: it cannot be missing a key it defines, and it cannot use a placeholder differently from the way it uses it. The checks that read one value on its own do apply to it. A source language is typed by hand like any other and picks up the same mistakes, and one that is never checked keeps them.
+
+| Code                     | What it catches in the target language                        |
+| ------------------------ | ------------------------------------------------------------- |
+| `EMPTY_VALUE`            | A key defined with an empty string                            |
+| `SURROUNDING_WHITESPACE` | A value that begins or ends with whitespace                   |
+| `INVISIBLE_CHARACTER`    | A zero width, bidirectional or non-breaking character         |
+| `INVALID_VALUE_TYPE`     | A value that is not a string                                  |
+| `UNTRANSLATED_SCRIPT`    | A value with no character of the target language's own script |
+
+The checks that look at a key rather than a value (`DUPLICATE_KEY`, `KEY_NAMING`, `KEY_DEPTH`, `UNUSED_KEY` and `UNDEFINED_KEY`) are not tied to one language at all, and `DUPLICATE_VALUE` and `NO_PLURAL_FORM` apply to every language including the target.
+
+None of the five reports at `error`, so a source language nobody had checked before does not start failing a build. Switch one off with `ignoreChecks` the way you would for any other language. There is no separate switch for the target.
+
+## Structural checks
+
+### `NO_LOCALE`
+
+A group of files holds nothing for a language the other groups do have. This is what a missing file looks like: `ja/common.json` exists, `ja/errors.json` was never created, and without this check every key it should have held drops out of the comparison and the run passes.
+
+```text
+locales/
+  en/common.json  en/errors.json
+  ja/common.json
+```
+
+```text
+[NO_LOCALE] ja @errors.json
+```
+
+It needs more than one group to mean anything. With a single set of files, every language that exists at all is in it.
+
+### `NO_KEY`
+
+The target language defines a key and this locale does not. This is the most common finding, and the one most worth failing a build on. Depending on your i18n runtime, a missing key shows up as an untranslated string or as a crash.
+
+```json
+// en.json
+{ "attr": { "folder": "Folder" } }
+// ko.json
+{ "attr": {} }
+```
+
+```text
+[NO_KEY] ko -> 'attr.folder' (en: "Folder")
+```
+
+### `DUMMY_KEY`
+
+The opposite case: this locale has a key the target language does not. Usually it is a key that was renamed or deleted in the source language and left behind in the translations. That is leftover weight rather than a defect, so it is a warning.
+
+```json
+// en.json
+{ "attr": { "folder": "Folder" } }
+// ko.json
+{ "attr": { "folder": "폴더", "legacy": "예전 문구" } }
+```
+
+```text
+[DUMMY_KEY] ko -> 'attr.legacy' (ko: "예전 문구")
+```
+
+### `DUPLICATE_KEY`
+
+The same key is defined twice, so one of the two values is thrown away before anything gets to read it. Two ways to write it, and neither is visible afterwards:
+
+```json
+// The literal kind — valid JSON, and `JSON.parse` answers "Hi" without a word
+{ "greeting": "Hello", "greeting": "Hi" }
+```
+
+```json
+// The collision kind — a nested key and a dotted one flatten to the same thing
+{ "attr": { "folder": "Folder" }, "attr.folder": "Directory" }
+```
+
+The first is what a botched merge conflict leaves behind, and the second happens when part of a file is written in dotted form and part of it nested. Both are found. The literal kind is caught by reading the file's text before it is parsed, since parsing throws the evidence away, and that is also how the message can name the line it is on.
+
+This reports as an error, because a value is being lost. `levels` will let you lower it, but this is the one check worth leaving alone.
+
+### `INVALID_FILE`
+
+A file that could not be read, was empty, did not parse as JSON, or matched no file at all when a layout was forced with `format`. It is reported before any comparison and is always an error, because a file that could not be read has not been checked.
+
+## Value checks
+
+### `EMPTY_VALUE`
+
+The key is defined but its value is `""`. Usually a placeholder someone left for later, and those ship by accident often enough to be worth reporting. It is a warning by default; promote it if your project treats an empty string as a missing translation:
+
+```bash
+chki18n ./locales --levels EMPTY_VALUE=error
+```
+
+### `NOT_TRANSLATED_VALUE`
+
+The value is byte-for-byte identical to the target language's. Either the translation was never done, or the word is genuinely the same in both languages, as with `OK`, `Wi-Fi` or a product name. Both are common, so this is a warning rather than an error.
+
+```json
+// en.json
+{ "desc": { "same": "Same" } }
+// ko.json
+{ "desc": { "same": "Same" } }
+```
+
+If your project has many legitimately identical strings, switching it off is reasonable:
+
+```bash
+chki18n ./locales --ignore-checks NOT_TRANSLATED_VALUE
+```
+
+### `SURROUNDING_WHITESPACE`
+
+The value begins or ends with whitespace. Almost always accidental, usually a trailing space that survived a copy-paste, and it shows up as a layout bug that is hard to see in a diff.
+
+```json
+{ "attr": { "trim": " Folder " } }
+```
+
+### `MISSING_NUMBER`
+
+The target language's value contains digits and the translation does not. It catches a number dropped while translating, as in `You have 3 items` becoming `여러 개 있습니다`. This is a heuristic and reports as a warning, since a translation that deliberately spells the number out will trip it.
+
+### `INVALID_VALUE_TYPE`
+
+The value is not a string: a number, a boolean, `null`, or an object that survived flattening. Most i18n runtimes want strings, and a `null` is a bug in whatever wrote the file. It is a warning, because arrays and numbers do have legitimate uses in some setups.
+
+### `DUPLICATE_VALUE`
+
+Two keys in the same locale carry the same value. Sometimes duplication worth collapsing, sometimes two genuinely different strings that happen to read the same. The issue names the first key that used the value, in `relatedKey`.
+
+```text
+[DUPLICATE_VALUE] ko -> 'dup-b' (en: "Beta") The key `dup-a` in the same locale already uses this value.
+```
+
+Like `DUPLICATE_KEY` and `UNUSED_KEY`, this one has to see more than a single key, so it is **not** reported by [`checkEntry`](https://chki18n.cdget.com/api/create-analyzer). The codes with that property are listed in `CROSS_KEY_CHECK_CODES`.
+
+### `NUMBER_MISMATCH`
+
+`MISSING_NUMBER` checks whether the translation kept any digits at all; this one checks whether it kept the same ones. A translation that says five where the original says three is a worse bug than one that drops the number, and it passes every other check.
+
+```json
+// en.json
+{ "count": "You have 3 items" }
+// ko.json
+{ "count": "5개 있습니다" }
+```
+
+Numbers the translation reordered are fine, since `3 of 5` and `5 중 3` hold the same numbers. A translation that spells its numbers out is left to `MISSING_NUMBER`.
+
+### `TAG_MISMATCH`
+
+The markup a value carries, compared against the target language's. A dropped `<b>` renders as plain text, a dropped `</b>` bolds the rest of the page, and in a `<Trans>` component a tag the translation does not have leaves a child that never renders.
+
+```json
+// en.json
+{ "hint": "Click <b>here</b> to continue" }
+// ko.json
+{ "hint": "계속하려면 여기를 누르세요" }
+```
+
+```text
+[TAG_MISMATCH] ko -> 'hint' The tags `<b>` and `</b>` of the target language are missing from this value.
+```
+
+Tags are counted rather than merely looked for, so a value that opens twice and closes once is reported too. Tag names are read case-insensitively, and text that compares two numbers, as in `a < b`, is not mistaken for markup.
+
+This is a warning rather than an error because `<Ctrl>` in a keyboard hint looks like a tag to any pattern. Promote it with `--levels TAG_MISMATCH=error` once you know your files.
+
+### `UNTRANSLATED_SCRIPT`
+
+A value that holds no character of the script its language is written in. `NOT_TRANSLATED_VALUE` only catches a translation that is character-for-character the original, so adding an exclamation mark is enough to pass it.
+
+```json
+// en.json
+{ "greet": "Hello" }
+// ko.json
+{ "greet": "Hello!" }
+```
+
+Only languages whose script is a useful signal are checked: Korean, Japanese, Chinese, Russian, Arabic, Greek, Hebrew, Thai and the rest of that list. A language written in the Latin alphabet is not, since there would be nothing to tell it apart from the English nobody translated. A locale that names its own script, such as `sr-Latn`, is left alone.
+
+A value that is only a placeholder, a tag or a number is skipped. A brand name that stays in English is not, so that is the false positive to expect here.
+
+### `INCONSISTENT_VALUE`
+
+`DUPLICATE_VALUE` looks for one locale repeating itself; this one looks for the opposite. Two keys share one string in the target language, and this locale translates them differently.
+
+```json
+// en.json
+{ "save-a": "Save", "save-b": "Save" }
+// ko.json
+{ "save-a": "저장", "save-b": "보관" }
+```
+
+```text
+[INCONSISTENT_VALUE] ko -> 'save-b' The key `save-a` has the same en value but is translated as "저장".
+```
+
+This is the terminology drift that turns one button into two different words on two screens. It is a warning, because the same English word does sometimes need two translations.
+
+### `INVISIBLE_CHARACTER`
+
+A zero width space, a byte order mark, a bidirectional control, or a non-breaking space where an ordinary space was meant. These survive a copy out of a design tool or a spreadsheet and break a lookup that compares strings, and a code review will not spot them.
+
+```text
+[INVISIBLE_CHARACTER] ko -> 'clean' The value holds a zero width space (U+200B), which nothing will draw.
+```
+
+### `SUSPICIOUS_LENGTH`
+
+A value far longer or shorter than the one it translates, which is how a truncated string or a pasted paragraph looks. `lengthRatio` says how far is too far: `4` reports anything under a quarter or over four times the original.
+
+```bash
+chki18n ./locales --length-ratio 3
+```
+
+Lengths are counted in columns rather than characters, so Korean and Japanese are not short by default. Originals under eight columns are skipped, because a ratio means nothing for a value like `OK`. It is reported at `info`, since languages genuinely differ in length and this is a prompt to look rather than a defect.
+
+## Usage checks
+
+### `UNUSED_KEY`
+
+Nothing in your source files appears to reference this key. Off unless you point chki18n at the sources to search:
+
+```bash
+chki18n ./locales --target en --source ./src
+```
+
+```javascript
+await checkTranslationFiles('./locales', { target: 'en', source: './src' });
+```
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(target: 'en', source: './src'),
+);
+```
+
+```python
+check_translation_files("./locales", Options(target="en", source="./src"))
+```
+
+That also decides the severity. A leaf like `name` or `title` will turn up in almost any codebase whether or not the key is used, so this is a hint rather than a settled finding. It is reported at `info`, it never fails a run, and it marks a place to start looking rather than something to delete.
+
+The project's own translation files are never searched, since a key appears verbatim in the file that defines it and reading them would mark every key used. Only text files are read (source, styles, templates, docs), anything over 5MB is skipped, and the `exclude` and `excludeFiles` lists apply here too.
+
+If you already know the answer, as an editor that has scanned the project itself does, hand it over instead of having it worked out again:
+
+```javascript
+analyzeTranslations({ locales, unusedKeys: ['desc.orphan'] }, { target: 'en' });
+```
+
+```dart
+analyzeTranslations(
+  Chki18nInput(locales: locales, unusedKeys: const ['desc.orphan']),
+  options: const Chki18nOptions(target: 'en'),
+);
+```
+
+```python
+analyze_translations(
+    Input(locales=locales, unused_keys=["desc.orphan"]), Options(target="en")
+)
+```
+
+### `UNDEFINED_KEY`
+
+The opposite of `UNUSED_KEY`, and the more serious of the two: the source calls for a key and no language file defines it. Depending on the runtime the user sees the raw key, an empty string, or nothing at all.
+
+```javascript
+t('attr.missing'); // no language file has it
+```
+
+```text
+[UNDEFINED_KEY] 'attr.missing' The scanned source asks for `attr.missing` and no language file defines it.
+```
+
+It needs the same `source` directory `UNUSED_KEY` does, and reads the calls it finds there. `translateFunctions` says which names a call goes by. The default of `t`, `$t` and `translate` covers i18next, react-i18next and vue-i18n, including `i18n.t` and a `t` bound by `useTranslation`. The `i18nKey` attribute a `<Trans>` component takes is read as well.
+
+Three shapes are deliberately let through, on the same reasoning that makes `UNUSED_KEY` search for the leaf. Reporting working code as broken is worse than missing something.
+
+- A key built at run time, as in ``t(`error.${code}`)``, because the key is not known until it runs.
+- A key reached through a prefix, as in `t('folder')` where the file defines `attr.folder`, because a bound `keyPrefix` or namespace resolves it.
+- A plural key asked for by its base, as in `t('item')` where the file defines `item_one` and `item_other`, because the runtime picks the form.
+
+A namespace written in front of the key, as in `t('common:attr.folder')`, is read and set aside; the key after it is what is looked up.
+
+## Plural checks
+
+### `NO_PLURAL_FORM`
+
+A key written with plural suffixes, missing a form the language needs. Which forms a language needs is a fact about that language and not about the original: English writes two, Russian four, Korean one.
+
+```json
+// ru.json — Russian needs one, few, many and other
+{ "item_one": "{count} элемент", "item_other": "{count} элементов" }
+```
+
+```text
+[NO_PLURAL_FORM] ru -> 'item' `ru` needs `item_few` and `item_many` and the file does not define them.
+```
+
+Only the named categories are read: `_zero`, `_one`, `_two`, `_few`, `_many` and `_other`. The older i18next pairing of a bare key with `_plural` is treated as ordinary keys, because which of the two forms is which depends on the language.
+
+A language the table does not cover is never judged. The table is deliberately conservative, because recent CLDR releases added a `many` category to several languages for compact decimals and a project on an older runtime does not write it.
+
+### Plural keys in `NO_KEY` and `DUMMY_KEY`
+
+A plural form belongs to one language's grammar, so the two key checks do not ask every language for every form. Korean needs only `item_other`, so `item_one` being absent from it is correct rather than missing. Russian needs an `item_few` that English never writes, and that is not a stray key.
+
+This holds only for keys ending in a named plural category, and only for languages the table covers. Every other key is compared normally.
+
+## Key shape checks
+
+Both are off until you say what the project wants, because a key's shape has no right answer of its own, only the one your project chose. They are judged once per key rather than once per locale, since a key is named the same everywhere.
+
+### `KEY_NAMING`
+
+`keyCase` names the case every segment of a key has to be written in: `kebab`, `camel` or `snake`.
+
+```bash
+chki18n ./locales --key-case kebab
+```
+
+```text
+[KEY_NAMING] 'attr.badName' The part `badName` is not written in kebab case.
+```
+
+The plural and context suffixes an i18n library appends, such as `item-count_one` and `greeting_male`, are accepted whatever case you chose, because that underscore belongs to the library rather than to your naming.
+
+A key is reported once however many of its parts are wrong. Naming the second one adds nothing to what has to be done about it.
+
+### `KEY_DEPTH`
+
+`maxKeyDepth` is how many levels a key may be nested. `2` allows `attr.folder` and reports `attr.folder.name`.
+
+```bash
+chki18n ./locales --max-key-depth 2
+```
+
+```text
+[KEY_DEPTH] 'a.b.c.d' The key is 4 levels deep, and `maxKeyDepth` allows 2.
+```
+
+Deep nesting makes a key hard to search for and a translation file hard to merge. One level of grouping is usually enough.
+
+## Interpolation checks
+
+An interpolation key is a placeholder inside a string, `{name}` by default. Both sides of the comparison are extracted and the two sets are compared, so a placeholder that was translated along with the sentence gets caught.
+
+### `NO_INTERPOLATION_KEY`
+
+The target language's value has a placeholder that this value does not. At run time this is a variable that never gets substituted, so it is an error.
+
+```json
+// en.json
+{ "desc": { "hello": "Hello {name}" } }
+// ko.json
+{ "desc": { "hello": "안녕하세요" } }
+```
+
+```text
+[NO_INTERPOLATION_KEY] ko -> 'desc.hello' (en: "Hello {name}")
+  The interpolation key `{name}` of the target language is missing from this value.
+```
+
+### `EXTRA_INTERPOLATION_KEY`
+
+The opposite case: this value has a placeholder the target language does not define. Usually a typo such as `{nmae}`, or a placeholder invented during translation. At run time it renders as literal braces.
+
+### `INTERPOLATION_COUNT`
+
+The two checks above look at which placeholders a value uses; this one looks at how many times it uses each. A string naming the same placeholder twice and a translation naming it once agree on the set and still disagree on the sentence.
+
+```json
+// en.json
+{ "invite": "{name} invited {name}" }
+// ko.json
+{ "invite": "{name}님이 초대했습니다" }
+```
+
+```text
+[INTERPOLATION_COUNT] ko -> 'invite' The interpolation key `{name}` is used 1 time here and 2 times in the target language.
+```
+
+A placeholder that is missing outright, or that the target language does not have at all, is left to the two checks above.
+
+### Custom delimiters
+
+The default delimiters are `{` and `}`. If your project uses `{{ }}`, say so. Otherwise every placeholder goes unrecognised and both interpolation checks pass without finding anything:
+
+```bash
+chki18n ./locales --interpolation-prefix "{{" --interpolation-suffix "}}"
+```
+
+```javascript
+await checkTranslationFiles('./locales', {
+	interpolationPrefix: '{{',
+	interpolationSuffix: '}}'
+});
+```
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(interpolationPrefix: '{{', interpolationSuffix: '}}'),
+);
+```
+
+```python
+check_translation_files(
+    "./locales", Options(interpolation_prefix="{{", interpolation_suffix="}}")
+)
+```
+
+## Choosing which checks run
+
+Run only some of them:
+
+```bash
+chki18n ./locales --checks NO_KEY,NO_INTERPOLATION_KEY
+```
+
+Or everything except some:
+
+```bash
+chki18n ./locales --ignore-checks DUPLICATE_VALUE,MISSING_NUMBER
+```
+
+The two cannot be combined: `checks` wins and `ignoreChecks` is reported as ignored. `INVALID_FILE` and `INVALID_OPTIONS` are in neither list, since they report how the run itself went and cannot be switched off.
+
+## Changing a check's severity
+
+Every comparison check can be re-graded, so a project decides for itself what blocks a build:
+
+```bash
+chki18n ./locales --levels EMPTY_VALUE=error,DUPLICATE_VALUE=info
+```
+
+```javascript
+await checkTranslationFiles('./locales', {
+	levels: { EMPTY_VALUE: 'error', DUPLICATE_VALUE: 'info' }
+});
+```
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(
+    levels: {
+      Chki18nCheckCode.emptyValue: Chki18nLevel.error,
+      Chki18nCheckCode.duplicateValue: Chki18nLevel.info,
+    },
+  ),
+);
+```
+
+```python
+check_translation_files(
+    "./locales",
+    Options(levels={"EMPTY_VALUE": "error", "DUPLICATE_VALUE": "info"}),
+)
+```
+
+## Reading the codes from code
+
+The codes and their metadata are exported, so a user interface does not have to hard-code a string:
+
+```javascript
+import { ANALYZE_CHECK_CODES, CHECK_CODE, CHECK_META } from 'chki18n';
+
+CHECK_META[CHECK_CODE.NO_KEY];
+// {
+//   level: 'error',
+//   summary: 'Some translation files did not include the following keys',
+//   description: 'The key exists in the target language but is missing here.'
+// }
+
+ANALYZE_CHECK_CODES; // every code that compares translations, in report order
+```
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+checkMeta[Chki18nCheckCode.noKey];
+// Chki18nCheckMeta(
+//   level: Chki18nLevel.error,
+//   summary: 'Some translation files did not include the following keys',
+//   description: 'The key exists in the target language but is missing here.',
+// )
+
+analyzeCheckCodes; // every code that compares translations, in report order
+```
+
+```python
+from chki18n import ANALYZE_CHECK_CODES, CHECK_META
+
+CHECK_META["NO_KEY"]
+# CheckMeta(
+#     level="error",
+#     summary="Some translation files did not include the following keys",
+#     description="The key exists in the target language but is missing here.",
+# )
+
+ANALYZE_CHECK_CODES  # every code that compares translations, in report order
+```
+
+`summary` is the heading for a list of occurrences; `description` describes one. See [The result object](https://chki18n.cdget.com/reference/result) for how they fit together.
+
+---
+
+# Options
+
+Source: https://chki18n.cdget.com/guide/options
+
+The command line and the API take the same options. Every CLI flag is an API option with the same name, resolved from one definition, so the two cannot drift apart and what passes in CI passes in your build script.
+
+Option names are written here in their JavaScript spelling. Dart uses the same one, and Python is snake_case throughout, so `ignoreChecks` is `ignore_checks` and `maxKeyDepth` is `max_key_depth`. [Getting started](https://chki18n.cdget.com/guide/getting-started#how-the-names-map) states that mapping once.
+
+## The full set
+
+| Option | CLI flag | Type | Default |
+| --- | --- | --- | --- |
+| `path` | `--path` | `string` | — |
+| `target` | `--target` | `string` | `'en'` |
+| `format` | `--format` | `'auto' \| 'single' \| 'folder' \| 'nested'` | `'auto'` |
+| `checks` | `--checks` | `string[]` or a comma separated string | all |
+| `ignoreChecks` | `--ignore-checks` | `string[]` or a comma separated string | none |
+| `levels` | `--levels` | `Record<code, level>` or `CODE=level` pairs | none |
+| `interpolationPrefix` | `--interpolation-prefix` | `string` | `'{'` |
+| `interpolationSuffix` | `--interpolation-suffix` | `string` | `'}'` |
+| `exclude` | `--exclude` | `string[]` or a comma separated string | see below |
+| `excludeFiles` | `--exclude-files` | `string[]` or a comma separated string | see below |
+| `source` | `--source` | `string` | — |
+| `translateFunctions` | `--translate-functions` | `string[]` or a comma separated string | see below |
+| `keyCase` | `--key-case` | `'kebab' \| 'camel' \| 'snake'` | — |
+| `maxKeyDepth` | `--max-key-depth` | `number` | — |
+| `lengthRatio` | `--length-ratio` | `number` | — |
+| `reporter` | `--reporter` | `'pretty' \| 'list' \| 'json' \| 'markdown' \| 'github'` | `'pretty'` |
+| `groupBy` | `--group-by` | `'locale' \| 'code' \| 'group' \| 'file' \| 'none'` | `'locale'` |
+| `output` | `--output` | `string` | — |
+| `color` | `--no-color` | `boolean` | `true` |
+| `width` | `--width` | `number` | the terminal's |
+| `info` | `--no-info` | `boolean` | `true` |
+| `warn` | `--no-warn` | `boolean` | `true` |
+| `debug` | `--debug` | `boolean` | `false` |
+| `flattened` | — | `boolean` | `false` |
+| `verbose` | — | `boolean` | `false` |
+
+The last two are API-only: the CLI always prints, so `verbose` is set for you, and `flattened` describes data you pass in rather than a directory.
+
+Dart takes all of them as one `Chki18nOptions` object built with named parameters, and the closed value sets are enums: `Chki18nFileFormat.folder` for `'folder'`, `Chki18nCheckCode.noKey` for `'NO_KEY'`. The text forms a flag writes (`'NO_KEY,EMPTY_VALUE'`, `'EMPTY_VALUE=error'`) live on `Chki18nTextOptions`, which `Chki18nOptions.text` carries, so no field has to accept two types.
+
+Python takes all of them as one keyword-only `Options` object, and the closed value sets stay the strings they are everywhere else: `format="folder"`, `checks=["NO_KEY"]`, `levels={"EMPTY_VALUE": "error"}`. A list option also accepts the comma separated text a flag gives it.
+
+## Path and target
+
+### `path`
+
+The directory holding the translation files. On the CLI it is also the bare positional argument, so these are the same:
+
+```bash
+chki18n ./locales
+chki18n --path ./locales
+```
+
+A relative path resolves against the current working directory. From code it is the first argument, and the `path` option is accepted too. The option wins when both are given, which is how the CLI passes its positional argument through.
+
+### `target`
+
+The language every other language is compared against, which is the one you write first. It defaults to `en`, and a run that falls back to the default says so at `info` level instead of failing.
+
+```bash
+chki18n ./locales --target ko
+```
+
+If the target language is not among the scanned files there is nothing to compare against, and that is an error rather than a silent pass.
+
+## Layout
+
+### `format`
+
+Which on-disk layout to read. `auto` decides from the paths and is right nearly always. Force it when the detection guesses wrong, or when you want a mismatch to fail outright.
+
+```bash
+chki18n ./locales --format folder
+```
+
+See [File layouts](https://chki18n.cdget.com/guide/file-layouts) for what each value means.
+
+### `exclude`
+
+Directories to skip while scanning. **Replaces** the default list rather than adding to it:
+
+```text
+node_modules  dist  build  out  coverage
+.git  .next  .nuxt  .svelte-kit  .turbo  .cache
+```
+
+```bash
+chki18n . --exclude node_modules,dist,fixtures
+```
+
+The default list is exported as `DEFAULT_EXCLUDE_DIRS` if you would rather extend it than replace it:
+
+```javascript
+import { DEFAULT_EXCLUDE_DIRS } from 'chki18n';
+
+await checkTranslationFiles('.', { exclude: [...DEFAULT_EXCLUDE_DIRS, 'fixtures'] });
+```
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+await checkTranslationFiles(
+  path: '.',
+  options: const Chki18nOptions(exclude: [...defaultExcludeDirs, 'fixtures']),
+);
+```
+
+```python
+from chki18n import DEFAULT_EXCLUDE_DIRS, Options, check_translation_files
+
+check_translation_files(".", Options(exclude=[*DEFAULT_EXCLUDE_DIRS, "fixtures"]))
+```
+
+```bash
+chki18n . --exclude node_modules,src/legacy
+```
+
+Hidden entries, meaning anything starting with `.`, are always skipped whatever this is set to.
+
+### `excludeFiles`
+
+File names never read as translations, as patterns where `*` stands for any run of characters and case is ignored. **Replaces** the default list rather than adding to it:
+
+```text
+package.json  tsconfig.json  tsconfig.*.json  eslintrc.json
+*-lock.json   *-config.json  *.config.json
+```
+
+These are the configuration and lock files an application root is full of. Skipping them is what makes it practical to point chki18n at that root rather than at a folder of locales: reading and parsing every one of them costs more than the comparison itself.
+
+```bash
+chki18n . --exclude-files '*-lock.json,*.config.json,messages.json'
+```
+
+The default list is exported as <Lang js="DEFAULT_EXCLUDE_FILES" dart="defaultExcludeFiles" py="DEFAULT_EXCLUDE_FILES" code /> if you would rather extend it than replace it:
+
+```javascript
+import { DEFAULT_EXCLUDE_FILES } from 'chki18n';
+
+await checkTranslationFiles('.', { excludeFiles: [...DEFAULT_EXCLUDE_FILES, 'messages.json'] });
+```
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+await checkTranslationFiles(
+  path: '.',
+  options: const Chki18nOptions(excludeFiles: [...defaultExcludeFiles, 'messages.json']),
+);
+```
+
+```python
+from chki18n import DEFAULT_EXCLUDE_FILES, Options, check_translation_files
+
+check_translation_files(".", Options(exclude_files=[*DEFAULT_EXCLUDE_FILES, "messages.json"]))
+```
+
+### `source`
+
+A directory of source files to search for key usages, which is what the [`UNUSED_KEY`](https://chki18n.cdget.com/guide/checks#unused-key) check needs. Without it that check reports nothing.
+
+```bash
+chki18n ./locales --target en --source ./src
+```
+
+Only text files are read, anything over 5MB is skipped, and both `exclude` and `excludeFiles` apply here as well. The project's own translation files are never searched.
+
+[`UNDEFINED_KEY`](https://chki18n.cdget.com/guide/checks#undefined-key) uses the same directory for the opposite question: which keys the source calls for that no language file defines.
+
+### `translateFunctions`
+
+The names a translation call goes by, which is how `UNDEFINED_KEY` finds the keys the source asks for. It **replaces** the default list rather than adding to it:
+
+```text
+t  $t  translate
+```
+
+Those three cover i18next, react-i18next and vue-i18n between them, including `i18n.t` and a `t` bound by `useTranslation`, since a call is matched wherever its name ends. The `i18nKey` attribute a `<Trans>` component takes is always read.
+
+```bash
+chki18n ./locales --source ./src --translate-functions t,trans,__
+```
+
+The default list is exported as `TRANSLATION_FUNCTIONS` if you would rather extend it than replace it.
+
+## Key and value limits
+
+The three options below exist only to give a check something to compare against. Each one is off until it is set, because none of them has a right answer of its own, only the one your project chose.
+
+### `keyCase`
+
+The case every segment of a key has to be written in, which is what [`KEY_NAMING`](https://chki18n.cdget.com/guide/checks#key-naming) compares against: `kebab`, `camel` or `snake`.
+
+```bash
+chki18n ./locales --key-case kebab
+```
+
+The plural and context suffixes an i18n library appends, such as `item-count_one` and `greeting_male`, are accepted whatever case you chose.
+
+### `maxKeyDepth`
+
+How many levels a key may be nested, for [`KEY_DEPTH`](https://chki18n.cdget.com/guide/checks#key-depth). `2` allows `attr.folder` and reports `attr.folder.name`.
+
+```bash
+chki18n ./locales --max-key-depth 2
+```
+
+### `lengthRatio`
+
+How many times longer or shorter than its original a value may be before [`SUSPICIOUS_LENGTH`](https://chki18n.cdget.com/guide/checks#suspicious-length) reports it. `4` allows a quarter to four times.
+
+```bash
+chki18n ./locales --length-ratio 4
+```
+
+Lengths are counted in columns rather than characters, so a Korean or Japanese value is not short by default, and originals under eight columns are skipped.
+
+## Choosing checks
+
+### `checks`
+
+Run only these. Accepts an array or a comma separated string, case-insensitively:
+
+```bash
+chki18n ./locales --checks NO_KEY,NO_INTERPOLATION_KEY
+```
+
+```javascript
+await checkTranslationFiles('./locales', { checks: ['NO_KEY', 'NO_INTERPOLATION_KEY'] });
+```
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(
+    checks: [Chki18nCheckCode.noKey, Chki18nCheckCode.noInterpolationKey],
+  ),
+);
+```
+
+```python
+check_translation_files("./locales", Options(checks=["NO_KEY", "NO_INTERPOLATION_KEY"]))
+```
+
+### `ignoreChecks`
+
+Run everything except these:
+
+```bash
+chki18n ./locales --ignore-checks DUPLICATE_VALUE
+```
+
+Combining the two is not allowed: `checks` wins, and an `INVALID_OPTIONS` issue says `ignoreChecks` was ignored. An unknown code is reported the same way and skipped instead of failing the run, so a typo in one flag does not stop the rest of the scan.
+
+### `levels`
+
+Report a check at another severity. Accepts an object or `CODE=level` pairs:
+
+```bash
+chki18n ./locales --levels EMPTY_VALUE=error,DUPLICATE_VALUE=info
+```
+
+```javascript
+await checkTranslationFiles('./locales', { levels: { EMPTY_VALUE: 'error' } });
+```
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(
+    levels: {Chki18nCheckCode.emptyValue: Chki18nLevel.error},
+  ),
+);
+```
+
+```python
+check_translation_files("./locales", Options(levels={"EMPTY_VALUE": "error"}))
+```
+
+## Interpolation
+
+### `interpolationPrefix` / `interpolationSuffix`
+
+The delimiters that mark a placeholder. The defaults are `{` and `}`, and `{{ }}`, `[[ ]]` and `%{ }` are all common in real projects.
+
+```bash
+chki18n ./locales --interpolation-prefix "{{" --interpolation-suffix "}}"
+```
+
+Getting this wrong leaves the placeholders unrecognised, so both interpolation checks find nothing and pass without a word.
+
+## Output
+
+### `reporter`
+
+The shape of the report: `pretty` for a terminal, `list` for one line per issue, `json` for another program, `markdown` for a table, and `github` for the workflow commands GitHub Actions turns into annotations on the files themselves. Every reporter carries the same issues in the same order.
+
+```bash
+chki18n ./locales --reporter json > report.json
+```
+
+```javascript
+import { formatResult, resolveOptions } from 'chki18n';
+
+const { options } = resolveOptions({ target: 'en', reporter: 'markdown' });
+
+formatResult(result, options); // the report as a string
+```
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+final resolved = resolveOptions(
+  const Chki18nOptions(target: 'en', reporter: Chki18nReporter.markdown),
+);
+
+formatResult(result, resolved.options); // the report as a string
+```
+
+```python
+from chki18n import Options, format_result, resolve_options
+
+options, _ = resolve_options(Options(target="en", reporter="markdown"))
+
+format_result(result, options)  # the report as a string
+```
+
+### `groupBy`
+
+What a section of the report is: `locale` (the default), `code`, `group`, `file` or `none`. Grouping by language matches how a translator works, and grouping by check matches how a maintainer fixes things.
+
+```bash
+chki18n ./locales --group-by code
+```
+
+Sections with an error come first, then those with only warnings. The order is fixed for a given set of files, so two reports of the same translations can be compared line by line.
+
+<Lang js="groupIssues" dart="groupIssues" py="group_issues" code /> is exported if you would rather do the grouping yourself:
+
+```javascript
+import { groupIssues } from 'chki18n';
+
+groupIssues(result.issues, 'locale'); // [{ id, label, issues, counts }, ...]
+```
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+groupIssues(result.issues, Chki18nGroupBy.locale); // [Chki18nIssueGroup, ...]
+```
+
+```python
+from chki18n import group_issues
+
+group_issues(result.issues, "locale")  # [IssueGroup(id=…, label=…, issues=…, counts=…), …]
+```
+
+### `output`
+
+A file to write the report to, in addition to the terminal. The extension picks the reporter, with `.json` and `.md` having one of their own and anything else written as plain text. `reporter` overrides it when both are given.
+
+```bash
+chki18n ./locales --output report.md
+```
+
+Missing directories are created, colour codes are never written, and the layout uses a fixed width rather than the terminal's, so the same run produces the same file anywhere. A write that fails is reported as an error and fails the run.
+
+### `color`
+
+Whether to colour the terminal report. On by default where the terminal supports it, and `--no-color` turns it off. A file written by `output` is never coloured, whatever this says.
+
+### `width`
+
+Columns to lay the report out to. Without it the terminal's own width is used, then `COLUMNS`, then 96. A measured width is capped at 120, since past that the counts stop reading as part of the same line as their label. What `width` asks for is not capped.
+
+```bash
+chki18n ./locales --width 72
+```
+
+Descriptions wrap instead of being cut short, so a narrow report loses no wording. A file written by `output` ignores the terminal and uses the fixed default unless `width` says otherwise, so the same run produces the same file anywhere.
+
+### `info`, `warn`, `debug`
+
+What the CLI prints. `--no-info` drops the heading block and the summary, `--no-warn` drops warning level issues, and `--debug` adds the resolved options, the detected layout and every file that was skipped.
+
+```bash
+chki18n ./locales --no-info
+```
+
+These affect printing only. A suppressed warning is still in `result.issues`, still counted in `result.summary`, and still present in the `json` report, which is the whole result rather than a rendering of it. When something is hidden, the report says how many.
+
+`--debug` writes to standard error, so it never lands in a report piped out of standard output.
+
+### `verbose`
+
+API-only. The library prints nothing unless this is set, so importing it cannot pollute a host application's output. The CLI sets it for you.
+
+```javascript
+await checkTranslationFiles('./locales', { verbose: true });
+```
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(verbose: true),
+);
+```
+
+```python
+check_translation_files("./locales", Options(verbose=True))
+```
+
+## Data
+
+### `flattened`
+
+API-only. Says the translations you are passing in already use flat keys (`'desc.hello'`) rather than nested objects, so the flatten pass is skipped and the objects you passed are read directly:
+
+```javascript
+analyzeTranslations({ locales: { en, ko } }, { target: 'en', flattened: true });
+```
+
+```dart
+analyzeTranslations(
+  Chki18nInput(locales: {'en': en, 'ko': ko}),
+  options: const Chki18nOptions(target: 'en', flattened: true),
+);
+```
+
+```python
+analyze_translations(Input(locales={"en": en, "ko": ko}), Options(target="en", flattened=True))
+```
+
+## Resolving options yourself
+
+<Lang js="resolveOptions" dart="resolveOptions" py="resolve_options" code /> applies the defaults, normalises the loose forms, and reports what it could not use instead of raising:
+
+```javascript
+import { argsToOptions, resolveOptions } from 'chki18n';
+
+const { options, issues } = resolveOptions({ target: 'ko', ignoreChecks: 'NO_KEY' });
+
+options.enabledChecks; // Set of the codes that will run
+issues; // anything unusable, as INVALID_OPTIONS issues
+
+// The CLI form resolves to exactly the same thing
+resolveOptions(argsToOptions({ _: [], target: 'ko', 'ignore-checks': 'NO_KEY' }));
+```
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+final resolved = resolveOptions(
+  const Chki18nOptions(target: 'ko', ignoreChecks: [Chki18nCheckCode.noKey]),
+);
+
+resolved.options.enabledChecks; // Set of the codes that will run
+resolved.issues; // anything unusable, as INVALID_OPTIONS issues
+
+// The CLI form resolves to exactly the same thing
+resolveOptions(optionsFromArgs({'_': <String>[], 'target': 'ko', 'ignore-checks': 'NO_KEY'}));
+```
+
+```python
+from chki18n import Options, options_from_args, resolve_options
+
+options, issues = resolve_options(Options(target="ko", ignore_checks="NO_KEY"))
+
+options.enabled_checks  # frozenset of the codes that will run
+issues  # anything unusable, as INVALID_OPTIONS issues
+
+# The CLI form resolves to exactly the same thing
+resolve_options(options_from_args({"_": [], "target": "ko", "ignore-checks": "NO_KEY"}))
+```
+
+<Lang js="OPTION_DEFINITIONS" dart="optionDefinitions" py="OPTION_DEFINITIONS" code /> is the table both sides are built from, if you are generating a UI or a help text of your own.
+
+---
+
+# API
+
+Source: https://chki18n.cdget.com/api/
+
+chki18n has four entry points. Which one you want depends on who owns the translations and how often you check them. They share one comparison engine, one option set and one result shape, so moving between them changes only how the data arrives. Every package has all four.
+
+## Which entry point
+
+| Situation | Use | Reads files |
+| --- | --- | --- |
+| Check a directory once — CI, a script, a pre-commit hook | [`checkTranslationFiles`](https://chki18n.cdget.com/api/check-translation-files) | yes |
+| Check data you already have, once | [`analyzeTranslations`](https://chki18n.cdget.com/api/analyze-translations) | no |
+| Read a directory once, then check it repeatedly | [`loadTranslations`](https://chki18n.cdget.com/api/load-translations) | once |
+| Your own application owns the values and needs only a verdict | [`createAnalyzer`](https://chki18n.cdget.com/api/create-analyzer) | no |
+
+`analyzeTranslations` and `createAnalyzer` are also published on their own as <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />, which reaches no file system at all. See [The core entry point](https://chki18n.cdget.com/api/core).
+
+Every name below is written in its JavaScript spelling. Dart uses the same one; Python is snake_case, so `analyzeTranslations` is `analyze_translations`. [Getting started](https://chki18n.cdget.com/guide/getting-started#how-the-names-map) states that mapping once.
+
+## Who owns the values
+
+This is usually what decides between the four. A [session](https://chki18n.cdget.com/api/load-translations) holds its own copy of every string, so `session.set` and `session.checkKey` work from memory. If your application is _also_ holding those strings, as a translation editor or a form bound to what a user is typing does, then two copies exist and every edit has to reach both. They drift apart easily.
+
+In that case use [`createAnalyzer().checkEntry`](https://chki18n.cdget.com/api/create-analyzer) instead: you pass the values in on each call, your application stays the single source of truth, and the check costs about two microseconds.
+
+When chki18n owns the values, as it does in a script, a file watcher or a CI step that checks the same folder twice, the session is much simpler.
+
+## Everything else that is exported
+
+Beyond the four entry points:
+
+- **Check metadata** — <Lang js="CHECK_CODE" dart="Chki18nCheckCode" py="CHECK_CODES" code />, `CHECK_META`, `ANALYZE_CHECK_CODES`, `CROSS_KEY_CHECK_CODES`. See [Checks](https://chki18n.cdget.com/guide/checks).
+- **Result helpers** — `groupIssuesByCode`, `summarizeIssues`, `createIssue`, `buildResult`. See [The result object](https://chki18n.cdget.com/reference/result).
+- **Options** — `resolveOptions`, <Lang js="argsToOptions" dart="optionsFromArgs" py="options_from_args" code />, `buildUsageText`, `OPTION_DEFINITIONS`. See [Options](https://chki18n.cdget.com/guide/options).
+- **Defaults** — `DEFAULT_TARGET_LOCALE`, `DEFAULT_EXCLUDE_DIRS`, `DEFAULT_INTERPOLATION_PREFIX`, `DEFAULT_INTERPOLATION_SUFFIX`, <Lang js="FILE_FORMAT" dart="Chki18nFileFormat" py="FILE_FORMATS" code />.
+- **Reporting** — `formatResult`, `groupIssues`, `displayWidth`, `padTo`, `truncate`. See [Options](https://chki18n.cdget.com/guide/options#reporter).
+- **Utilities** — `isLocaleCode`, `extractInterpolationKeys`, `scanTranslationDirectory`.
+- **Sessions** — `createSession`, for translations you pass in rather than a directory.
+
+Every type is exported too.
+
+`Chki18nOptions`, `Chki18nResult`, `Chki18nIssue`, `Chki18nSummary`, `Chki18nEntry`, `Chki18nSession` and the rest.
+
+`Chki18nOptions`, `Chki18nResult`, `Chki18nIssue`, `Chki18nSummary`, `Chki18nEntry`, `Chki18nSession` and the rest. Dart prefixes every public type, so a name never collides with something in the importing library.
+
+`Options`, `Result`, `Issue`, `Summary`, `Entry`, `Session` and the rest. Python does not prefix them, because `chki18n.Result` already says which library it belongs to.
+
+---
+
+# `checkTranslationFiles`
+
+Source: https://chki18n.cdget.com/api/check-translation-files
+
+Reads a directory of translation files and compares every language against the target language, in one call. It does what the CLI does and returns the result as a value you can act on. Reach for it when a directory is checked once.
+
+## Signature
+
+```typescript
+function checkTranslationFiles(path?: string, options?: Chki18nOptions): Promise<Chki18nResult>;
+```
+
+```dart
+Future<Chki18nResult> checkTranslationFiles({String? path, Chki18nOptions? options});
+```
+
+```python
+def check_translation_files(
+    path: str | None = None,
+    options: Options | None = None,
+) -> Result: ...
+```
+
+Synchronous, unlike the JavaScript package. Python's file reads are synchronous, so an `async` signature would promise concurrency this package cannot deliver.
+
+## Usage
+
+```javascript
+import { checkTranslationFiles } from 'chki18n';
+
+const result = await checkTranslationFiles('./locales', { target: 'en' });
+
+result.success; // false
+result.summary.error; // 1
+result.issues;
+// [
+//   {
+//     code: 'NO_KEY',
+//     level: 'error',
+//     locale: 'ko',
+//     key: 'attr.folder',
+//     group: '',
+//     targetValue: 'Folder',
+//     file: '/project/locales/ko.json',
+//     message: 'The key exists in the target language but is missing here.'
+//   }
+// ]
+```
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+final result = await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(target: 'en'),
+);
+
+result.success; // false
+result.summary.error; // 1
+result.of(Chki18nCheckCode.noKey).first;
+// Chki18nIssue(
+//   code: Chki18nCheckCode.noKey,
+//   level: Chki18nLevel.error,
+//   locale: 'ko',
+//   key: 'attr.folder',
+//   group: '',
+//   targetValue: 'Folder',
+//   file: '/project/locales/ko.json',
+//   message: 'The key exists in the target language but is missing here.',
+// )
+```
+
+```python
+from chki18n import Options, check_translation_files
+
+result = check_translation_files("./locales", Options(target="en"))
+
+result.success  # False
+result.summary.error  # 1
+result.of("NO_KEY")[0]
+# Issue(
+#     code="NO_KEY",
+#     level="error",
+#     locale="ko",
+#     key="attr.folder",
+#     group="",
+#     target_value="Folder",
+#     file="/project/locales/ko.json",
+#     message="The key exists in the target language but is missing here.",
+# )
+```
+
+```javascript
+await checkTranslationFiles(undefined, { path: './locales', target: 'en' });
+```
+
+```dart
+await checkTranslationFiles(
+  options: const Chki18nOptions(path: './locales', target: 'en'),
+);
+```
+
+```python
+check_translation_files(options=Options(path="./locales", target="en"))
+```
+
+## Printing and exiting
+
+Two things this function deliberately does not do:
+
+- **It prints nothing** unless `verbose` is set. Importing the module cannot pollute a host application's output.
+- **It never exits the process.** A failing check comes back as <Lang js="result.success === false" dart="result.success == false" py="result.success is False" code />. Exiting is the CLI's job, and it does it after this function returns.
+
+Turn the output on when you want the CLI's report from your own script:
+
+```javascript
+await checkTranslationFiles('./locales', { target: 'en', verbose: true });
+```
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(target: 'en', verbose: true),
+);
+```
+
+```python
+check_translation_files("./locales", Options(target="en", verbose=True))
+```
+
+`reporter` and `groupBy` shape that report exactly as they shape the CLI's. `output` writes it to a file whether or not `verbose` is set, because saving a file is something the caller asked for explicitly.
+
+```javascript
+await checkTranslationFiles('./locales', { target: 'en', output: 'report.md' });
+```
+
+```dart
+await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(target: 'en', output: 'report.md'),
+);
+```
+
+```python
+check_translation_files("./locales", Options(target="en", output="report.md"))
+```
+
+```javascript
+import { formatResult, resolveOptions } from 'chki18n';
+
+formatResult(result, resolveOptions({ target: 'en', reporter: 'markdown' }).options);
+```
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+formatResult(
+  result,
+  resolveOptions(
+    const Chki18nOptions(target: 'en', reporter: Chki18nReporter.markdown),
+  ).options,
+);
+```
+
+```python
+from chki18n import Options, format_result, resolve_options
+
+format_result(result, resolve_options(Options(target="en", reporter="markdown"))[0])
+```
+
+## Failing a build
+
+```javascript
+import { checkTranslationFiles } from 'chki18n';
+
+const result = await checkTranslationFiles('./locales', { target: 'en' });
+
+if (!result.success) {
+	for (const issue of result.issues.filter((one) => one.level === 'error')) {
+		console.error(`${issue.locale} ${issue.key}: ${issue.message}`);
+	}
+
+	process.exit(1);
+}
+```
+
+```dart
+import 'dart:io';
+
+import 'package:chki18n/chki18n.dart';
+
+final result = await checkTranslationFiles(
+  path: './locales',
+  options: const Chki18nOptions(target: 'en'),
+);
+
+if (!result.success) {
+  for (final issue in result.issues.where((one) => one.level == Chki18nLevel.error)) {
+    stderr.writeln('${issue.locale} ${issue.key}: ${issue.message}');
+  }
+
+  exitCode = 1;
+}
+```
+
+```python
+import sys
+
+from chki18n import Options, check_translation_files
+
+result = check_translation_files("./locales", Options(target="en"))
+
+if not result.success:
+    for issue in (one for one in result.issues if one.level == "error"):
+        print(f"{issue.locale} {issue.key}: {issue.message}", file=sys.stderr)
+
+    sys.exit(1)
+```
+
+`success` is false when at least one issue is at `error` level. Warnings never make it false, so promote one with [`levels`](https://chki18n.cdget.com/guide/options#levels) if your project treats it as a blocker.
+
+## How errors are reported
+
+A missing directory, an unreadable file, JSON that does not parse, a target language that is nowhere in the files: none of these raise. They come back as issues, so one bad file does not hide everything else that was found:
+
+```javascript
+const result = await checkTranslationFiles('./does-not-exist');
+
+result.success; // false
+result.issuesByCode.INVALID_FILE;
+// [{ code: 'INVALID_FILE', level: 'error', message: "Failed to read the directory …" }]
+```
+
+```dart
+final result = await checkTranslationFiles(path: './does-not-exist');
+
+result.success; // false
+result.of(Chki18nCheckCode.invalidFile);
+// [Chki18nIssue(code: INVALID_FILE, level: error, message: "Failed to read the directory …")]
+```
+
+```python
+result = check_translation_files("./does-not-exist")
+
+result.success  # False
+result.of("INVALID_FILE")
+# [Issue(code="INVALID_FILE", level="error", message="Failed to read the directory …")]
+```
+
+## Timing
+
+<Lang js="result.elapsedMs" dart="result.elapsedMs" py="result.elapsed_ms" code /> covers the whole call: the scan, the parse and the comparison. Checking the same directory more than once means scanning it more than once, so use [`loadTranslations`](https://chki18n.cdget.com/api/load-translations) for that kind of work.
+
+## See also
+
+- [`analyzeTranslations`](https://chki18n.cdget.com/api/analyze-translations) — the same comparison, on data you already hold.
+- [`loadTranslations`](https://chki18n.cdget.com/api/load-translations) — scan once, then check as often as you like.
+- [Command line](https://chki18n.cdget.com/guide/cli) — the same thing, as a command.
+
+---
+
+# `analyzeTranslations`
+
+Source: https://chki18n.cdget.com/api/analyze-translations
+
+Compares translations you already hold in memory. It does no file system work at all, so it runs anywhere the language does: in a browser, in a Flutter web build, in a worker, in a sandbox with no disk. Reach for it when something else has already read the files.
+
+## Signature
+
+```typescript
+function analyzeTranslations(input: Chki18nInput, options?: Chki18nOptions): Chki18nResult;
+```
+
+Synchronous: there is nothing to await.
+
+```dart
+Chki18nResult analyzeTranslations(Chki18nInput input, {Chki18nOptions? options});
+```
+
+Synchronous: there is nothing to await.
+
+```python
+def analyze_translations(data: Input, options: Options | None = None) -> Result: ...
+```
+
+## Usage
+
+Pass one set of locales:
+
+```javascript
+import { analyzeTranslations } from 'chki18n';
+
+const result = analyzeTranslations(
+	{
+		locales: {
+			en: { desc: { hello: 'Hello {name}', bye: 'Goodbye' } },
+			ko: { desc: { hello: '안녕하세요' } }
+		}
+	},
+	{ target: 'en' }
+);
+
+result.keyCount; // 2
+result.issuesByCode.NO_KEY[0].key; // 'desc.bye'
+result.issuesByCode.NO_INTERPOLATION_KEY[0].interpolation; // 'name'
+```
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+final result = analyzeTranslations(
+  const Chki18nInput(
+    locales: {
+      'en': {
+        'desc': {'hello': 'Hello {name}', 'bye': 'Goodbye'},
+      },
+      'ko': {
+        'desc': {'hello': '안녕하세요'},
+      },
+    },
+  ),
+  options: const Chki18nOptions(target: 'en'),
+);
+
+result.keyCount; // 2
+result.of(Chki18nCheckCode.noKey).first.key; // 'desc.bye'
+result.of(Chki18nCheckCode.noInterpolationKey).first.interpolation; // 'name'
+```
+
+```python
+from chki18n import Input, Options, analyze_translations
+
+result = analyze_translations(
+    Input(
+        locales={
+            "en": {"desc": {"hello": "Hello {name}", "bye": "Goodbye"}},
+            "ko": {"desc": {"hello": "안녕하세요"}},
+        }
+    ),
+    Options(target="en"),
+)
+
+result.key_count  # 2
+result.of("NO_KEY")[0].key  # 'desc.bye'
+result.of("NO_INTERPOLATION_KEY")[0].interpolation  # 'name'
+```
+
+## Several translation files
+
+Use `groups` when your project has more than one set of files, so each is compared on its own and a key missing from one is never reported against the other:
+
+```javascript
+analyzeTranslations(
+	{
+		groups: {
+			'common.json': { en: { ok: 'OK' }, ko: { ok: '확인' } },
+			'errors.json': { en: { failed: 'Failed' }, ko: {} }
+		}
+	},
+	{ target: 'en' }
+);
+// the one NO_KEY issue carries group: 'errors.json'
+```
+
+```dart
+analyzeTranslations(
+  const Chki18nInput(
+    groups: {
+      'common.json': {
+        'en': {'ok': 'OK'},
+        'ko': {'ok': '확인'},
+      },
+      'errors.json': {
+        'en': {'failed': 'Failed'},
+        'ko': <String, Object?>{},
+      },
+    },
+  ),
+  options: const Chki18nOptions(target: 'en'),
+);
+// the one NO_KEY issue carries group: 'errors.json'
+```
+
+```python
+analyze_translations(
+    Input(
+        groups={
+            "common.json": {"en": {"ok": "OK"}, "ko": {"ok": "확인"}},
+            "errors.json": {"en": {"failed": "Failed"}, "ko": {}},
+        }
+    ),
+    Options(target="en"),
+)
+# the one NO_KEY issue carries group="errors.json"
+```
+
+`locales` is shorthand for a single group named `''`. See [File layouts](https://chki18n.cdget.com/guide/file-layouts#groups) for how a directory scan arrives at the same shape.
+
+## Skipping the flatten pass
+
+If your keys are already flat, say so and the objects you pass are used exactly as they are, with nothing copied and nothing rebuilt:
+
+```javascript
+const en = { 'desc.hello': 'Hello {name}' };
+const ko = { 'desc.hello': '안녕하세요' };
+
+analyzeTranslations({ locales: { en, ko } }, { target: 'en', flattened: true });
+```
+
+This is the fast path. Comparing 5,000 keys across 5 locales takes about **17ms** flattened, against about 22ms when the flatten pass runs.
+
+```dart
+const en = {'desc.hello': 'Hello {name}'};
+const ko = {'desc.hello': '안녕하세요'};
+
+analyzeTranslations(
+  const Chki18nInput(locales: {'en': en, 'ko': ko}),
+  options: const Chki18nOptions(target: 'en', flattened: true),
+);
+```
+
+This is the fast path: the maps you pass are the ones the comparison reads.
+
+```python
+en = {"desc.hello": "Hello {name}"}
+ko = {"desc.hello": "안녕하세요"}
+
+analyze_translations(Input(locales={"en": en, "ko": ko}), Options(target="en", flattened=True))
+```
+
+This is the fast path: the dictionaries you pass are the ones the comparison reads.
+
+## Input
+
+```typescript
+interface Chki18nInput {
+	groups?: { [group: string]: { [locale: string]: TranslationMap } };
+	locales?: { [locale: string]: TranslationMap };
+	files?: Chki18nSourceFile[];
+	issues?: Chki18nIssue[];
+	fileFormat?: Chki18nFileFormat;
+	unusedKeys?: string[];
+	undefinedKeys?: Chki18nKeyUsage[];
+}
+```
+
+```dart
+class Chki18nInput {
+  const Chki18nInput({
+    TranslationGroups? groups,
+    Map<String, TranslationMap>? locales,
+    List<Chki18nSourceFile>? files,
+    List<Chki18nIssue>? issues,
+    Chki18nFileFormat? fileFormat,
+    List<String>? unusedKeys,
+    List<Chki18nKeyUsage>? undefinedKeys,
+  });
+}
+```
+
+```python
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Input:
+    groups: TranslationGroups | None = None
+    locales: dict[str, TranslationMap] | None = None
+    files: list[SourceFile] = field(default_factory=list)
+    issues: list[Issue] = field(default_factory=list)
+    file_format: FileFormat | None = None
+    unused_keys: list[str] = field(default_factory=list)
+    undefined_keys: list[KeyUsage] = field(default_factory=list)
+```
+
+`files` maps a group and locale onto the file it came from, so issues can carry a `file` path. `issues` lets whatever produced the input add its own problems to the same result, which is how a directory scan's unreadable-file errors end up in the same list as the comparison's findings. <Lang js="fileFormat" dart="fileFormat" py="file_format" code /> is carried through to the result untouched, and the last two answer [`UNUSED_KEY`](https://chki18n.cdget.com/guide/checks#unused-key) and [`UNDEFINED_KEY`](https://chki18n.cdget.com/guide/checks#undefined-key) for an application that has already worked them out.
+
+## What the result says
+
+```javascript
+result.files; // [] — nothing was read from disk
+result.fileFormat; // null — unless you passed one in
+result.locales; // every locale seen, across all groups
+result.groups; // every group name, in input order
+result.keyCount; // distinct keys compared
+```
+
+```dart
+result.files; // [] — nothing was read from disk
+result.fileFormat; // null — unless you passed one in
+result.locales; // every locale seen, across all groups
+result.groups; // every group name, in input order
+result.keyCount; // distinct keys compared
+```
+
+```python
+result.files  # [] — nothing was read from disk
+result.file_format  # None — unless you passed one in
+result.locales  # every locale seen, across all groups
+result.groups  # every group name, in input order
+result.key_count  # distinct keys compared
+```
+
+## A locale that is not an object
+
+Reported as an issue rather than raised, like every other input problem:
+
+```javascript
+analyzeTranslations({ locales: { en: { a: 'A' }, ko: null } }, { target: 'en' });
+// issuesByCode.INVALID_FILE — "The translations of `ko` are not an object."
+```
+
+Dart's type system settles this one before it runs. `Chki18nInput.locales` is a `Map<String, TranslationMap>`, so there is nothing to pass that is not a map of keys. A file on disk that holds something else is still reported as `INVALID_FILE` by the scanner.
+
+```python
+analyze_translations(Input(locales={"en": {"a": "A"}, "ko": None}), Options(target="en"))
+# result.of("INVALID_FILE") — "The translations of `ko` are not an object."
+```
+
+## See also
+
+- [`createAnalyzer`](https://chki18n.cdget.com/api/create-analyzer) — reuse one analyzer, and check a single key.
+- [The core entry point](https://chki18n.cdget.com/api/core) — this function without the file system the scanner needs.
+
+---
+
+# `loadTranslations`
+
+Source: https://chki18n.cdget.com/api/load-translations
+
+Reads a directory once and hands back a session that holds the parsed translations. A full analysis, a single key check and an edit all work on what is already in memory, so checking the same folder repeatedly costs one scan instead of one per check.
+
+## Signature
+
+```typescript
+function loadTranslations(path?: string, options?: Chki18nOptions): Promise<Chki18nFileSession>;
+```
+
+```dart
+Future<Chki18nFileSession> loadTranslations({String? path, Chki18nOptions? options});
+```
+
+```python
+def load_translations(
+    path: str | None = None,
+    options: Options | None = None,
+) -> FileSession: ...
+```
+
+## Usage
+
+```javascript
+import { loadTranslations } from 'chki18n';
+
+const session = await loadTranslations('./locales', { target: 'en' });
+
+session.locales; // ['en', 'ko']
+session.groups; // ['']
+session.fileFormat; // 'single'
+session.keys(); // ['desc.hello', 'desc.bye', …] — target language order
+
+session.analyze(); // the full result, without reading a file
+
+session.get('ko', 'desc.hello'); // '안녕하세요'
+session.checkKey('desc.hello'); // [{ code: 'NO_INTERPOLATION_KEY', … }]
+
+session.set('ko', 'desc.hello', '{name}님 안녕하세요'); // → [] — that key is now clean
+session.analyze(); // one fewer error
+
+await session.reload(); // throw the edits away and read the directory again
+```
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+final session = await loadTranslations(
+  path: './locales',
+  options: const Chki18nOptions(target: 'en'),
+);
+
+session.locales; // ['en', 'ko']
+session.groups; // ['']
+session.fileFormat; // Chki18nFileFormat.single
+session.keys(); // ['desc.hello', 'desc.bye', …] — target language order
+
+session.analyze(); // the full result, without reading a file
+
+session.get('ko', 'desc.hello'); // '안녕하세요'
+session.checkKey('desc.hello'); // [Chki18nIssue(code: NO_INTERPOLATION_KEY, …)]
+
+session.set('ko', 'desc.hello', '{name}님 안녕하세요'); // [] — that key is now clean
+session.analyze(); // one fewer error
+
+await session.reload(); // throw the edits away and read the directory again
+```
+
+```python
+from chki18n import Options, load_translations
+
+session = load_translations("./locales", Options(target="en"))
+
+session.locales  # ['en', 'ko']
+session.groups  # ['']
+session.file_format  # 'single'
+session.keys()  # ['desc.hello', 'desc.bye', …] — target language order
+
+session.analyze()  # the full result, without reading a file
+
+session.get("ko", "desc.hello")  # '안녕하세요'
+session.check_key("desc.hello")  # [Issue(code='NO_INTERPOLATION_KEY', …)]
+
+session.set("ko", "desc.hello", "{name}님 안녕하세요")  # [] — that key is now clean
+session.analyze()  # one fewer error
+
+session.reload()  # throw the edits away and read the directory again
+```
+
+## Reading
+
+### `analyze()`
+
+Checks everything the session holds and returns a [result](https://chki18n.cdget.com/reference/result), identical in shape to what [`checkTranslationFiles`](https://chki18n.cdget.com/api/check-translation-files) returns. Reads no files, so calling it after every edit is cheap.
+
+### `keys(group?)`
+
+Every key of a group, target language first so a report follows its order.
+
+### `get(locale, key, group?)`
+
+One value, or <Lang js="undefined" dart="null" py="None" code /> when that locale does not define the key. Keys are flat: `'desc.hello'`, not `['desc', 'hello']`.
+
+### `translations(group?)`
+
+The flattened translations of a group, keyed by locale. These are the session's own objects, so read them freely but write through `set` and `remove` to keep the session's bookkeeping correct.
+
+```javascript
+session.translations(); // { en: { 'desc.hello': 'Hello {name}' }, ko: { … } }
+```
+
+```dart
+session.translations(); // {'en': {'desc.hello': 'Hello {name}'}, 'ko': {…}}
+```
+
+```python
+session.translations()  # {'en': {'desc.hello': 'Hello {name}'}, 'ko': {…}}
+```
+
+### Properties
+
+```javascript
+session.options; // the resolved options every check runs with
+session.locales; // every locale held
+session.groups; // every group held, in scan order
+session.files; // the files they were read from
+session.fileFormat; // 'single' | 'folder' | 'nested'
+session.path; // the absolute path that was scanned
+session.skipped; // files read but not belonging to any locale
+session.detectedInterpolation; // { prefix: '{{', suffix: '}}' } — what the files look like
+```
+
+```dart
+session.options; // the resolved options every check runs with
+session.locales; // every locale held
+session.groups; // every group held, in scan order
+session.files; // the files they were read from
+session.fileFormat; // Chki18nFileFormat.single, .folder or .nested
+session.path; // the absolute path that was scanned
+session.skipped; // files read but not belonging to any locale
+session.detectedInterpolation; // Chki18nDelimiters('{{', '}}') — what the files look like
+```
+
+```python
+session.options  # the resolved options every check runs with
+session.locales  # every locale held
+session.groups  # every group held, in scan order
+session.files  # the files they were read from
+session.file_format  # 'single' | 'folder' | 'nested'
+session.path  # the absolute path that was scanned
+session.skipped  # files read but not belonging to any locale
+session.detected_interpolation  # Delimiters('{{', '}}') — what the files look like
+```
+
+<Lang js="detectedInterpolation" dart="detectedInterpolation" py="detected_interpolation" code /> is a guess offered to whoever is setting a project up, read off the raw text of the files the scan accepted. It is <Lang js="null" dart="null" py="None" code /> when none of them holds anything that looks like a placeholder. It never changes what the run compared: the checks used `interpolationPrefix` whatever the files turned out to look like.
+
+## Writing
+
+### `set(locale, key, value, group?)`
+
+Writes a value **and returns the issues that key now has**, so an edit and its verdict are one call:
+
+```javascript
+session.set('ko', 'desc.hello', '안녕하세요');
+// [{ code: 'NO_INTERPOLATION_KEY', level: 'error', … }] — {name} is missing
+
+session.set('ko', 'desc.hello', '{name}님 안녕하세요');
+// [] — clean
+```
+
+```dart
+session.set('ko', 'desc.hello', '안녕하세요');
+// [Chki18nIssue(code: NO_INTERPOLATION_KEY, level: error, …)] — {name} is missing
+
+session.set('ko', 'desc.hello', '{name}님 안녕하세요');
+// [] — clean
+```
+
+```python
+session.set("ko", "desc.hello", "안녕하세요")
+# [Issue(code='NO_INTERPOLATION_KEY', level='error', …)] — {name} is missing
+
+session.set("ko", "desc.hello", "{name}님 안녕하세요")
+# [] — clean
+```
+
+### `remove(key, { locale, group })`
+
+Drops a key from one locale, or from every locale when no `locale` is given, and re-checks it:
+
+```javascript
+session.remove('attr.folder', { locale: 'ko' }); // → [{ code: 'NO_KEY', … }]
+session.remove('attr.folder'); // gone everywhere → []
+```
+
+```dart
+session.remove('attr.folder', locale: 'ko'); // [Chki18nIssue(code: NO_KEY, …)]
+session.remove('attr.folder'); // gone everywhere -> []
+```
+
+```python
+session.remove("attr.folder", locale="ko")  # [Issue(code='NO_KEY', …)]
+session.remove("attr.folder")  # gone everywhere -> []
+```
+
+### `checkKey(key, group?)`
+
+Checks one key across every locale. About **1µs**, so it is fine to call on every keystroke.
+
+Cross-key checks are not reported here. `DUPLICATE_VALUE` needs to see a whole locale at once, and one key is not enough to answer it. The codes with that property are in `CROSS_KEY_CHECK_CODES`.
+
+### `reset(input)`
+
+Replaces the translations while keeping the options and the analyzer. `reload()` does the same after a fresh scan of the same directory.
+
+### `reload()`
+
+Reads the directory again, throwing away every edit made through `set` and `remove`.
+
+## Groups
+
+A project with several translation files has several groups. Name one when you mean it, or leave it out. With one group there is nothing to decide, and with several the session looks the key up where it actually lives:
+
+```javascript
+session.groups; // ['common.json', 'errors.json']
+
+session.get('en', 'failed'); // found in errors.json
+session.checkKey('failed')[0].group; // 'errors.json'
+
+session.set('ko', 'failed', '실패', 'errors.json'); // named explicitly
+```
+
+```dart
+session.groups; // ['common.json', 'errors.json']
+
+session.get('en', 'failed'); // found in errors.json
+session.checkKey('failed').first.group; // 'errors.json'
+
+session.set('ko', 'failed', '실패', 'errors.json'); // named explicitly
+```
+
+```python
+session.groups  # ['common.json', 'errors.json']
+
+session.get("en", "failed")  # found in errors.json
+session.check_key("failed")[0].group  # 'errors.json'
+
+session.set("ko", "failed", "실패", "errors.json")  # named explicitly
+```
+
+## Translations you already hold
+
+<Lang js="createSession" dart="createSession" py="create_session" code /> is the same thing without the directory, and is exported from [the core entry point](https://chki18n.cdget.com/api/core) as well:
+
+```javascript
+import { createSession } from 'chki18n/core';
+
+const session = createSession({ groups: { 'common.json': { en, ko } } }, { target: 'en' });
+
+session.reset({ groups: nextGroups }); // swap the data, keep the options
+```
+
+```dart
+import 'package:chki18n/core.dart';
+
+final session = createSession(
+  Chki18nInput(groups: {'common.json': {'en': en, 'ko': ko}}),
+  options: const Chki18nOptions(target: 'en'),
+);
+
+session.reset(Chki18nInput(groups: nextGroups)); // swap the data, keep the options
+```
+
+```python
+from chki18n.core import Input, Options, create_session
+
+session = create_session(
+    Input(groups={"common.json": {"en": en, "ko": ko}}), Options(target="en")
+)
+
+session.reset(Input(groups=next_groups))  # swap the data, keep the options
+```
+
+## The copy a session holds
+
+The session holds its own copy of every string. If your application is _also_ holding them, as a translation editor bound to what a user is typing does, then two copies exist and every edit has to reach both. They drift apart easily.
+
+In that case use [`createAnalyzer().checkEntry`](https://chki18n.cdget.com/api/create-analyzer): you pass the values on each call, your application stays the single source of truth, and the check still costs a couple of microseconds.
+
+## Errors
+
+A missing path or an unreadable directory does not raise. The session comes back empty and carries the problem, which surfaces as an issue on the first `analyze()`:
+
+```javascript
+const session = await loadTranslations('./does-not-exist');
+
+session.analyze().success; // false
+session.analyze().issuesByCode.INVALID_FILE; // the reason
+```
+
+```dart
+final session = await loadTranslations(path: './does-not-exist');
+
+session.analyze().success; // false
+session.analyze().of(Chki18nCheckCode.invalidFile); // the reason
+```
+
+```python
+session = load_translations("./does-not-exist")
+
+session.analyze().success  # False
+session.analyze().of("INVALID_FILE")  # the reason
+```
+
+---
+
+# `createAnalyzer`
+
+Source: https://chki18n.cdget.com/api/create-analyzer
+
+Returns a reusable analyzer bound to one set of options. Its `checkEntry` compares a single key across locales in about two microseconds, which suits an editor that validates on every keystroke without holding a second copy of the values.
+
+## Signature
+
+```typescript
+function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer;
+
+interface Chki18nAnalyzer {
+	readonly options: Chki18nResolvedOptions;
+	readonly optionIssues: Chki18nIssue[];
+	analyze: (input: Chki18nInput) => Chki18nResult;
+	checkEntry: (entry: Chki18nEntry) => Chki18nIssue[];
+}
+```
+
+```dart
+Chki18nAnalyzer createAnalyzer({Chki18nOptions? options});
+
+class Chki18nAnalyzer {
+  final Chki18nResolvedOptions options;
+  final List<Chki18nIssue> optionIssues;
+
+  Chki18nResult analyze(Chki18nInput input);
+  List<Chki18nIssue> checkEntry(Chki18nEntry entry);
+}
+```
+
+```python
+def create_analyzer(options: Options | None = None) -> Analyzer: ...
+
+class Analyzer:
+    options: ResolvedOptions
+    option_issues: list[Issue]
+
+    def analyze(self, data: Input) -> Result: ...
+    def check_entry(self, entry: Entry) -> list[Issue]: ...
+```
+
+## What reusing an analyzer saves
+
+Options, the enabled check set and the interpolation delimiters are resolved once, when the analyzer is built. Calling [`analyzeTranslations`](https://chki18n.cdget.com/api/analyze-translations) in a loop re-resolves all of it on every call. For one check that makes no difference. For a check that runs on every keystroke, resolving the options is most of the cost.
+
+## `checkEntry`
+
+```javascript
+import { createAnalyzer } from 'chki18n';
+
+const analyzer = createAnalyzer({ target: 'en' });
+
+analyzer.checkEntry({
+	key: 'desc.hello',
+	values: { en: 'Hello {name}', ko: '안녕하세요' }
+});
+// [
+//   {
+//     code: 'NO_INTERPOLATION_KEY',
+//     level: 'error',
+//     locale: 'ko',
+//     key: 'desc.hello',
+//     interpolation: 'name',
+//     message: 'The interpolation key `{name}` of the target language is missing from this value.'
+//   }
+// ]
+
+analyzer.checkEntry({
+	key: 'desc.hello',
+	values: { en: 'Hello {name}', ko: '{name}님 안녕하세요' }
+});
+// []
+```
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+final analyzer = createAnalyzer(options: const Chki18nOptions(target: 'en'));
+
+analyzer.checkEntry(
+  const Chki18nEntry(
+    key: 'desc.hello',
+    values: {'en': 'Hello {name}', 'ko': '안녕하세요'},
+  ),
+);
+// [
+//   Chki18nIssue(
+//     code: Chki18nCheckCode.noInterpolationKey,
+//     level: Chki18nLevel.error,
+//     locale: 'ko',
+//     key: 'desc.hello',
+//     interpolation: 'name',
+//     message: 'The interpolation key `{name}` of the target language is missing from this value.',
+//   ),
+// ]
+
+analyzer.checkEntry(
+  const Chki18nEntry(
+    key: 'desc.hello',
+    values: {'en': 'Hello {name}', 'ko': '{name}님 안녕하세요'},
+  ),
+);
+// []
+```
+
+```python
+from chki18n import Entry, Options, create_analyzer
+
+analyzer = create_analyzer(Options(target="en"))
+
+analyzer.check_entry(Entry(key="desc.hello", values={"en": "Hello {name}", "ko": "안녕하세요"}))
+# [
+#     Issue(
+#         code="NO_INTERPOLATION_KEY",
+#         level="error",
+#         locale="ko",
+#         key="desc.hello",
+#         interpolation="name",
+#         message="The interpolation key `{name}` of the target language is missing from this value.",
+#     )
+# ]
+
+analyzer.check_entry(
+    Entry(key="desc.hello", values={"en": "Hello {name}", "ko": "{name}님 안녕하세요"})
+)
+# []
+```
+
+`values` is `locale -> value`. The target language's value is read from the same object, so it has to be in there for a comparison to happen.
+
+### Entry
+
+```typescript
+interface Chki18nEntry {
+	key: string;
+	values: { [locale: string]: any };
+	group?: string;
+	locales?: string[];
+}
+```
+
+```dart
+class Chki18nEntry {
+  const Chki18nEntry({
+    required String key,
+    required Map<String, Object?> values,
+    String? group,
+    List<String>? locales,
+  });
+}
+```
+
+```python
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Entry:
+    key: str
+    values: dict[str, Any]
+    group: str = ""
+    locales: Sequence[str] | None = None
+```
+
+`group` is carried onto every issue, so a project with several translation files can tell them apart.
+
+### Reporting a locale that has no value at all
+
+By default the locales are the keys of `values`, so a language that is simply absent is not compared. Pass `locales` when a missing value has to be reported as missing:
+
+```javascript
+analyzer.checkEntry({ key: 'a', values: { en: 'Hello' }, locales: ['en', 'ko'] });
+// [{ code: 'NO_KEY', locale: 'ko', … }]
+```
+
+```dart
+analyzer.checkEntry(
+  const Chki18nEntry(key: 'a', values: {'en': 'Hello'}, locales: ['en', 'ko']),
+);
+// [Chki18nIssue(code: NO_KEY, locale: ko, …)]
+```
+
+```python
+analyzer.check_entry(Entry(key="a", values={"en": "Hello"}, locales=["en", "ko"]))
+# [Issue(code='NO_KEY', locale='ko', …)]
+```
+
+### What it will not report
+
+Only checks that can be decided from one key. `DUPLICATE_VALUE` needs to see a whole locale at once and is never reported here; the codes with that property are in `CROSS_KEY_CHECK_CODES`.
+
+Everything else matches a full analysis of the same data, in the same codes and the same order.
+
+## Linting an editor grid
+
+This is the arrangement the function was built for. Your application owns the values, and chki18n only judges them:
+
+```javascript
+import { createAnalyzer } from 'chki18n/core';
+
+// Once, when the project opens.
+const analyzer = createAnalyzer({
+	target: project.primaryLocale,
+	interpolationPrefix: project.interpolationPrefix,
+	interpolationSuffix: project.interpolationSuffix
+});
+
+// On every edit, for the one row that changed.
+function lintRow(row) {
+	return analyzer.checkEntry({
+		key: row.key,
+		values: Object.fromEntries(row.cells.map((cell) => [cell.locale, cell.value])),
+		locales: project.locales,
+		group: row.group
+	});
+}
+```
+
+```dart
+import 'package:chki18n/core.dart';
+
+// Once, when the project opens.
+final analyzer = createAnalyzer(
+  options: Chki18nOptions(
+    target: project.primaryLocale,
+    interpolationPrefix: project.interpolationPrefix,
+    interpolationSuffix: project.interpolationSuffix,
+  ),
+);
+
+// On every edit, for the one row that changed.
+List<Chki18nIssue> lintRow(Row row) => analyzer.checkEntry(
+  Chki18nEntry(
+    key: row.key,
+    values: {for (final cell in row.cells) cell.locale: cell.value},
+    locales: project.locales,
+    group: row.group,
+  ),
+);
+```
+
+```python
+from chki18n.core import Entry, Options, create_analyzer
+
+# Once, when the project opens.
+analyzer = create_analyzer(
+    Options(
+        target=project.primary_locale,
+        interpolation_prefix=project.interpolation_prefix,
+        interpolation_suffix=project.interpolation_suffix,
+    )
+)
+
+# On every edit, for the one row that changed.
+def lint_row(row):
+    return analyzer.check_entry(
+        Entry(
+            key=row.key,
+            values={cell.locale: cell.value for cell in row.cells},
+            locales=project.locales,
+            group=row.group,
+        )
+    )
+```
+
+## `analyze`
+
+The same comparison [`analyzeTranslations`](https://chki18n.cdget.com/api/analyze-translations) performs, on this analyzer's options:
+
+```javascript
+const analyzer = createAnalyzer({ target: 'en', flattened: true });
+
+analyzer.analyze({ groups: everything }); // full pass, when the whole set changed
+analyzer.checkEntry({ key, values }); // one key, on every keystroke
+```
+
+```dart
+final analyzer = createAnalyzer(
+  options: const Chki18nOptions(target: 'en', flattened: true),
+);
+
+analyzer.analyze(Chki18nInput(groups: everything)); // full pass, when the whole set changed
+analyzer.checkEntry(Chki18nEntry(key: key, values: values)); // one key, on every keystroke
+```
+
+```python
+analyzer = create_analyzer(Options(target="en", flattened=True))
+
+analyzer.analyze(Input(groups=everything))  # full pass, when the whole set changed
+analyzer.check_entry(Entry(key=key, values=values))  # one key, on every keystroke
+```
+
+## `options` and `optionIssues`
+
+```javascript
+analyzer.options; // the resolved options — target, enabledChecks, delimiters, …
+analyzer.optionIssues; // anything unusable in what you passed, as INVALID_OPTIONS
+```
+
+```dart
+analyzer.options; // the resolved options — target, enabledChecks, delimiters, …
+analyzer.optionIssues; // anything unusable in what you passed, as INVALID_OPTIONS
+```
+
+```python
+analyzer.options  # the resolved options — target, enabled_checks, delimiters, …
+analyzer.option_issues  # anything unusable in what you passed, as INVALID_OPTIONS
+```
+
+<Lang js="optionIssues" dart="optionIssues" py="option_issues" code /> is replayed into every result `analyze` produces, so a typo in an option is reported once per result instead of being dropped.
+
+## Performance
+
+Measured on 5,000 keys across 5 locales:
+
+| Call                        | Cost   |
+| --------------------------- | ------ |
+| `analyze` (flattened input) | ~17ms  |
+| `checkEntry`                | ~2.2µs |
+| `session.checkKey`          | ~0.9µs |
+
+`checkKey` is faster because the [session](https://chki18n.cdget.com/api/load-translations) builds the value set itself instead of being handed one. Both are far shorter than the time it takes to draw a frame.
+
+A single key is compared in microseconds, which is what makes checking on every keystroke practical. A full `analyze` is proportional to the number of keys times the number of locales, and is fast enough to run on a file watcher.
+
+---
+
+# The core entry point
+
+Source: https://chki18n.cdget.com/api/core
+
+The comparison engine on its own, without the directory scanner, so it runs where there is no file system to read.
+
+Each package publishes it under its own name:
+
+| Package    | Import                               |
+| ---------- | ------------------------------------ |
+| JavaScript | `import { … } from 'chki18n/core'`   |
+| Dart       | `import 'package:chki18n/core.dart'` |
+| Python     | `from chki18n.core import …`         |
+
+## How it differs from the package root
+
+The package root reads directories, so it imports the file system modules: <Lang js="`node:fs`, `node:path` and `node:os`" dart="`dart:io`" py="`os` and `shutil`" />. A build that cannot supply them either fails or pulls in a stack of polyfills for code that will never run.
+
+The comparison itself uses none of them. The core entry point is the same engine with the file reading left out:
+
+```javascript
+import { analyzeTranslations, createAnalyzer, CHECK_META } from 'chki18n/core';
+```
+
+A test walks the subpath's import graph on every build and fails if a Node built-in appears in it.
+
+```dart
+import 'package:chki18n/core.dart';
+```
+
+A test walks the entry point's import graph on every run and fails if `dart:io` appears in it. That is what keeps the comparison usable in a Flutter web build.
+
+```python
+from chki18n.core import CHECK_META, analyze_translations, create_analyzer
+```
+
+A test walks the module's import graph on every run and fails if `os`, `pathlib` or `shutil` appears in it.
+
+## What it exports
+
+Everything the root does **except** the parts that read files:
+
+| Exported | Not exported |
+| --- | --- |
+| [`analyzeTranslations`](https://chki18n.cdget.com/api/analyze-translations), [`createAnalyzer`](https://chki18n.cdget.com/api/create-analyzer) | `checkTranslationFiles` |
+| `createSession` (for translations you pass in) | `loadTranslations` |
+| `CHECK_CODE`, `CHECK_META`, `ANALYZE_CHECK_CODES`, `CROSS_KEY_CHECK_CODES`, `FILE_FORMAT` | `scanTranslationDirectory` |
+| `groupIssuesByCode`, `summarizeIssues`, `createIssue`, `buildResult` | `findUnusedKeys` |
+| `resolveOptions`, `argsToOptions`, `buildUsageText`, `OPTION_DEFINITIONS` |  |
+| `isLocaleCode`, `extractInterpolationKeys`, `detectInterpolationDelimiters` |  |
+| `createPathExcluder`, `createFileExcluder`, and every type |  |
+
+The root re-exports all of it, so `import { createAnalyzer } from 'chki18n'` works too. Reach for the subpath when the bundle must not carry the scanner.
+
+| Exported | Not exported |
+| --- | --- |
+| [`analyzeTranslations`](https://chki18n.cdget.com/api/analyze-translations), [`createAnalyzer`](https://chki18n.cdget.com/api/create-analyzer) | `checkTranslationFiles` |
+| `createSession` (for translations you pass in) | `loadTranslations` |
+| `Chki18nCheckCode`, `checkMeta`, `analyzeCheckCodes`, `crossKeyCheckCodes`, `Chki18nFileFormat` | `scanTranslationDirectory` |
+| `groupIssuesByCode`, `summarizeIssues`, `createIssue`, `buildResult` | `findUnusedKeys` |
+| `resolveOptions`, `optionsFromArgs`, `buildUsageText`, `optionDefinitions` | `formatResult` |
+| `isLocaleCode`, `extractInterpolationKeys`, `detectInterpolationDelimiters` |  |
+| `createPathExcluder`, `createFileExcluder`, and every type |  |
+
+`package:chki18n/chki18n.dart` re-exports all of it, so one import covers both. Reach for `core.dart` when the build must not pull `dart:io` in.
+
+| Exported | Not exported |
+| --- | --- |
+| [`analyze_translations`](https://chki18n.cdget.com/api/analyze-translations), [`create_analyzer`](https://chki18n.cdget.com/api/create-analyzer) | `check_translation_files` |
+| `create_session` (for translations you pass in) | `load_translations` |
+| `CHECK_CODES`, `CHECK_META`, `ANALYZE_CHECK_CODES`, `CROSS_KEY_CHECK_CODES`, `FILE_FORMATS` | `scan_translation_directory` |
+| `group_issues_by_code`, `summarize_issues`, `create_issue`, `build_result` | `find_unused_keys` |
+| `resolve_options`, `options_from_args`, `build_usage_text`, `OPTION_DEFINITIONS` | `format_result` |
+| `is_locale_code`, `extract_interpolation_keys`, `detect_interpolation_delimiters` |  |
+| `create_path_excluder`, `create_file_excluder`, and every type |  |
+
+`chki18n` re-exports all of it, so `from chki18n import create_analyzer` works too. Reach for `chki18n.core` when the module must not touch the disk.
+
+## Using it
+
+Read the files with whatever the environment already uses, then hand the parsed objects over:
+
+```javascript
+import { analyzeTranslations } from 'chki18n/core';
+
+const en = await fetch('/locales/en.json').then((res) => res.json());
+const ko = await fetch('/locales/ko.json').then((res) => res.json());
+
+const result = analyzeTranslations({ locales: { en, ko } }, { target: 'en' });
+```
+
+```dart
+import 'dart:convert';
+
+import 'package:chki18n/core.dart';
+import 'package:flutter/services.dart' show rootBundle;
+
+final en = jsonDecode(await rootBundle.loadString('locales/en.json'));
+final ko = jsonDecode(await rootBundle.loadString('locales/ko.json'));
+
+final result = analyzeTranslations(
+  Chki18nInput(locales: {'en': en as Map<String, Object?>, 'ko': ko as Map<String, Object?>}),
+  options: const Chki18nOptions(target: 'en'),
+);
+```
+
+```python
+import json
+
+from chki18n.core import Input, Options, analyze_translations
+
+en = json.loads(request.files["en"].read())
+ko = json.loads(request.files["ko"].read())
+
+result = analyze_translations(Input(locales={"en": en, "ko": ko}), Options(target="en"))
+```
+
+## In an editor
+
+Run a full pass when a project opens, then check one key on every edit:
+
+```javascript
+import { createAnalyzer } from 'chki18n/core';
+
+const analyzer = createAnalyzer({ target: 'en' });
+
+analyzer.analyze({ groups: everything }); // on open
+analyzer.checkEntry({ key, values, locales }); // on each keystroke
+```
+
+```dart
+import 'package:chki18n/core.dart';
+
+final analyzer = createAnalyzer(options: const Chki18nOptions(target: 'en'));
+
+analyzer.analyze(Chki18nInput(groups: everything)); // on open
+analyzer.checkEntry(Chki18nEntry(key: key, values: values, locales: locales)); // on each keystroke
+```
+
+```python
+from chki18n.core import Entry, Input, Options, create_analyzer
+
+analyzer = create_analyzer(Options(target="en"))
+
+analyzer.analyze(Input(groups=everything))  # on open
+analyzer.check_entry(Entry(key=key, values=values, locales=locales))  # on each keystroke
+```
+
+## Dependencies
+
+Two, both of them small and neither of them Node-specific: `flat` for flattening nested keys, and `qsu` for extracting interpolation placeholders. `chalk` and `minimist` belong to the CLI and are not reachable from here.
+
+None. The one thing the core entry point reaches outside itself is <Lang dart="`dart:convert`, for the `json` reporter" py="`json`, `re` and `dataclasses`, all of them standard library" />.
+
+---
+
+# Reference
+
+Source: https://chki18n.cdget.com/reference/
+
+What a check hands back, and what has changed between releases.
+
+- [**The result object**](https://chki18n.cdget.com/reference/result) — every field of a result and of an issue, and how to render one.
+- [**Changelog**](https://chki18n.cdget.com/reference/changelog) — every release, newest first.
+
+---
+
+# The result object
+
+Source: https://chki18n.cdget.com/reference/result
+
+Every entry point returns the same result, whether the translations came from a directory, from memory or from a session. It carries every issue found, the same issues grouped by check code, and counts by level, code, locale and group, so a dashboard or a build script never has to derive any of it.
+
+## The result
+
+```typescript
+interface Chki18nResult {
+	success: boolean;
+	issues: Chki18nIssue[];
+	issuesByCode: Partial<Record<Chki18nCheckCode, Chki18nIssue[]>>;
+	summary: Chki18nSummary;
+	target: string;
+	locales: string[];
+	groups: string[];
+	keyCount: number;
+	files: Chki18nSourceFile[];
+	fileFormat: Chki18nFileFormat | null;
+	elapsedMs: number;
+}
+```
+
+```dart
+class Chki18nResult {
+  final bool success;
+  final List<Chki18nIssue> issues;
+  final Map<Chki18nCheckCode, List<Chki18nIssue>> issuesByCode;
+  final Chki18nSummary summary;
+  final String target;
+  final List<String> locales;
+  final List<String> groups;
+  final int keyCount;
+  final List<Chki18nSourceFile> files;
+  final Chki18nFileFormat? fileFormat;
+  final int elapsedMs;
+
+  List<Chki18nIssue> of(Chki18nCheckCode code);
+  Map<String, Object?> toJson();
+}
+```
+
+```python
+@dataclass(slots=True)
+class Result:
+    success: bool
+    issues: list[Issue]
+    issues_by_code: dict[CheckCode, list[Issue]]
+    summary: Summary
+    target: str
+    locales: list[str]
+    groups: list[str]
+    key_count: int
+    files: list[SourceFile]
+    file_format: FileFormat | None
+    elapsed_ms: int
+
+    def of(self, code: CheckCode) -> list[Issue]: ...
+    def to_json(self) -> dict[str, Any]: ...
+```
+
+| Field | Meaning |
+| --- | --- |
+| `success` | <Lang js="`false`" dart="`false`" py="`False`" /> when at least one issue is at `error` level. Warnings never affect it. |
+| `issues` | Every issue, in scan order: target language key order, locale by locale. |
+| <Lang js="issuesByCode" dart="issuesByCode" py="issues_by_code" code /> | The same issues grouped by check code, in the order the codes were first seen. |
+| `summary` | Counts by level, code, locale and group. |
+| `target` | The language everything was compared against. |
+| `locales` | Every locale that took part. |
+| `groups` | Every group name. <Lang js="`['']`" dart="`['']`" py="`[&quot;&quot;]`" /> for a single unnamed group. |
+| <Lang js="keyCount" dart="keyCount" py="key_count" code /> | Distinct keys compared, across every group. |
+| `files` | The files that were read. Empty for in-memory input. |
+| <Lang js="fileFormat" dart="fileFormat" py="file_format" code /> | `single`, `folder`, `nested`, or <Lang js="`null`" dart="`null`" py="`None`" /> for in-memory input. |
+| <Lang js="elapsedMs" dart="elapsedMs" py="elapsed_ms" code /> | How long the call took, scan included where there was one. |
+
+<Lang js="`issues` and `issuesByCode`" dart="`issues` and `issuesByCode`" py="`issues` and `issues_by_code`" /> hold the same objects. Grouping by code does not copy an issue.
+
+Reading one check out of the grouping is common enough to have its own method, so the empty case does not have to be written out every time:
+
+```dart
+result.of(Chki18nCheckCode.noKey); // issuesByCode[noKey] ?? const []
+```
+
+```python
+result.of("NO_KEY")  # issues_by_code.get("NO_KEY", [])
+```
+
+## An issue
+
+```typescript
+interface Chki18nIssue {
+	code: Chki18nCheckCode;
+	level: 'error' | 'warn' | 'info';
+	locale: string;
+	key: string;
+	group: string;
+	value?: string;
+	targetValue?: string;
+	interpolation?: string;
+	relatedKey?: string;
+	file?: string;
+	message: string;
+}
+```
+
+```dart
+class Chki18nIssue {
+  final Chki18nCheckCode code;
+  final Chki18nLevel level;
+  final String locale;
+  final String key;
+  final String group;
+  final String? value;
+  final String? targetValue;
+  final String? interpolation;
+  final String? relatedKey;
+  final String? file;
+  final String message;
+
+  Chki18nIssue withLevel(Chki18nLevel level);
+  Map<String, Object?> toJson();
+}
+```
+
+```python
+@dataclass(frozen=True, slots=True)
+class Issue:
+    code: CheckCode
+    level: Level
+    message: str
+    locale: str = ""
+    key: str = ""
+    group: str = ""
+    value: str | None = None
+    target_value: str | None = None
+    interpolation: str | None = None
+    related_key: str | None = None
+    file: str | None = None
+
+    def with_level(self, level: Level) -> Issue: ...
+    def to_json(self) -> dict[str, Any]: ...
+```
+
+| Field | Meaning |
+| --- | --- |
+| `code` | Which check reported it. See [Checks](https://chki18n.cdget.com/guide/checks). |
+| `level` | Its severity, after any [`levels`](https://chki18n.cdget.com/guide/options#levels) override. |
+| `locale` | The locale the issue belongs to. Empty for issues that are not locale-bound. |
+| `key` | The flattened key. Empty for file and option level issues. |
+| `group` | The group the key belongs to. Empty when there is only one. |
+| `value` | The value as found, where the check is about a value. |
+| <Lang js="targetValue" dart="targetValue" py="target_value" code /> | The target language's value, which is what it was compared against. |
+| `interpolation` | The placeholder that triggered an interpolation issue. |
+| <Lang js="relatedKey" dart="relatedKey" py="related_key" code /> | The other key involved — for `DUPLICATE_VALUE`, the first key using that value. |
+| `file` | Absolute path of the file the key came from, when it came from one. |
+| `message` | A sentence describing this occurrence. |
+
+Optional fields are **absent** rather than `undefined`, so `JSON.stringify` and a deep comparison both behave.
+
+An optional field with nothing in it is <Lang dart="`null`" py="`None`" />, and <Lang dart="`toJson`" py="`to_json`" code /> leaves it out instead of writing it as `null`. That is what keeps the `json` reporter's output identical across the three packages.
+
+## The summary
+
+```typescript
+interface Chki18nSummary {
+	error: number;
+	warn: number;
+	info: number;
+	total: number;
+	byCode: Partial<Record<Chki18nCheckCode, number>>;
+	byLocale: Record<string, { error: number; warn: number; info: number }>;
+	byGroup: Record<string, { error: number; warn: number; info: number }>;
+}
+```
+
+```dart
+class Chki18nSummary {
+  final int error;
+  final int warn;
+  final int info;
+  final int total;
+  final Map<Chki18nCheckCode, int> byCode;
+  final Map<String, Chki18nLevelCount> byLocale;
+  final Map<String, Chki18nLevelCount> byGroup;
+
+  Chki18nLevelCount get levelCount;
+}
+```
+
+```python
+@dataclass(slots=True)
+class Summary:
+    error: int
+    warn: int
+    info: int
+    total: int
+    by_code: dict[CheckCode, int]
+    by_locale: dict[str, LevelCount]
+    by_group: dict[str, LevelCount]
+
+    @property
+    def level_count(self) -> LevelCount: ...
+```
+
+```javascript
+result.summary;
+// {
+//   error: 2, warn: 7, info: 1, total: 10,
+//   byCode: { NO_KEY: 1, EMPTY_VALUE: 1, NOT_TRANSLATED_VALUE: 1, … },
+//   byLocale: { ko: { error: 2, warn: 7, info: 0 } },
+//   byGroup: { '': { error: 2, warn: 7, info: 1 } }
+// }
+```
+
+```dart
+result.summary;
+// error: 2, warn: 7, info: 1, total: 10
+// byCode: {NO_KEY: 1, EMPTY_VALUE: 1, NOT_TRANSLATED_VALUE: 1, …}
+// byLocale: {ko: Chki18nLevelCount(error: 2, warn: 7, info: 0)}
+// byGroup: {: Chki18nLevelCount(error: 2, warn: 7, info: 1)}
+```
+
+```python
+result.summary
+# error=2, warn=7, info=1, total=10
+# by_code={"NO_KEY": 1, "EMPTY_VALUE": 1, "NOT_TRANSLATED_VALUE": 1, …}
+# by_locale={"ko": LevelCount(error=2, warn=7, info=0)}
+# by_group={"": LevelCount(error=2, warn=7, info=1)}
+```
+
+<Lang js="byLocale" dart="byLocale" py="by_locale" code /> only counts issues that belong to a locale; an option or file level issue lands in <Lang js="byGroup" dart="byGroup" py="by_group" code /> but not in <Lang js="byLocale" dart="byLocale" py="by_locale" code />.
+
+## Rendering a result
+
+Every issue carries its own `message`, and the check metadata describes each check, so a user interface never has to hard-code a string:
+
+```javascript
+import { CHECK_META } from 'chki18n';
+
+CHECK_META.NO_KEY;
+// {
+//   level: 'error',
+//   summary: 'Some translation files did not include the following keys',
+//   description: 'The key exists in the target language but is missing here.'
+// }
+```
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+checkMeta[Chki18nCheckCode.noKey];
+// Chki18nCheckMeta(
+//   level: Chki18nLevel.error,
+//   summary: 'Some translation files did not include the following keys',
+//   description: 'The key exists in the target language but is missing here.',
+// )
+```
+
+```python
+from chki18n import CHECK_META
+
+CHECK_META["NO_KEY"]
+# CheckMeta(
+#     level="error",
+#     summary="Some translation files did not include the following keys",
+#     description="The key exists in the target language but is missing here.",
+# )
+```
+
+`summary` heads a list of occurrences and `description` describes one. An issue's own `message` is the description unless the check produced something more specific, as `NO_INTERPOLATION_KEY` does when it names the placeholder.
+
+A minimal report:
+
+```javascript
+for (const [code, issues] of Object.entries(result.issuesByCode)) {
+	console.log(`${CHECK_META[code].summary} (${issues.length})`);
+
+	for (const issue of issues) {
+		console.log(`  ${issue.locale} ${issue.key} — ${issue.message}`);
+	}
+}
+```
+
+```dart
+for (final entry in result.issuesByCode.entries) {
+  print('${checkMeta[entry.key]!.summary} (${entry.value.length})');
+
+  for (final issue in entry.value) {
+    print('  ${issue.locale} ${issue.key} — ${issue.message}');
+  }
+}
+```
+
+```python
+for code, issues in result.issues_by_code.items():
+    print(f"{CHECK_META[code].summary} ({len(issues)})")
+
+    for issue in issues:
+        print(f"  {issue.locale} {issue.key} — {issue.message}")
+```
+
+## Regrouping a filtered subset
+
+<Lang js="`issuesByCode` and `summary`" dart="`issuesByCode` and `summary`" py="`issues_by_code` and `summary`" /> describe the whole result. Filter the issues and the two helpers rebuild both:
+
+```javascript
+import { groupIssuesByCode, summarizeIssues } from 'chki18n';
+
+const visible = result.issues.filter((issue) => issue.locale !== 'ja');
+
+groupIssuesByCode(visible);
+summarizeIssues(visible);
+```
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+final visible = result.issues.where((issue) => issue.locale != 'ja').toList();
+
+groupIssuesByCode(visible);
+summarizeIssues(visible);
+```
+
+```python
+from chki18n import group_issues_by_code, summarize_issues
+
+visible = [issue for issue in result.issues if issue.locale != "ja"]
+
+group_issues_by_code(visible)
+summarize_issues(visible)
+```
+
+## Grouping some other way
+
+The issue carries enough to group by anything you like:
+
+```javascript
+// By locale
+const byLocale = Object.groupBy(result.issues, (issue) => issue.locale);
+
+// By key, to show every problem with one string at once
+const byKey = Object.groupBy(result.issues, (issue) => `${issue.group}/${issue.key}`);
+
+// By file, to annotate an editor
+const byFile = Object.groupBy(result.issues, (issue) => issue.file ?? '');
+```
+
+```dart
+Map<String, List<Chki18nIssue>> groupBy(
+  List<Chki18nIssue> issues,
+  String Function(Chki18nIssue issue) keyOf,
+) {
+  final grouped = <String, List<Chki18nIssue>>{};
+
+  for (final issue in issues) {
+    grouped.putIfAbsent(keyOf(issue), () => []).add(issue);
+  }
+
+  return grouped;
+}
+
+// By locale
+final byLocale = groupBy(result.issues, (issue) => issue.locale);
+
+// By key, to show every problem with one string at once
+final byKey = groupBy(result.issues, (issue) => '${issue.group}/${issue.key}');
+
+// By file, to annotate an editor
+final byFile = groupBy(result.issues, (issue) => issue.file ?? '');
+```
+
+```python
+from collections import defaultdict
+
+def group_by(issues, key_of):
+    grouped = defaultdict(list)
+
+    for issue in issues:
+        grouped[key_of(issue)].append(issue)
+
+    return grouped
+
+# By locale
+by_locale = group_by(result.issues, lambda issue: issue.locale)
+
+# By key, to show every problem with one string at once
+by_key = group_by(result.issues, lambda issue: f"{issue.group}/{issue.key}")
+
+# By file, to annotate an editor
+by_file = group_by(result.issues, lambda issue: issue.file or "")
+```
+
+## Building a result of your own
+
+<Lang js="buildResult" dart="buildResult" py="build_result" code /> assembles one from a list of issues, deriving `success`, the grouping and the summary so they cannot disagree with the issues they describe:
+
+```javascript
+import { buildResult, createIssue, resolveOptions } from 'chki18n';
+
+const { options } = resolveOptions({ target: 'en' });
+
+const result = buildResult([createIssue('NO_KEY', { locale: 'ko', key: 'a' })], options, {
+	locales: ['en', 'ko'],
+	groups: ['']
+});
+```
+
+```dart
+import 'package:chki18n/chki18n.dart';
+
+final options = resolveOptions(const Chki18nOptions(target: 'en')).options;
+
+final result = buildResult(
+  [createIssue(Chki18nCheckCode.noKey, locale: 'ko', key: 'a')],
+  options,
+  locales: ['en', 'ko'],
+  groups: [''],
+);
+```
+
+```python
+from chki18n import Options, build_result, create_issue, resolve_options
+
+options, _ = resolve_options(Options(target="en"))
+
+result = build_result(
+    [create_issue("NO_KEY", locale="ko", key="a")],
+    options,
+    locales=["en", "ko"],
+    groups=[""],
+)
+```
+
+---
+
+# Changelog
+
+Source: https://chki18n.cdget.com/reference/changelog
+
+Every release of chki18n, newest first. Each package versions on its own, so a release on one side is not a release on the others.
+
+Released as `chki18n` on npm.
+
+## 1.2.0 (2026-09-05)
+
+> A scan can be pointed at an application's root rather than at a folder of locales. It skips the configuration and lock files that root is full of, an exclude can name a path rather than a bare directory name, and it reports which interpolation delimiters the files it read appear to use.
+
+### Added
+
+- `excludeFiles` names the files a scan never reads, as patterns where `*` stands for any run of characters and case is ignored. It defaults to the configuration and lock files no project keeps translations in — `package.json`, `tsconfig.json`, `tsconfig.*.json`, `eslintrc.json`, `*-lock.json`, `*-config.json` and `*.config.json` — which a scan of an application root used to read and parse in full on every run. The default list is exported as `DEFAULT_EXCLUDE_FILES`, and `--exclude-files` is the flag
+- `detectInterpolationDelimiters` guesses which delimiters a text writes its interpolation keys with: `{{name}}` before `{name}`, and `[[ ]]`, `(( ))` and `<< >>` after them. `Chki18nScanResult.detectedInterpolation` reports what a whole scan saw, which `loadTranslations` carries as `session.detectedInterpolation`. It is a suggestion for a project being set up, never what the run compared with — that stays `interpolationPrefix`. The pairs it knows are exported in order as `INTERPOLATION_DELIMITERS`
+- `createPathExcluder` and `createFileExcluder` build the two tests a scan applies, so an application that shows a user which folders are excluded can ask the same question the scan asks
+
+### Changed
+
+- `exclude` accepts a path as well as a name. One segment still names a directory at any depth, so `node_modules` means every `node_modules` there is; an entry with a separator names a path from the scanned root, so `src/legacy` excludes that folder and everything under it without touching a `legacy` belonging to something else
+- Both exclude lists apply to the source tree `source` names as well as to the translation directory
+
+## 1.1.0 (2026-09-04)
+
+> The target language is checked too. Everything else is compared against it, so it sat outside every check, and a mistake typed into the source language stayed there however often the files were checked.
+
+### Changed
+
+- The target language is now checked by everything that reads one value on its own: `EMPTY_VALUE`, `SURROUNDING_WHITESPACE`, `INVISIBLE_CHARACTER`, `INVALID_VALUE_TYPE` and `UNTRANSLATED_SCRIPT`. It was skipped outright before, so an empty string, a trailing space or a zero width character in `en.json` was never reported. The comparison checks still say nothing about it, since it is what they compare against. None of the five reports at `error`, so a run that passed still passes; switch one off with `ignoreChecks` the way you would for any other language
+- An issue about the target language's own value carries no `targetValue`. What a report quotes beside a finding is the value it would be compared to, and for the target language that is the value already shown
+
+### Fixed
+
+- The `github` reporter writes the annotation's `file=` path with forward slashes on every platform. On a Windows runner it wrote the platform's own separator, which GitHub matches against nothing, so the annotation silently attached to no file
+
+## 1.0.0 (2026-09-03)
+
+> The first stable release. The checks no longer depend on the file system, so they run against translations an application already holds in memory as well as against a folder of files; the report was rebuilt around what a reader is looking for, and can be written as JSON, Markdown or GitHub annotations; and the comparison grew to twenty-five checks.
+
+### Breaking changes
+
+- A project that passed on `0.3.0` can fail on this release. Four of the checks added report at `error` — `NO_LOCALE`, `DUPLICATE_KEY`, `EXTRA_INTERPOLATION_KEY` and `INTERPOLATION_COUNT` — and `EMPTY_VALUE` and `DUMMY_KEY` were fixed to report at all. Everything else added reports at `warn` or `info`, which never fails a run. Switch off what a project does not want with `ignoreChecks`, or `--ignore-checks` on the command line
+- The CLI report was rebuilt around what the reader is looking for: a heading block naming what was scanned, one section per language with its own tally, each check's meaning printed once above its findings, and a summary that counts the axis the sections did not use. Columns are laid out by display width, so a Korean, Japanese or Chinese value no longer pushes the ones beside it out of line. Nothing should read the text of that report — anything that used to parse standard output wants `--reporter json`
+- `--no-info` drops the heading block and the summary rather than only the progress lines, and `--debug` writes to standard error so a report piped out of standard output stays parseable
+- The CLI moved to its own entry point (`dist/cli.js`), which the `chki18n` binary points at. Importing the module has no side effect and never writes to the console or exits the process, so an import that ran the CLI has to call `checkTranslationFiles` instead
+- The result now carries every issue, whether the run passed or failed, as a flat `issues` list plus `issuesByCode` and a `summary` with per-level, per-code, per-locale and per-group counts. Each issue has its own `level`, `message` and originating `file`. Code that read the old shape has to move to these fields
+
+### Added
+
+- `analyzeTranslations` compares translations passed in directly, with no file system work
+- `createAnalyzer` returns a reusable analyzer whose `checkEntry` re-checks a single key
+- `loadTranslations` reads a directory once and returns a session that holds the parsed translations: `analyze`, `checkKey`, `get`, `set`, `remove`, `keys`, `translations` and `reload` all work on what is already in memory. `createSession` is the same for translations passed in directly
+- `EXTRA_INTERPOLATION_KEY`, `SURROUNDING_WHITESPACE`, `MISSING_NUMBER` and `INVALID_VALUE_TYPE` checks
+- `NO_LOCALE`, for a group of files that holds nothing for a language the other groups have. Until now a translation file nobody created dropped out of the comparison entirely and the run passed
+- `INTERPOLATION_COUNT`, for a placeholder used a different number of times than the target language uses it. The two interpolation checks compare which placeholders a value has, so `{name} invited {name}` translated with one `{name}` passed both
+- `TAG_MISMATCH`, for markup a translation dropped, added or left unbalanced. Tags are counted rather than looked for, and read case-insensitively
+- `UNTRANSLATED_SCRIPT`, for a value holding no character of the script its language is written in. `NOT_TRANSLATED_VALUE` only catches a translation identical to the original, so `Hello` becoming `Hello!` passed it
+- `INVISIBLE_CHARACTER`, for a zero width space, a byte order mark, a bidirectional control or a non-breaking space
+- `NUMBER_MISMATCH`, for a number the translation changed rather than dropped. `MISSING_NUMBER` only asks whether any digits survived
+- `INCONSISTENT_VALUE`, for two keys sharing one target language string that a locale translates two different ways. `DUPLICATE_VALUE` asks whether one locale repeats itself; this asks the opposite
+- `KEY_NAMING` and `KEY_DEPTH`, for the shape of a key rather than what it translates to. Both wait for `keyCase` and `maxKeyDepth` to say what the project wants, and are judged once per key rather than once per locale
+- `keyCase` and `maxKeyDepth`, the options those two compare against. `keyCase` accepts the plural and context suffixes an i18n library appends, whatever case the project uses
+- `UNDEFINED_KEY`, the reverse of `UNUSED_KEY` and the more serious of the two: the scanned source calls for a key and no language file defines it. Reads the calls it finds under `source`, and lets through a key built at run time, one reached through a bound prefix, and a plural key asked for by its base
+- `translateFunctions`, the names a translation call goes by. The default covers i18next, react-i18next and vue-i18n
+- `NO_PLURAL_FORM`, for a plural key missing a form its language needs. Which forms a language needs is a fact about the language rather than about the original: English writes two, Russian four, Korean one. The older i18next pairing of a bare key with `_plural` is left as ordinary keys, and a language the table does not cover is never judged
+- `SUSPICIOUS_LENGTH`, reported at `info`, for a value far longer or shorter than the one it translates. Waits for `lengthRatio`, and measures columns rather than characters so a Korean or Japanese value is not short by default
+- `lengthRatio`, the option it compares against
+- `checkKeyShape` and `displayWidth` are exported, so an editor can judge a key the user is still typing and lay a value out the way the report does
+- `extractTags`, `extractNumbers`, `findInvisibleCharacter`, `scriptOfLocale` and `hasTranslatableText` are exported, so an editor can run the same measurements on a value it is holding
+- `DUPLICATE_KEY`, which catches a key defined twice — both the literal kind (`{"a": 1, "a": 2}`, which `JSON.parse` resolves silently) and the kind where a nested key and a dotted one flatten onto each other
+- `UNUSED_KEY`, reported at `info`, for keys nothing in a `source` directory appears to reference. An application that has already worked this out can pass its own answer as `unusedKeys` instead
+- `source`, the directory the unused-key scan searches
+- Support for the folder-per-locale (`en/common.json`) and single-file-per-project (`{ "en": ... }`) layouts, alongside the existing one-file-per-locale layout. Files holding the same keys are compared as a group, so several translation files no longer share one pile of keys
+- `Chki18nInput` accepts `issues` and `fileFormat`, so whatever produced the input can report its own problems into the same result
+- `chki18n/core`, a subpath that exports the comparison engine on its own. It imports no Node built-in, so it bundles for a browser or an editor's renderer process
+- `checks`, `ignoreChecks`, `levels`, `format`, `exclude` and the interpolation delimiter options, available both as CLI flags and as JavaScript options
+- `--help` and `--version`
+- `reporter`, which decides the shape of the report: `pretty` for a terminal, `list` for one line per issue, `json` for another program to read, `markdown` for a table, and `github` for the workflow commands GitHub Actions turns into annotations on the translation files themselves. Everything but `pretty` prints the report alone, with no banner, so it can be piped straight into something else
+- `groupBy`, the axis the report groups its issues by: `locale` (the default), `code`, `group`, `file` or `none`
+- `output`, a file the report is written to as well as the terminal. The extension picks the format, an explicit `reporter` overrides it, missing directories are created, and a write that fails is reported as an error and fails the run
+- `color`, and `--no-color` with it. A file written by `output` is never coloured
+- `width`, the column count the report is laid out to. Without it the terminal's own width is used, then `COLUMNS`, which is where a CI runner reports its log width
+- `formatResult` and `groupIssues` are exported, so an application can render a result the way the CLI does, along with `displayWidth`, `padTo` and `truncate` for laying out columns of its own
+
+### Changed
+
+- `CHECK_META` describes each check's severity and wording, so a user interface does not have to hard-code them
+- A description that does not fit the width wraps onto the next line instead of being cut short, so a narrow terminal loses no wording
+- `NO_KEY` and `DUMMY_KEY` no longer ask every language for every plural form. Korean needs only `item_other`, so `item_one` being absent from it was reported as missing and is not; Russian needs an `item_few` that English never writes, and that was reported as a stray key. Applies only to keys ending in a named plural category, and only to the languages the plural table covers
+- `UNUSED_KEY` searches for a plural key by its base. No source file writes `item_one`, so every plural key in a project was reported as unused
+- The package now publishes `types`, so TypeScript consumers get the result shape
+- Analysis is linear in the number of keys rather than quadratic: comparing 5,000 keys across 5 locales went from about 10.8s to about 26ms
+- The twelve checks added since cost about a third as much again as the original twelve over the same 5,000 keys, and a check that is switched off costs nothing at all. `lengthRatio` is the exception worth knowing: measuring every value in display columns more than doubles the run, which is part of why it stays off until it is asked for
+
+### Fixed
+
+- `--no-warn` hid the heading of a warning but still printed the lines under it. A suppressed issue is now left out entirely, and the report says how many it hid
+- `EMPTY_VALUE` and `DUMMY_KEY` were written so their conditions could never be true, and never reported anything
+- A missing target language file threw instead of being reported
+- A relative path was joined as if it were absolute, so a scan rooted at one found nothing. Paths now resolve against the working directory
+- An explicit `path` option was overridden by the (absent) first argument, which is how the CLI passes it
+
+## 0.1.0 ~ 0.3.0 (2026-04-14 ~ 2026-04-17) (Beta)
+
+> This is for the Beta release. It can be used in production, but some features are still under development.
+
+- Cleanup and refactoring (0.1.0)
+- Improved error handling (0.1.0)
+- Fix and cleanup codes (0.2.0)
+- Add `NO_INTERPOLATION_KEY` check (0.2.0)
+- Base JS function support (0.3.0)
+
+## 0.0.1 ~ 0.0.5 (2026-04-14) (Alpha)
+
+> This is for the Alpha release and is not recommended for use
+
+- Initial release
+
+Released as `chki18n` on pub.dev.
+
+## 1.2.0 (2026-09-05)
+
+> A scan can be pointed at an application's root rather than at a folder of locales. It skips the configuration and lock files that root is full of, an exclude can name a path rather than a bare directory name, and it reports which interpolation delimiters the files it read appear to use.
+
+### Added
+
+- `excludeFiles` names the files a scan never reads, as patterns where `*` stands for any run of characters and case is ignored. It defaults to the configuration and lock files no project keeps translations in — `package.json`, `tsconfig.json`, `tsconfig.*.json`, `eslintrc.json`, `*-lock.json`, `*-config.json` and `*.config.json` — which a scan of an application root used to read and parse in full on every run. The default list is exported as `defaultExcludeFiles`, and `--exclude-files` is the flag
+- `detectInterpolationDelimiters` guesses which delimiters a text writes its interpolation keys with: `{{name}}` before `{name}`, and `[[ ]]`, `(( ))` and `<< >>` after them. `Chki18nScanResult.detectedInterpolation` reports what a whole scan saw, which `loadTranslations` carries as `session.detectedInterpolation`. It is a suggestion for a project being set up, never what the run compared with — that stays `interpolationPrefix`. The pairs it knows are exported in order as `interpolationDelimiters`
+- `createPathExcluder` and `createFileExcluder` build the two tests a scan applies, so an application that shows a user which folders are excluded can ask the same question the scan asks
+
+### Changed
+
+- `exclude` accepts a path as well as a name. One segment still names a directory at any depth, so `node_modules` means every `node_modules` there is; an entry with a separator names a path from the scanned root, so `src/legacy` excludes that folder and everything under it without touching a `legacy` belonging to something else
+- Both exclude lists apply to the source tree `source` names as well as to the translation directory
+
+## 1.1.0 (2026-09-04)
+
+> The target language is checked too. Everything else is compared against it, so it sat outside every check, and a mistake typed into the source language stayed there however often the files were checked.
+
+### Changed
+
+- The target language is now checked by everything that reads one value on its own: `EMPTY_VALUE`, `SURROUNDING_WHITESPACE`, `INVISIBLE_CHARACTER`, `INVALID_VALUE_TYPE` and `UNTRANSLATED_SCRIPT`. It was skipped outright before, so an empty string, a trailing space or a zero width character in `en.json` was never reported. The comparison checks still say nothing about it, since it is what they compare against. None of the five reports at `error`, so a run that passed still passes; switch one off with `ignoreChecks` the way you would for any other language
+- An issue about the target language's own value carries no `targetValue`. What a report quotes beside a finding is the value it would be compared to, and for the target language that is the value already shown
+
+### Fixed
+
+- The `github` reporter writes the annotation's `file=` path with forward slashes on every platform. On a Windows runner it wrote the platform's own separator, which GitHub matches against nothing, so the annotation silently attached to no file
+
+## 1.0.0 (2026-09-03)
+
+> The first release. A port of the JavaScript package at the same version: the same twenty-five checks, the same option names, the same report, and the same exit code from the command line.
+
+### Added
+
+- `checkTranslationFiles` reads a directory of translation files and compares every language against the target language, in one call
+- `analyzeTranslations` compares translations passed in directly, with no file system work
+- `createAnalyzer` returns a reusable analyzer whose `checkEntry` re-checks a single key
+- `loadTranslations` reads a directory once and returns a session that holds the parsed translations: `analyze`, `checkKey`, `get`, `set`, `remove`, `keys`, `translations` and `reload` all work on what is already in memory. `createSession` is the same for translations passed in directly
+- Twenty-five checks. `NO_KEY`, `NO_LOCALE`, `DUPLICATE_KEY`, `NO_INTERPOLATION_KEY`, `EXTRA_INTERPOLATION_KEY` and `INTERPOLATION_COUNT` report at `error` and fail a run; `DUMMY_KEY`, `EMPTY_VALUE`, `INVALID_VALUE_TYPE`, `TAG_MISMATCH`, `NOT_TRANSLATED_VALUE`, `UNTRANSLATED_SCRIPT`, `DUPLICATE_VALUE`, `INCONSISTENT_VALUE`, `SURROUNDING_WHITESPACE`, `INVISIBLE_CHARACTER`, `MISSING_NUMBER`, `NUMBER_MISMATCH`, `NO_PLURAL_FORM`, `KEY_NAMING`, `KEY_DEPTH` and `UNDEFINED_KEY` at `warn`; `UNUSED_KEY` and `SUSPICIOUS_LENGTH` at `info`
+- Every on-disk layout: one file per locale (`en.json`), one folder per locale (`en/common.json`), and one file holding every locale (`{"en": ...}`). Files holding the same keys are compared as a group
+- Five reporters — `pretty`, `list`, `json`, `markdown` and `github` — and five grouping axes: `locale`, `code`, `group`, `file` and `none`. `output` writes a copy to a file, in the shape its extension implies
+- The `chki18n` command, which takes the same options as the library and exits with `1` when an `error` level issue was found. Install it with `dart pub global activate chki18n`
+- `package:chki18n/core.dart`, the comparison on its own. It imports no `dart:io`, so it runs in a Flutter web build or anywhere else the file system is not there
+
+### Notes on the port
+
+- Options are one object with named parameters — `Chki18nOptions(target: 'en')` — rather than the twenty-four named parameters each entry point would otherwise carry. Every field is optional and every one has the JavaScript default
+- Enums replace the string unions: `Chki18nCheckCode.noKey`, `Chki18nLevel.error`, `Chki18nFileFormat.single`. Each carries the spelling the CLI and the JSON reporter share, so `Chki18nCheckCode.noKey.code` is `NO_KEY` in every package
+- The loose text forms a command line writes — `'NO_KEY,EMPTY_VALUE'`, `'EMPTY_VALUE=error'` — live on `Chki18nTextOptions` rather than being a second accepted type on every field. `resolveOptions` reads both, and a typed field wins over the text one
+- A translation file whose JSON is not an object is reported as `INVALID_FILE` rather than read as an empty one
+- No dependencies. The argument parser, the ANSI colours and the path helpers are written out, because `args`, `chalk` and `package:path` would be the only three
+
+Released as `chki18n` on PyPI.
+
+## 1.2.0 (2026-09-05)
+
+> A scan can be pointed at an application's root rather than at a folder of locales. It skips the configuration and lock files that root is full of, an exclude can name a path rather than a bare directory name, and it reports which interpolation delimiters the files it read appear to use.
+
+### Added
+
+- `exclude_files` names the files a scan never reads, as patterns where `*` stands for any run of characters and case is ignored. It defaults to the configuration and lock files no project keeps translations in — `package.json`, `tsconfig.json`, `tsconfig.*.json`, `eslintrc.json`, `*-lock.json`, `*-config.json` and `*.config.json` — which a scan of an application root used to read and parse in full on every run. The default list is exported as `DEFAULT_EXCLUDE_FILES`, and `--exclude-files` is the flag
+- `detect_interpolation_delimiters` guesses which delimiters a text writes its interpolation keys with: `{{name}}` before `{name}`, and `[[ ]]`, `(( ))` and `<< >>` after them. `ScanResult.detected_interpolation` reports what a whole scan saw, which `load_translations` carries as `session.detected_interpolation`. It is a suggestion for a project being set up, never what the run compared with — that stays `interpolation_prefix`. The pairs it knows are exported in order as `INTERPOLATION_DELIMITERS`
+- `create_path_excluder` and `create_file_excluder` build the two tests a scan applies, so an application that shows a user which folders are excluded can ask the same question the scan asks
+
+### Changed
+
+- `exclude` accepts a path as well as a name. One segment still names a directory at any depth, so `node_modules` means every `node_modules` there is; an entry with a separator names a path from the scanned root, so `src/legacy` excludes that folder and everything under it without touching a `legacy` belonging to something else
+- Both exclude lists apply to the source tree `source` names as well as to the translation directory
+
+## 1.1.0 (2026-09-04)
+
+> The target language is checked too. Everything else is compared against it, so it sat outside every check, and a mistake typed into the source language stayed there however often the files were checked.
+
+### Changed
+
+- The target language is now checked by everything that reads one value on its own: `EMPTY_VALUE`, `SURROUNDING_WHITESPACE`, `INVISIBLE_CHARACTER`, `INVALID_VALUE_TYPE` and `UNTRANSLATED_SCRIPT`. It was skipped outright before, so an empty string, a trailing space or a zero width character in `en.json` was never reported. The comparison checks still say nothing about it, since it is what they compare against. None of the five reports at `error`, so a run that passed still passes; switch one off with `ignore_checks` the way you would for any other language
+- An issue about the target language's own value carries no `target_value`. What a report quotes beside a finding is the value it would be compared to, and for the target language that is the value already shown
+
+### Fixed
+
+- The `github` reporter writes the annotation's `file=` path with forward slashes on every platform. On a Windows runner it wrote the platform's own separator, which GitHub matches against nothing, so the annotation silently attached to no file
+- The command writes UTF-8 to the console whatever its code page is. On Windows it printed the banner and then died with a `UnicodeEncodeError` half a report in, exiting `1` on a directory with nothing wrong
+
+## 1.0.0 (2026-09-03)
+
+> The first release. A port of the JavaScript package at the same version: the same twenty-five checks, the same option names, the same report, and the same exit code from the command line.
+
+### Added
+
+- `check_translation_files` reads a directory of translation files and compares every language against the target language, in one call
+- `analyze_translations` compares translations passed in directly, with no file system work
+- `create_analyzer` returns a reusable analyzer whose `check_entry` re-checks a single key
+- `load_translations` reads a directory once and returns a session that holds the parsed translations: `analyze`, `check_key`, `get`, `set`, `remove`, `keys`, `translations` and `reload` all work on what is already in memory. `create_session` is the same for translations passed in directly
+- Twenty-five checks. `NO_KEY`, `NO_LOCALE`, `DUPLICATE_KEY`, `NO_INTERPOLATION_KEY`, `EXTRA_INTERPOLATION_KEY` and `INTERPOLATION_COUNT` report at `error` and fail a run; `DUMMY_KEY`, `EMPTY_VALUE`, `INVALID_VALUE_TYPE`, `TAG_MISMATCH`, `NOT_TRANSLATED_VALUE`, `UNTRANSLATED_SCRIPT`, `DUPLICATE_VALUE`, `INCONSISTENT_VALUE`, `SURROUNDING_WHITESPACE`, `INVISIBLE_CHARACTER`, `MISSING_NUMBER`, `NUMBER_MISMATCH`, `NO_PLURAL_FORM`, `KEY_NAMING`, `KEY_DEPTH` and `UNDEFINED_KEY` at `warn`; `UNUSED_KEY` and `SUSPICIOUS_LENGTH` at `info`
+- Every on-disk layout: one file per locale (`en.json`), one folder per locale (`en/common.json`), and one file holding every locale (`{"en": ...}`). Files holding the same keys are compared as a group
+- Five reporters — `pretty`, `list`, `json`, `markdown` and `github` — and five grouping axes: `locale`, `code`, `group`, `file` and `none`. `output` writes a copy to a file, in the shape its extension implies
+- The `chki18n` command, which takes the same options as the library and exits with `1` when an `error` level issue was found
+- `chki18n.core`, the comparison on its own. It reaches no file system, so an application that must not touch the disk can import the checks without the scanner
+
+### Notes on the port
+
+- Options are one keyword-only frozen dataclass — `Options(target="en")` — rather than the twenty-four keyword arguments each entry point would otherwise carry. Every field is optional and every one has the JavaScript default
+- Check codes, severities and the option choices are the same strings the JavaScript package uses, typed as `Literal`, so `"NO_KEY"` and `"error"` need no translating between the two. `checks` accepts a list or the comma separated text a flag gives it, and `levels` a mapping or the CLI's `CODE=level` list
+- The entry points are synchronous. The JavaScript package is asynchronous because Node's file system is; Python's is not, and an `async` surface would be a promise this package cannot keep anything with
+- A translation file whose JSON is not an object is reported as `INVALID_FILE` rather than read as an empty one
+- No dependencies. The argument parser, the ANSI colours and the JSON key scanner are written out, because `argparse` cannot express `--no-x` as the negation of `x` and the other two would be a dependency each
