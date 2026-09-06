@@ -2,7 +2,7 @@
 
 Thank you for contributing. Issues and pull requests are both welcome, and this page covers what each one needs.
 
-This project adheres to the Contributor Covenant code of conduct. Contributing means you have read that policy and agree to it. The maintainers will warn or restrict any behaviour that undermines it.
+This project adheres to version 2.1 of the Contributor Covenant, which is reproduced in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Contributing means you have read that policy and agree to it. The maintainers will warn or restrict any behaviour that undermines it.
 
 ## Issues
 
