@@ -117,14 +117,21 @@ function casesFrom() {
 		if (!entry.isDirectory()) continue;
 
 		const sample = `${SAMPLES}/${entry.name}`;
-		const hasSource = readdirSync(join(dir, entry.name)).includes('src');
+		const contents = readdirSync(join(dir, entry.name));
+		const hasSource = contents.includes('src');
+		// A sample that only means something under an option of its own, such as
+		// a pair of delimiters, names it in `.parity.json`. The scanners skip a
+		// hidden file, so it is never read as a translation.
+		const extra = contents.includes('.parity.json')
+			? JSON.parse(readFileSync(join(dir, entry.name, '.parity.json'), 'utf8')).args
+			: [];
 
 		// A sample carrying its own sources is there for `UNUSED_KEY` and
 		// `UNDEFINED_KEY`, which report nothing until they are pointed at them.
 		cases.push(
 			hasSource
-				? { name: entry.name, args: [`${sample}/locales`, '--source', `${sample}/src`] }
-				: { name: entry.name, args: [sample] }
+				? { name: entry.name, args: [`${sample}/locales`, '--source', `${sample}/src`, ...extra] }
+				: { name: entry.name, args: [sample, ...extra] }
 		);
 	}
 

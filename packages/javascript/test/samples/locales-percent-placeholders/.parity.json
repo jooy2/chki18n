@@ -1,0 +1,8 @@
+{
+	"args": [
+		"--interpolation-prefix",
+		"%{",
+		"--interpolation-suffix",
+		"}"
+	]
+}

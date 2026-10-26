@@ -1,0 +1,5 @@
+{
+	"greeting": "안녕하세요 %{nmae}",
+	"items": "%{place}에 %{count}개",
+	"literal": "{braces}를 자유롭게 쓰세요"
+}

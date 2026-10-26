@@ -1,0 +1,5 @@
+{
+	"greeting": "Hello %{name}",
+	"items": "%{count} items in %{place}",
+	"literal": "Use {braces} freely"
+}
