@@ -1,6 +1,8 @@
 # Changelog
 
-## vNext (2026--)
+## 1.3.0 (2026-10-26)
+
+> Reports now agree with the JavaScript and Python packages in every case they used to differ on, the unused key scan takes a second where it took two minutes, and numbers, ordinal plurals and Thai or Hindi text are read the way their languages write them.
 
 ### Added
 

@@ -1,14 +1,15 @@
 {
 	"name": "chki18n",
 	"type": "module",
-	"version": "1.2.0",
+	"version": "1.3.0",
 	"description": "Check and verify your i18n translation files, from the command line or from JavaScript.",
 	"author": "CDGet (https://cdget.com)",
 	"license": "MIT",
 	"homepage": "https://chki18n.cdget.com",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/jooy2/chki18n"
+		"url": "https://github.com/jooy2/chki18n",
+		"directory": "packages/javascript"
 	},
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
