@@ -35,15 +35,49 @@ const DIGIT_ZEROS = [
 	0x1e140, 0x1e2f0, 0x1e4f0, 0x1e5f1, 0x1e950, 0x1fbf0
 ];
 
-const DIGIT_CLASS = DIGIT_ZEROS.map(
-	(zero) => `\\u{${zero.toString(16)}}-\\u{${(zero + 9).toString(16)}}`
-).join('');
+const ASCII_DIGIT_PATTERN = /[0-9]/;
 
-const NUMBER_PATTERN = new RegExp(`[${DIGIT_CLASS}]+`, 'gu');
+const ASCII_NUMBER_PATTERN = /[0-9]+/g;
 
-const DIGIT_PATTERN = new RegExp(`[${DIGIT_CLASS}]`, 'u');
+/**
+ * Anything at or past the first digit outside ASCII. A value without one, which
+ * is every value in a Latin, Greek or Cyrillic script, can only hold ASCII
+ * digits, and the regular expressions for those are the fastest way to them.
+ */
+const BEYOND_ASCII_DIGITS_PATTERN = /[^\u0000-\u065f]/;
 
-const ASCII_NUMBER_PATTERN = /^[0-9]+$/;
+/**
+ * The value of a digit of any script, or `-1` for a character that is not one.
+ * Read off the table rather than matched against a character class built from
+ * it: a value is walked once either way, and the walk is several times faster.
+ */
+function digitValueOf(code: number): number {
+	if (code >= 0x30 && code <= 0x39) {
+		return code - 0x30;
+	}
+
+	if (code < DIGIT_ZEROS[1]) {
+		return -1;
+	}
+
+	let low = 0;
+	let high = DIGIT_ZEROS.length - 1;
+
+	// The last zero at or below the character is the one its set would start from.
+	while (low < high) {
+		const middle = (low + high + 1) >> 1;
+
+		if (DIGIT_ZEROS[middle] <= code) {
+			low = middle;
+		} else {
+			high = middle - 1;
+		}
+	}
+
+	const value = code - DIGIT_ZEROS[low];
+
+	return value <= 9 ? value : -1;
+}
 
 /**
  * Characters that take no space and are invisible in a review: zero width
@@ -117,7 +151,27 @@ export function extractTags(value: string): readonly string[] {
 
 /** Whether a value holds a digit of any script. */
 export function hasDigit(value: string): boolean {
-	return DIGIT_PATTERN.test(value);
+	if (ASCII_DIGIT_PATTERN.test(value)) {
+		return true;
+	}
+
+	if (!BEYOND_ASCII_DIGITS_PATTERN.test(value)) {
+		return false;
+	}
+
+	for (let index = 0; index < value.length; index += 1) {
+		const code = value.codePointAt(index) ?? 0;
+
+		if (digitValueOf(code) !== -1) {
+			return true;
+		}
+
+		if (code > 0xffff) {
+			index += 1;
+		}
+	}
+
+	return false;
 }
 
 /**
@@ -125,37 +179,50 @@ export function hasDigit(value: string): boolean {
  * `3` stay apart. A run may be written in any script's digits.
  */
 export function extractNumbers(value: string): readonly string[] {
-	return value.match(NUMBER_PATTERN) ?? NOTHING;
+	if (!BEYOND_ASCII_DIGITS_PATTERN.test(value)) {
+		return value.match(ASCII_NUMBER_PATTERN) ?? NOTHING;
+	}
+
+	let numbers: string[] | null = null;
+	let start = -1;
+
+	for (let index = 0; index <= value.length; index += 1) {
+		const code = index < value.length ? (value.codePointAt(index) ?? 0) : -1;
+		const isDigit = code !== -1 && digitValueOf(code) !== -1;
+
+		if (isDigit && start === -1) {
+			start = index;
+		} else if (!isDigit && start !== -1) {
+			(numbers ??= []).push(value.slice(start, index));
+			start = -1;
+		}
+
+		if (code > 0xffff) {
+			index += 1;
+		}
+	}
+
+	return numbers ?? NOTHING;
 }
 
 /** A run of digits in ASCII, so `٠٣` and `03` compare equal. */
 export function asciiDigitsOf(digits: string): string {
-	if (ASCII_NUMBER_PATTERN.test(digits)) {
+	if (!BEYOND_ASCII_DIGITS_PATTERN.test(digits)) {
 		return digits;
 	}
 
 	let ascii = '';
+	let changed = false;
 
 	for (const char of digits) {
 		const code = char.codePointAt(0) ?? 0;
-		let low = 0;
-		let high = DIGIT_ZEROS.length - 1;
+		const value = digitValueOf(code);
 
-		// The last zero at or below the digit is the one its set starts from.
-		while (low < high) {
-			const middle = (low + high + 1) >> 1;
-
-			if (DIGIT_ZEROS[middle] <= code) {
-				low = middle;
-			} else {
-				high = middle - 1;
-			}
-		}
-
-		ascii += String.fromCharCode(0x30 + code - DIGIT_ZEROS[low]);
+		changed ||= code !== 0x30 + value;
+		ascii += String.fromCharCode(0x30 + value);
 	}
 
-	return ascii;
+	return changed ? ascii : digits;
 }
 
 /** The first character in a value that nothing will draw, if there is one. */
