@@ -14,6 +14,7 @@
 
 - The command line writes its whole report before it exits. Written into a pipe, which is how a CI runner reads it, a report longer than 64 KB stopped there and the rest was lost
 - `interpolationPrefix` and `interpolationSuffix` of different lengths, such as `%{` and `}`, are read the way the Dart and Python packages read them. The run used to stop with an exception at the first value holding the prefix, and so did a prefix equal to the suffix
+- A translation file that starts with a byte order mark is read like any other. Several Windows editors write one, and such a file was reported as `INVALID_FILE` and left out of the comparison
 
 ## 1.2.0 (2026-09-05)
 

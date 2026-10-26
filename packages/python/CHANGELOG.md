@@ -1,5 +1,11 @@
 # Changelog
 
+## vNext (2026--)
+
+### Fixed
+
+- A translation file that starts with a byte order mark is read like any other. Several Windows editors write one, and such a file was reported as `INVALID_FILE` and left out of the comparison
+
 ## 1.2.0 (2026-09-05)
 
 > A scan can be pointed at an application's root rather than at a folder of locales. It skips the configuration and lock files that root is full of, an exclude can name a path rather than a bare directory name, and it reports which interpolation delimiters the files it read appear to use.

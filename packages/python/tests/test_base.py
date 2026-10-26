@@ -19,6 +19,13 @@ def test_passes_a_directory_with_no_critical_issue() -> None:
     assert len(result.files) == 2
 
 
+def test_reads_a_file_that_starts_with_a_byte_order_mark() -> None:
+    result = check_translation_files(sample_path("locales-byte-order-mark"))
+
+    assert result.of("INVALID_FILE") == []
+    assert [issue.key for issue in result.of("NO_KEY")] == ["farewell"]
+
+
 def test_reports_a_key_the_target_has_and_another_locale_does_not() -> None:
     result = check_translation_files(sample_path("locales-issue-no-key"))
 

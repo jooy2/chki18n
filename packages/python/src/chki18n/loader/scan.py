@@ -125,7 +125,9 @@ def _collect_files(
             read_error = f"Failed to read file '{relative_path}': "
 
             try:
-                with open(path, encoding="utf-8") as handle:
+                # `utf-8-sig` drops the byte order mark a Windows editor often
+                # writes first, which `json.loads` would otherwise refuse.
+                with open(path, encoding="utf-8-sig") as handle:
                     content = handle.read()
             except OSError:
                 issues.append(

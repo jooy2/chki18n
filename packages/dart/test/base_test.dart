@@ -15,6 +15,13 @@ void main() {
       expect(result.files.length, 2);
     });
 
+    test('reads a file that starts with a byte order mark', () async {
+      final result = await checkTranslationFiles(path: samplePath('locales-byte-order-mark'));
+
+      expect(result.of(Chki18nCheckCode.invalidFile), isEmpty);
+      expect(result.of(Chki18nCheckCode.noKey).map((issue) => issue.key), ['farewell']);
+    });
+
     test('reports a key the target language has and another locale does not', () async {
       final result = await checkTranslationFiles(path: samplePath('locales-issue-no-key'));
 

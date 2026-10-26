@@ -49,6 +49,13 @@ type ScannedFile = {
 
 const stemOf = (fileName: string): string => fileName.replace(/\.[^.]+$/, '');
 
+/**
+ * The text without the byte order mark a Windows editor often writes first.
+ * `JSON.parse` refuses one, so a file saved that way would not be read at all.
+ */
+const withoutByteOrderMark = (text: string): string =>
+	text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+
 const isPlainObject = (value: unknown): boolean =>
 	value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -112,7 +119,7 @@ async function collectFiles(
 			let content: string;
 
 			try {
-				content = await readFile(path, { encoding: 'utf-8' });
+				content = withoutByteOrderMark(await readFile(path, { encoding: 'utf-8' }));
 			} catch {
 				issues.push(
 					createIssue(CHECK_CODE.INVALID_FILE, {

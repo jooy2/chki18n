@@ -16,6 +16,13 @@ describe('checkTranslationFiles', () => {
 		assert.strictEqual(result.files.length, 2);
 	});
 
+	it('reads a file that starts with a byte order mark', async () => {
+		const result = await checkTranslationFiles(samplePath('locales-byte-order-mark'));
+
+		assert.strictEqual(result.issuesByCode.INVALID_FILE, undefined);
+		assert.strictEqual(result.issuesByCode.NO_KEY?.[0].key, 'farewell');
+	});
+
 	it('reports a key the target language has and another locale does not', async () => {
 		const result = await checkTranslationFiles(samplePath('locales-issue-no-key'));
 
