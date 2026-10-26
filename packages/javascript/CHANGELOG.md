@@ -1,5 +1,7 @@
 # Changelog
 
+## vNext (2026--)
+
 ## 1.3.0 (2026-10-26)
 
 > The three packages now read the same files the same way, down to the order of their findings, and the scans that took longest take a fraction of the time. The command line no longer cuts its report off when it is piped, numbers, ordinal plurals and Thai or Hindi text are read the way their languages write them, and `qsu` and `flat` are gone, so the comparison engine depends on nothing.

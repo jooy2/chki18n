@@ -1,5 +1,7 @@
 # Changelog
 
+## vNext (2026--)
+
 ## 1.3.0 (2026-10-26)
 
 > 1.2.0 was never published to PyPI, so this release is the first there to carry its changes as well, which are listed under 1.2.0 below. Reports now agree with the JavaScript and Dart packages in every case they used to differ on, the unused key scan takes a fraction of a second where it took twenty, and numbers, ordinal plurals and Thai or Hindi text are read the way their languages write them.
