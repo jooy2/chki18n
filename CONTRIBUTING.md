@@ -78,3 +78,28 @@ When creating a pull request, keep the following in mind:
 - Write everything in English.
 
 A maintainer reviews and tests the change before merging it. That takes some time, and they may ask for edits or for more detail in the comments.
+
+## Releasing
+
+This part is for maintainers. Each package is released on its own, under a tag such as `javascript-v1.3.0`, `dart-v1.3.0` or `python-v1.3.0`, by the `release` workflow in `.github/workflows/release.yml`.
+
+1. Raise the version in every file of the package that carries it, and give its changelog section the version and the date in place of `vNext`, as `## 1.3.0 (2026-10-26)`.
+
+   | Package      | Files that carry the version                |
+   | ------------ | ------------------------------------------- |
+   | `javascript` | `package.json`, `package-lock.json`         |
+   | `dart`       | `pubspec.yaml`, `lib/src/version.dart`      |
+   | `python`     | `pyproject.toml`, `src/chki18n/_version.py` |
+
+1. Push that commit to `main`.
+1. Run the `release` workflow from the Actions tab, or with `gh workflow run release.yml -f package=javascript`. It checks the version files and the changelog, tags the commit, runs the tests, publishes the package and creates the GitHub release with the changelog section, the build and the package's source.
+
+A failed release is run again by choosing its tag under "Use workflow from". A step that already succeeded, such as the upload to the registry, is skipped.
+
+No registry token is stored in the repository. Each registry trusts the `release` workflow in the `release` environment, which only deploys from a release tag, and this is set up once per registry:
+
+| Registry | Where | Values |
+| --- | --- | --- |
+| npm | The package's settings, "Trusted Publisher" | Organization or user `jooy2`, repository `chki18n`, workflow filename `release.yml`, environment name `release`, and `npm publish` allowed besides `npm stage publish` |
+| pub.dev | The package's admin page, "Automated publishing" | Repository `jooy2/chki18n`, tag pattern `dart-v{{version}}`, publishing from `push` and from `workflow_dispatch` events enabled, GitHub Actions environment `release` required |
+| PyPI | The project's publishing settings, "GitHub" | Owner `jooy2`, repository name `chki18n`, workflow name `release.yml`, environment name `release` |

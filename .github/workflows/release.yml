@@ -1,0 +1,320 @@
+name: release
+
+# Releases one package. Each package versions on its own and is tagged on its
+# own, as `javascript-v1.3.0`, `dart-v1.3.0` or `python-v1.3.0`.
+#
+# Run it from the Actions tab, or with `gh workflow run release.yml -f
+# package=javascript`, once the commit that cut the version is on `main`. The
+# `tag` job checks that every file of the package names that version and that
+# its changelog section is dated, tags the commit, and starts this workflow
+# again on the tag. A tag pushed with the workflow's own token starts nothing on
+# its own, which is why the second run is asked for rather than waited for. A
+# tag pushed by hand releases the same way, and a failed release is run again
+# by choosing its tag under "Use workflow from".
+#
+# On the tag, `build` runs the package's tests, builds it the way its registry
+# takes it, and writes the notes from the changelog. One `publish-*` job then
+# puts that build on its registry. No registry token is stored anywhere: npm,
+# pub.dev and PyPI each trust this workflow file of this repository in the
+# `release` environment, and trade the job's OIDC token for one that lasts
+# minutes. pub.dev only takes a run whose ref is a tag, which the second run
+# is. `github-release` runs last, so a release page only appears for a version
+# its registry already serves, and it carries the build and the package's
+# source as they were at the tag.
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package to release, at the version its files name
+        type: choice
+        required: true
+        options:
+          - javascript
+          - dart
+          - python
+  push:
+    tags:
+      - 'javascript-v*'
+      - 'dart-v*'
+      - 'python-v*'
+
+# Each job asks for what it needs beyond this.
+permissions:
+  contents: read
+
+# Two runs for the same ref are the same release, so the second one waits.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Tag ${{ inputs.package }}
+    if: github.event_name == 'workflow_dispatch' && github.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # To push the tag, and to start this workflow on it.
+      contents: write
+      actions: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        name: Setup Node.js
+        with:
+          node-version: '26'
+
+      - name: Tag the commit and start its release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::A release is cut from main, and this run is on $GITHUB_REF_NAME."
+            exit 1
+          fi
+          tag=$(node .github/scripts/release-notes.mjs --tag "$PACKAGE")
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+            echo "::error::$tag already exists. To release it again, run this workflow on the tag."
+            exit 1
+          fi
+          git tag "$tag" "$GITHUB_SHA"
+          git push origin "refs/tags/$tag"
+          gh workflow run release.yml --ref "$tag" -f package="$PACKAGE"
+          echo "::notice::Tagged $GITHUB_SHA as $tag and started its release."
+
+  build:
+    name: Build ${{ github.ref_name }}
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      package: ${{ steps.tag.outputs.package }}
+      version: ${{ steps.tag.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # The notes script runs on Node whichever package is released, and the
+      # JavaScript package is built with it.
+      - uses: actions/setup-node@v6
+        name: Setup Node.js
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: packages/javascript/package-lock.json
+
+      # First, so a tag on the wrong commit, or on one whose changelog still
+      # says `vNext`, fails in seconds rather than after the tests.
+      - name: Check the version and write the release notes
+        id: tag
+        run: |
+          mkdir -p "$RUNNER_TEMP/release/assets"
+          node .github/scripts/release-notes.mjs "$GITHUB_REF_NAME" > "$RUNNER_TEMP/release/notes.md"
+          echo "package=${GITHUB_REF_NAME%%-v*}" >> "$GITHUB_OUTPUT"
+          echo "version=${GITHUB_REF_NAME#*-v}" >> "$GITHUB_OUTPUT"
+
+      # The package's own directory at the tag, which is what its registry was
+      # built from. GitHub adds an archive of the whole repository by itself.
+      - name: Archive the package source
+        env:
+          PACKAGE: ${{ steps.tag.outputs.package }}
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          name="chki18n-$PACKAGE-$VERSION"
+          git archive --format=tar.gz --prefix="$name/" \
+            -o "$RUNNER_TEMP/release/assets/$name-source.tar.gz" "HEAD:packages/$PACKAGE"
+
+      # `npm test` compiles the package before it tests it, so only the minify
+      # step of `npm run build` is left; its formatting step would rewrite the
+      # checkout. `npm pack` packs what `.npmignore` lets through, which is the
+      # tarball `npm publish` uploads.
+      - name: Test, build and pack the JavaScript package
+        if: steps.tag.outputs.package == 'javascript'
+        working-directory: packages/javascript
+        run: |
+          npm ci
+          npm test
+          npm run minify
+          npm pack --pack-destination "$RUNNER_TEMP/release/assets"
+
+      - uses: dart-lang/setup-dart@v1
+        if: steps.tag.outputs.package == 'dart'
+
+      # pub.dev's own checks on what `dart pub publish` would upload. Pub has
+      # no command that writes that archive to a file, so `publish-pub` uploads
+      # from the checkout, and the source archive above is what it uploads. A
+      # warning fails this step; a hint does not.
+      - name: Test and validate the Dart package
+        if: steps.tag.outputs.package == 'dart'
+        working-directory: packages/dart
+        run: |
+          dart pub get
+          dart test
+          dart pub publish --dry-run
+
+      - uses: actions/setup-python@v6
+        name: Setup Python
+        if: steps.tag.outputs.package == 'python'
+        with:
+          python-version: '3.13'
+
+      # The wheel and the source archive PyPI takes, built by the backend that
+      # `pyproject.toml` names, then checked the way PyPI checks an upload.
+      - name: Test and build the Python package
+        if: steps.tag.outputs.package == 'python'
+        working-directory: packages/python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" build twine
+          pytest
+          python -m build --outdir "$RUNNER_TEMP/release/dist"
+          twine check --strict "$RUNNER_TEMP"/release/dist/*
+          cp "$RUNNER_TEMP"/release/dist/* "$RUNNER_TEMP/release/assets/"
+
+      # The notes and the build, handed to the jobs below so that the registry
+      # and the release page carry the same files.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release
+          path: ${{ runner.temp }}/release
+          if-no-files-found: error
+
+  # Each publish job is skipped when its version is already on the registry,
+  # so a re-run, or a version published by hand, does not fail on it.
+  publish-npm:
+    name: Publish to npm
+    needs: build
+    if: needs.build.outputs.package == 'javascript'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+          path: release
+
+      # npm 11.5.1 is the first to publish through OIDC, and Node 26 ships a
+      # later one. Provenance is attached without being asked for.
+      - uses: actions/setup-node@v6
+        name: Setup Node.js
+        with:
+          node-version: '26'
+
+      # npm refuses to make a pre-release `latest` on its own, so one goes out
+      # under `next`.
+      - name: Publish the tarball
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          if npm view "chki18n@$VERSION" version > /dev/null 2>&1; then
+            echo "::notice::chki18n $VERSION is already on npm."
+            exit 0
+          fi
+          tag="latest"
+          case "$VERSION" in *-*) tag="next" ;; esac
+          npm publish release/assets/chki18n-*.tgz --tag "$tag"
+
+  publish-pub:
+    name: Publish to pub.dev
+    needs: build
+    if: needs.build.outputs.package == 'dart'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # Besides installing the SDK, this trades the job's OIDC token for one
+      # pub.dev takes and hands it to `dart pub`.
+      - uses: dart-lang/setup-dart@v1
+
+      - name: Publish the package
+        working-directory: packages/dart
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          if curl -sf "https://pub.dev/api/packages/chki18n/versions/$VERSION" > /dev/null; then
+            echo "::notice::chki18n $VERSION is already on pub.dev."
+            exit 0
+          fi
+          dart pub get
+          dart pub publish --force
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build
+    if: needs.build.outputs.package == 'python'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+          path: release
+
+      # Only the wheel and its source archive: the repository archive beside
+      # them in `assets` is not something PyPI takes. Attestations are attached
+      # without being asked for.
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: release/dist/
+          skip-existing: true
+
+  github-release:
+    name: GitHub release
+    needs: [build, publish-npm, publish-pub, publish-pypi]
+    # Two of the three publish jobs are skipped on every run, which would skip
+    # this one as well; it runs unless one of them failed.
+    if: ${{ !failure() && !cancelled() && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+          path: release
+
+      # Created, or brought up to date when the workflow runs again after the
+      # release exists, so a re-run never fails on its own earlier success. A
+      # version with a pre-release part is marked as one.
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PACKAGE: ${{ needs.build.outputs.package }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          case "$PACKAGE" in
+            javascript) title="JavaScript $VERSION" ;;
+            dart) title="Dart $VERSION" ;;
+            python) title="Python $VERSION" ;;
+          esac
+          notes="release/notes.md"
+          assets=$(find release/assets -type f | sort)
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --title "$title" --notes-file "$notes"
+            gh release upload "$GITHUB_REF_NAME" $assets --clobber
+          else
+            prerelease=""
+            case "$VERSION" in *-*) prerelease="--prerelease" ;; esac
+            gh release create "$GITHUB_REF_NAME" $assets --verify-tag \
+              --title "$title" --notes-file "$notes" $prerelease
+          fi
