@@ -10,6 +10,10 @@ docs/.vitepress/dist/
 
 # Node.js
 node_modules/
+# The packages are installed with npm, and `package-lock.json` is the lock file.
+# Nobody who installs a published package reads its lock file, whichever
+# package manager they use.
+pnpm-lock.yaml
 
 # Dart
 .dart_tool/
