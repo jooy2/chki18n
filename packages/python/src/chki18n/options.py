@@ -473,6 +473,18 @@ def resolve_options(
         else:
             invalid(f"Unknown `key_case` value `{raw_key_case}`. Key names were not checked.")
 
+    interpolation_prefix = pick("interpolation_prefix") or DEFAULT_INTERPOLATION_PREFIX
+    interpolation_suffix = pick("interpolation_suffix") or DEFAULT_INTERPOLATION_SUFFIX
+
+    # Said out loud, because nothing else would say it: every interpolation check
+    # would pass on every value without having read one placeholder.
+    if interpolation_prefix == interpolation_suffix:
+        invalid(
+            f"`interpolation_prefix` and `interpolation_suffix` are both `{interpolation_prefix}`, "
+            "so a placeholder's start cannot be told from its end. Interpolation keys were not "
+            "checked."
+        )
+
     exclude_list = split_option_list(pick("exclude"))
     exclude_file_list = split_option_list(pick("exclude_files"))
     translate_function_list = split_option_list(pick("translate_functions"))
@@ -492,8 +504,8 @@ def resolve_options(
             format=file_format,
             enabled_checks=enabled_checks,
             levels=levels,
-            interpolation_prefix=pick("interpolation_prefix") or DEFAULT_INTERPOLATION_PREFIX,
-            interpolation_suffix=pick("interpolation_suffix") or DEFAULT_INTERPOLATION_SUFFIX,
+            interpolation_prefix=interpolation_prefix,
+            interpolation_suffix=interpolation_suffix,
             exclude=frozenset(exclude_list or DEFAULT_EXCLUDE_DIRS),
             exclude_files=frozenset(exclude_file_list or DEFAULT_EXCLUDE_FILES),
             source=pick("source") or None,

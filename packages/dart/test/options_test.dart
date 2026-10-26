@@ -12,6 +12,15 @@ void main() {
       expect(resolved.options.enabledChecks.length, analyzeCheckCodes.length);
     });
 
+    test('says so when both interpolation delimiters are the same', () {
+      final resolved = resolveOptions(
+        const Chki18nOptions(target: 'en', interpolationPrefix: '__', interpolationSuffix: '__'),
+      );
+
+      expect(resolved.issues.length, 1);
+      expect(resolved.issues.first.message, contains('Interpolation keys were not checked'));
+    });
+
     test('does not treat a missing target as a fault', () {
       final resolved = resolveOptions();
 

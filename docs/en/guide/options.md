@@ -351,7 +351,7 @@ The delimiters that mark a placeholder. The defaults are `{` and `}`, and `{{ }}
 chki18n ./locales --interpolation-prefix "{{" --interpolation-suffix "}}"
 ```
 
-Getting this wrong leaves the placeholders unrecognised, so both interpolation checks find nothing and pass without a word.
+The two may differ in length, as `%{` and `}` do. Getting this wrong leaves the placeholders unrecognised, so both interpolation checks find nothing and pass without a word. The one mistake that is reported is giving both the same value, such as `__` for each: a placeholder's start cannot be told from its end, and the run warns with `INVALID_OPTIONS` that no interpolation key was checked.
 
 ## Output
 

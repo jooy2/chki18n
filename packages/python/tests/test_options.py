@@ -22,6 +22,15 @@ def test_fills_in_the_defaults() -> None:
     assert len(options.enabled_checks) == len(ANALYZE_CHECK_CODES)
 
 
+def test_says_so_when_both_interpolation_delimiters_are_the_same() -> None:
+    _, issues = resolve_options(
+        Options(target="en", interpolation_prefix="__", interpolation_suffix="__")
+    )
+
+    assert len(issues) == 1
+    assert "Interpolation keys were not checked" in issues[0].message
+
+
 def test_does_not_treat_a_missing_target_as_a_fault() -> None:
     _, issues = resolve_options()
 

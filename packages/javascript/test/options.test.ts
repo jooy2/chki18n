@@ -21,6 +21,17 @@ describe('resolveOptions', () => {
 		assert.strictEqual(options.enabledChecks.size, ANALYZE_CHECK_CODES.length);
 	});
 
+	it('says so when both interpolation delimiters are the same', () => {
+		const { issues } = resolveOptions({
+			target: 'en',
+			interpolationPrefix: '__',
+			interpolationSuffix: '__'
+		});
+
+		assert.strictEqual(issues.length, 1);
+		assert.ok(issues[0].message.includes('Interpolation keys were not checked'));
+	});
+
 	it('does not treat a missing target as a fault', () => {
 		const { issues } = resolveOptions();
 

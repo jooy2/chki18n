@@ -554,6 +554,25 @@ Chki18nResolvedResult resolveOptions([Chki18nOptions? options, Chki18nOptions? d
       splitOptionList(text?.translateFunctions);
   final output = raw.output ?? base.output;
   final resolvedReporter = reporter ?? defaultReporter;
+  final interpolationPrefix = _firstNonEmpty(
+    raw.interpolationPrefix,
+    base.interpolationPrefix,
+    defaultInterpolationPrefix,
+  );
+  final interpolationSuffix = _firstNonEmpty(
+    raw.interpolationSuffix,
+    base.interpolationSuffix,
+    defaultInterpolationSuffix,
+  );
+
+  // Said out loud, because nothing else would say it: every interpolation check
+  // would pass on every value without having read one placeholder.
+  if (interpolationPrefix == interpolationSuffix) {
+    invalid(
+      '`interpolationPrefix` and `interpolationSuffix` are both `$interpolationPrefix`, so a '
+      "placeholder's start cannot be told from its end. Interpolation keys were not checked.",
+    );
+  }
 
   return Chki18nResolvedResult(
     Chki18nResolvedOptions(
@@ -562,16 +581,8 @@ Chki18nResolvedResult resolveOptions([Chki18nOptions? options, Chki18nOptions? d
       format: format ?? Chki18nFileFormat.auto,
       enabledChecks: enabledChecks,
       levels: levels,
-      interpolationPrefix: _firstNonEmpty(
-        raw.interpolationPrefix,
-        base.interpolationPrefix,
-        defaultInterpolationPrefix,
-      ),
-      interpolationSuffix: _firstNonEmpty(
-        raw.interpolationSuffix,
-        base.interpolationSuffix,
-        defaultInterpolationSuffix,
-      ),
+      interpolationPrefix: interpolationPrefix,
+      interpolationSuffix: interpolationSuffix,
       exclude: {...excludeList.isNotEmpty ? excludeList : defaultExcludeDirs},
       excludeFiles: {...excludeFileList.isNotEmpty ? excludeFileList : defaultExcludeFiles},
       source: (raw.source ?? base.source)?.isEmpty ?? true ? null : (raw.source ?? base.source),

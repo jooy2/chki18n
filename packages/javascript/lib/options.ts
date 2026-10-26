@@ -389,6 +389,14 @@ export function resolveOptions(
 	const interpolationPrefix = raw.interpolationPrefix || DEFAULT_INTERPOLATION_PREFIX;
 	const interpolationSuffix = raw.interpolationSuffix || DEFAULT_INTERPOLATION_SUFFIX;
 
+	// Said out loud, because nothing else would say it: every interpolation
+	// check would pass on every value without having read one placeholder.
+	if (interpolationPrefix === interpolationSuffix) {
+		invalid(
+			`\`interpolationPrefix\` and \`interpolationSuffix\` are both \`${interpolationPrefix}\`, so a placeholder's start cannot be told from its end. Interpolation keys were not checked.`
+		);
+	}
+
 	const excludeList = toList(raw.exclude);
 	const excludeFileList = toList(raw.excludeFiles);
 	const translateFunctionList = toList(raw.translateFunctions);

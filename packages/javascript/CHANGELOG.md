@@ -6,6 +6,10 @@
 
 - Node.js 22 or newer is required, up from 18, because `chalk` 6, which colours the command line report, no longer supports older runtimes. A project on Node.js 18 or 20 has to upgrade its runtime or stay on `1.2.0`
 
+### Added
+
+- `INVALID_OPTIONS` warns when `interpolationPrefix` and `interpolationSuffix` are the same string. No placeholder can be read between two of the same delimiter, so every interpolation check passed without having checked anything
+
 ### Changed
 
 - `qsu` is no longer a dependency. The three helpers taken from it are written out, which also takes about 20 ms off loading the package

@@ -351,7 +351,7 @@ check_translation_files("./locales", Options(levels={"EMPTY_VALUE": "error"}))
 chki18n ./locales --interpolation-prefix "{{" --interpolation-suffix "}}"
 ```
 
-이 값을 잘못 지정하면 자리 표시자가 인식되지 않습니다. 그러면 두 보간 검사가 아무것도 찾지 못한 채 조용히 통과합니다.
+`%{`와 `}`처럼 두 구분자의 길이가 달라도 됩니다. 이 값을 잘못 지정하면 자리 표시자가 인식되지 않습니다. 그러면 두 보간 검사가 아무것도 찾지 못한 채 조용히 통과합니다. 따로 알려 주는 실수는 둘에 같은 값을 준 경우 하나뿐입니다. `__`처럼 둘이 같으면 자리 표시자의 시작과 끝을 구분할 수 없으므로, 보간 키를 하나도 검사하지 않았다는 `INVALID_OPTIONS` 경고를 냅니다.
 
 ## 출력
 

@@ -2,6 +2,10 @@
 
 ## vNext (2026--)
 
+### Added
+
+- `INVALID_OPTIONS` warns when `interpolationPrefix` and `interpolationSuffix` are the same string. No placeholder can be read between two of the same delimiter, so every interpolation check passed without having checked anything
+
 ### Changed
 
 - `MISSING_NUMBER` and `NUMBER_MISMATCH` read the digits of every script, and compare a number by its value. A translation that writes `٣` or `３` for `3` holds the same number, where it was reported as having dropped it. `extractNumbers` returns runs of those digits too, as they are written

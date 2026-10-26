@@ -2,6 +2,10 @@
 
 ## vNext (2026--)
 
+### Added
+
+- `INVALID_OPTIONS` warns when `interpolation_prefix` and `interpolation_suffix` are the same string. No placeholder can be read between two of the same delimiter, so every interpolation check passed without having checked anything
+
 ### Changed
 
 - `MISSING_NUMBER` and `NUMBER_MISMATCH` compare a number written in another script's digits by its value, so `٣` in a translation matches `3`, where it was reported as a different number. What counts as a digit is the set Unicode 17 defines, whatever version the interpreter ships, so the three packages agree. `extract_numbers` returns runs of those digits, as they are written
