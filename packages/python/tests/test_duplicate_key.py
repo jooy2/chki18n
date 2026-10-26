@@ -58,6 +58,12 @@ def test_reports_the_path_of_a_nested_duplicate() -> None:
     assert find_duplicate_json_keys('{"x": {"a": 1, "a": 2}}') == [JsonDuplicateKey("x.a", 1)]
 
 
+def test_addresses_an_object_inside_an_array_by_its_position() -> None:
+    assert find_duplicate_json_keys('{"list": [{"y": 1}, {"x": 1, "x": 2}]}') == [
+        JsonDuplicateKey("list.1.x", 1)
+    ]
+
+
 def test_does_not_confuse_the_same_key_in_two_different_objects() -> None:
     assert find_duplicate_json_keys('{"x": {"a": 1}, "y": {"a": 2}}') == []
 

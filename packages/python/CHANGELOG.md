@@ -15,6 +15,7 @@
 - Issues, sections and summary rows are ordered by UTF-16 code units, as the other two packages order them. Python compares code points, which put a key starting with a character above U+FFFF, such as an emoji, after one starting with `！` rather than before it
 - The source tree `source` names is read in name order, as the translation directory already was. When two files ask for the same missing key, `UNDEFINED_KEY` names the same one of them on every machine
 - A symbolic link to a directory is not followed, as the other two packages never followed one. A link pointing back up the tree made the scan fail with an `OSError`
+- A key written twice in an object inside an array is reported at the key flattening gives it, such as `list.0.label`. The position was left out, so the report named a key that did not exist
 
 ## 1.2.0 (2026-09-05)
 

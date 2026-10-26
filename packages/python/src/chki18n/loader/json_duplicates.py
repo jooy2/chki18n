@@ -37,6 +37,13 @@ class _Frame:
     path: str
     #: Key the next value belongs to, once one has been read.
     pending_key: str | None = field(default=None)
+    #: Position of the current element, inside an array.
+    index: int = field(default=0)
+
+
+def _join(path: str, segment: str) -> str:
+    """A dotted path one segment longer."""
+    return f"{path}.{segment}" if path else segment
 
 
 def _read_string(text: str, start: int) -> tuple[str, int]:
@@ -88,9 +95,7 @@ def find_duplicate_json_keys(text: str) -> list[JsonDuplicateKey]:
 
             if frame is not None and frame.keys is not None and expect_key:
                 if value in frame.keys:
-                    duplicates.append(
-                        JsonDuplicateKey(f"{frame.path}.{value}" if frame.path else value, line)
-                    )
+                    duplicates.append(JsonDuplicateKey(_join(frame.path, value), line))
                 else:
                     frame.keys.add(value)
 
@@ -105,14 +110,16 @@ def find_duplicate_json_keys(text: str) -> list[JsonDuplicateKey]:
         if char in "{[":
             parent = stack[-1] if stack else None
 
+            # An element of an array is addressed by its position, the way
+            # flattening writes it: `list.0.label`.
             if parent is None:
                 path = ""
-            elif parent.keys is None or parent.pending_key is None:
+            elif parent.keys is None:
+                path = _join(parent.path, str(parent.index))
+            elif parent.pending_key is None:
                 path = parent.path
-            elif parent.path:
-                path = f"{parent.path}.{parent.pending_key}"
             else:
-                path = parent.pending_key
+                path = _join(parent.path, parent.pending_key)
 
             stack.append(_Frame(keys=set() if char == "{" else None, path=path))
             expect_key = char == "{"
@@ -128,6 +135,9 @@ def find_duplicate_json_keys(text: str) -> list[JsonDuplicateKey]:
             continue
 
         if char == ",":
+            if stack and stack[-1].keys is None:
+                stack[-1].index += 1
+
             expect_key = bool(stack) and stack[-1].keys is not None
             index += 1
             continue

@@ -48,6 +48,12 @@ describe('findDuplicateJsonKeys', () => {
 		]);
 	});
 
+	it('addresses an object inside an array by its position, as flattening does', () => {
+		assert.deepStrictEqual(findDuplicateJsonKeys('{"list": [{"y": 1}, {"x": 1, "x": 2}]}'), [
+			{ path: 'list.1.x', line: 1 }
+		]);
+	});
+
 	it('does not confuse the same key in two different objects', () => {
 		assert.deepStrictEqual(findDuplicateJsonKeys('{"x": {"a": 1}, "y": {"a": 2}}'), []);
 	});

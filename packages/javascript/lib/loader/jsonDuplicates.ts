@@ -28,7 +28,12 @@ type Frame = {
 	path: string;
 	/** Key the next value belongs to, once one has been read. */
 	pendingKey: string | null;
+	/** Position of the current element, inside an array. */
+	index: number;
 };
+
+/** A dotted path one segment longer. */
+const join = (path: string, segment: string): string => (path ? `${path}.${segment}` : segment);
 
 /** Read a JSON string starting at the opening quote. Returns its value and end. */
 function readString(text: string, start: number): { value: string; end: number } {
@@ -82,7 +87,7 @@ export function findDuplicateJsonKeys(text: string): JsonDuplicateKey[] {
 
 			if (frame?.keys && expectKey) {
 				if (frame.keys.has(value)) {
-					duplicates.push({ path: frame.path ? `${frame.path}.${value}` : value, line });
+					duplicates.push({ path: join(frame.path, value), line });
 				} else {
 					frame.keys.add(value);
 				}
@@ -104,17 +109,12 @@ export function findDuplicateJsonKeys(text: string): JsonDuplicateKey[] {
 
 		if (char === '{' || char === '[') {
 			const parent = stack[stack.length - 1];
-			const path = !parent
-				? ''
-				: parent.keys
-					? parent.pendingKey
-						? parent.path
-							? `${parent.path}.${parent.pendingKey}`
-							: parent.pendingKey
-						: parent.path
-					: parent.path;
+			// An element of an array is addressed by its position, the way
+			// flattening writes it: `list.0.label`.
+			const segment = !parent ? null : parent.keys ? parent.pendingKey : String(parent.index);
+			const path = !parent || segment === null ? (parent?.path ?? '') : join(parent.path, segment);
 
-			stack.push({ keys: char === '{' ? new Set() : null, path, pendingKey: null });
+			stack.push({ keys: char === '{' ? new Set() : null, path, pendingKey: null, index: 0 });
 			expectKey = char === '{';
 			index += 1;
 			continue;
@@ -128,7 +128,13 @@ export function findDuplicateJsonKeys(text: string): JsonDuplicateKey[] {
 		}
 
 		if (char === ',') {
-			expectKey = Boolean(stack[stack.length - 1]?.keys);
+			const frame = stack[stack.length - 1];
+
+			if (frame && !frame.keys) {
+				frame.index += 1;
+			}
+
+			expectKey = Boolean(frame?.keys);
 			index += 1;
 			continue;
 		}

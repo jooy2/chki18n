@@ -46,7 +46,13 @@ class _Frame {
 
   /// Key the next value belongs to, once one has been read.
   String? pendingKey;
+
+  /// Position of the current element, inside an array.
+  int index = 0;
 }
+
+/// A dotted path one segment longer.
+String _join(String path, String segment) => path.isEmpty ? segment : '$path.$segment';
 
 /// A JSON string read off the text, and where it ended.
 class _ReadString {
@@ -110,12 +116,7 @@ List<Chki18nJsonDuplicateKey> findDuplicateJsonKeys(String text) {
 
       if (keys != null && expectKey) {
         if (keys.contains(read.value)) {
-          duplicates.add(
-            Chki18nJsonDuplicateKey(
-              frame!.path.isEmpty ? read.value : '${frame.path}.${read.value}',
-              line,
-            ),
-          );
+          duplicates.add(Chki18nJsonDuplicateKey(_join(frame!.path, read.value), line));
         } else {
           keys.add(read.value);
         }
@@ -137,16 +138,20 @@ List<Chki18nJsonDuplicateKey> findDuplicateJsonKeys(String text) {
 
     if (char == '{' || char == '[') {
       final parent = stack.isEmpty ? null : stack.last;
+      // An element of an array is addressed by its position, the way
+      // flattening writes it: `list.0.label`.
+      final segment =
+          parent == null
+              ? null
+              : parent.keys == null
+              ? '${parent.index}'
+              : parent.pendingKey;
       final path =
           parent == null
               ? ''
-              : parent.keys == null
+              : segment == null
               ? parent.path
-              : parent.pendingKey == null
-              ? parent.path
-              : parent.path.isEmpty
-              ? parent.pendingKey!
-              : '${parent.path}.${parent.pendingKey}';
+              : _join(parent.path, segment);
 
       stack.add(_Frame(keys: char == '{' ? <String>{} : null, path: path));
       expectKey = char == '{';
@@ -165,6 +170,10 @@ List<Chki18nJsonDuplicateKey> findDuplicateJsonKeys(String text) {
     }
 
     if (char == ',') {
+      if (stack.isNotEmpty && stack.last.keys == null) {
+        stack.last.index += 1;
+      }
+
       expectKey = stack.isNotEmpty && stack.last.keys != null;
       index += 1;
       continue;

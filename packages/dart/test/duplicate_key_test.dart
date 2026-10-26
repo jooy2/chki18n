@@ -70,6 +70,12 @@ void main() {
       expect(findDuplicateJsonKeys('{\n  "a": 1,\n\n  "a": 2\n}').first.line, 4);
     });
 
+    test('addresses an object inside an array by its position, as flattening does', () {
+      expect(findDuplicateJsonKeys('{"list": [{"y": 1}, {"x": 1, "x": 2}]}'), [
+        const Chki18nJsonDuplicateKey('list.1.x', 1),
+      ]);
+    });
+
     test('reports the path of a nested duplicate', () {
       expect(findDuplicateJsonKeys('{"x": {"a": 1, "a": 2}}'), [
         const Chki18nJsonDuplicateKey('x.a', 1),
