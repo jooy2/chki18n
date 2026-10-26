@@ -7,7 +7,6 @@ translations.
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -22,6 +21,7 @@ from chki18n.core.interpolation import (
 from chki18n.core.issue import create_issue
 from chki18n.core.locale import is_locale_code
 from chki18n.loader.json_duplicates import JsonDuplicateKey, find_duplicate_json_keys
+from chki18n.loader.walk import walk_files
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,110 +95,88 @@ def _collect_files(
     is_excluded_directory = create_path_excluder(options.exclude)
     is_excluded_file = create_file_excluder(options.exclude_files)
 
-    def walk(directory: str, segments: tuple[str, ...]) -> None:
+    def report_unreadable(directory: str) -> None:
+        issues.append(
+            create_issue(
+                "INVALID_FILE",
+                file=directory,
+                message=(
+                    f"Failed to read the directory '{directory}'. It may not exist or "
+                    "read access may be denied."
+                ),
+            )
+        )
+
+    walk = walk_files(
+        root,
+        is_excluded_directory=is_excluded_directory,
+        is_wanted=lambda file: (
+            _extension_of(file.segments[-1]) in SUPPORTED_EXTENSIONS
+            and not is_excluded_file(file.segments[-1])
+        ),
+        on_unreadable=report_unreadable,
+    )
+
+    for file in walk:
+        relative_path = "/".join(file.segments)
+        read_error = f"Failed to read file '{relative_path}': "
+
         try:
-            entries = sorted(os.scandir(directory), key=lambda entry: entry.name)
-        except OSError:
+            # `utf-8-sig` drops the byte order mark a Windows editor often
+            # writes first, which `json.loads` would otherwise refuse.
+            with open(file.path, encoding="utf-8-sig") as handle:
+                content = handle.read()
+        except (OSError, UnicodeDecodeError):
             issues.append(
                 create_issue(
                     "INVALID_FILE",
-                    file=directory,
+                    file=file.path,
+                    message=f"{read_error}May be read access denied or invalid file format.",
+                )
+            )
+            continue
+
+        if not content.strip():
+            issues.append(
+                create_issue(
+                    "INVALID_FILE",
+                    file=file.path,
+                    message=f"{read_error}File content is empty.",
+                )
+            )
+            continue
+
+        try:
+            data = json.loads(content, parse_constant=_reject_constant)
+        except ValueError:
+            issues.append(
+                create_issue(
+                    "INVALID_FILE",
+                    file=file.path,
                     message=(
-                        f"Failed to read the directory '{directory}'. It may not exist or "
-                        "read access may be denied."
+                        f"{read_error}Content is not json format or parse failed due to "
+                        "an invalid character."
                     ),
                 )
             )
-            return
+            continue
 
-        for entry in entries:
-            # Hidden entries are tooling state, never translations.
-            if entry.name.startswith("."):
-                continue
-
-            path = os.path.join(directory, entry.name)
-
-            if entry.is_dir():
-                if not is_excluded_directory((*segments, entry.name)):
-                    walk(path, (*segments, entry.name))
-
-                continue
-
-            if _extension_of(entry.name) not in SUPPORTED_EXTENSIONS or is_excluded_file(
-                entry.name
-            ):
-                continue
-
-            relative_path = "/".join((*segments, entry.name))
-            read_error = f"Failed to read file '{relative_path}': "
-
-            try:
-                # `utf-8-sig` drops the byte order mark a Windows editor often
-                # writes first, which `json.loads` would otherwise refuse.
-                with open(path, encoding="utf-8-sig") as handle:
-                    content = handle.read()
-            except OSError:
-                issues.append(
-                    create_issue(
-                        "INVALID_FILE",
-                        file=path,
-                        message=f"{read_error}May be read access denied or invalid file format.",
-                    )
-                )
-                continue
-            except UnicodeDecodeError:
-                issues.append(
-                    create_issue(
-                        "INVALID_FILE",
-                        file=path,
-                        message=f"{read_error}May be read access denied or invalid file format.",
-                    )
-                )
-                continue
-
-            if not content.strip():
-                issues.append(
-                    create_issue(
-                        "INVALID_FILE",
-                        file=path,
-                        message=f"{read_error}File content is empty.",
-                    )
-                )
-                continue
-
-            try:
-                data = json.loads(content, parse_constant=_reject_constant)
-            except ValueError:
-                issues.append(
-                    create_issue(
-                        "INVALID_FILE",
-                        file=path,
-                        message=(
-                            f"{read_error}Content is not json format or parse failed due to "
-                            "an invalid character."
-                        ),
-                    )
-                )
-                continue
-
-            files.append(
-                _ScannedFile(
-                    path=path,
-                    relative_path=relative_path,
-                    segments=(*segments, entry.name),
-                    data=data,
-                    interpolation=detect_interpolation_delimiters(content),
-                    # Read off the text, because the decoder has already
-                    # discarded it.
-                    duplicate_keys=(
-                        find_duplicate_json_keys(content)
-                        if "DUPLICATE_KEY" in options.enabled_checks
-                        else []
-                    ),
-                )
+        files.append(
+            _ScannedFile(
+                path=file.path,
+                relative_path=relative_path,
+                segments=file.segments,
+                data=data,
+                interpolation=detect_interpolation_delimiters(content),
+                # Read off the text, because the decoder has already
+                # discarded it.
+                duplicate_keys=(
+                    find_duplicate_json_keys(content)
+                    if "DUPLICATE_KEY" in options.enabled_checks
+                    else []
+                ),
             )
-
-    walk(root, ())
+        )
 
     return files
 

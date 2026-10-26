@@ -8,9 +8,10 @@ from typing import Final
 
 from chki18n._types import Issue, LevelCount
 from chki18n.constants import CHECK_META
+from chki18n.core.order import text_sort_key
 from chki18n.core.width import display_width
 from chki18n.reporter.context import ReportContext
-from chki18n.reporter.group import GENERAL_LABEL, IssueGroup, sub_group_issues, text_sort_key
+from chki18n.reporter.group import GENERAL_LABEL, IssueGroup, sub_group_issues
 from chki18n.reporter.paint import paint_of_level
 from chki18n.reporter.text import (
     counts_phrase,

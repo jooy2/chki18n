@@ -13,6 +13,7 @@ import 'package:chki18n/src/core/issue.dart';
 import 'package:chki18n/src/core/locale.dart';
 import 'package:chki18n/src/loader/json_duplicates.dart';
 import 'package:chki18n/src/loader/paths.dart';
+import 'package:chki18n/src/loader/walk.dart';
 import 'package:chki18n/src/types.dart';
 
 /// What one walk of a translation directory found.
@@ -94,12 +95,15 @@ Future<List<_ScannedFile>> _collectFiles(
   final isExcludedDirectory = createPathExcluder(options.exclude);
   final isExcludedFile = createFileExcluder(options.excludeFiles);
 
-  Future<void> walk(String directory, List<String> segments) async {
-    List<FileSystemEntity> entries;
+  final walk = walkFiles(
+    root,
+    isExcludedDirectory: isExcludedDirectory,
+    isWanted: (file) {
+      final name = file.segments.last;
 
-    try {
-      entries = await Directory(directory).list(followLinks: false).toList();
-    } on FileSystemException {
+      return supportedExtensions.contains(extensionOf(name)) && !isExcludedFile(name);
+    },
+    onUnreadable: (directory) {
       issues.add(
         createIssue(
           Chki18nCheckCode.invalidFile,
@@ -109,98 +113,70 @@ Future<List<_ScannedFile>> _collectFiles(
               'may be denied.',
         ),
       );
-      return;
-    }
+    },
+  );
 
-    // Listing order is filesystem dependent; sort so a scan of the same tree
-    // always reports its issues in the same order.
-    entries.sort((a, b) => basenameOf(a.path).compareTo(basenameOf(b.path)));
+  await for (final file in walk) {
+    final relativePath = file.segments.join('/');
+    final readError = "Failed to read file '$relativePath': ";
+    String content;
 
-    for (final entry in entries) {
-      final name = basenameOf(entry.path);
-
-      // Hidden entries are tooling state, never translations.
-      if (name.startsWith('.')) {
-        continue;
-      }
-
-      final path = joinPath(directory, name);
-
-      if (entry is Directory) {
-        if (!isExcludedDirectory([...segments, name])) {
-          await walk(path, [...segments, name]);
-        }
-
-        continue;
-      }
-
-      if (!supportedExtensions.contains(extensionOf(name)) || isExcludedFile(name)) {
-        continue;
-      }
-
-      final relativePath = [...segments, name].join('/');
-      final readError = "Failed to read file '$relativePath': ";
-      String content;
-
-      try {
-        content = await File(path).readAsString();
-      } catch (_) {
-        issues.add(
-          createIssue(
-            Chki18nCheckCode.invalidFile,
-            file: path,
-            message: '${readError}May be read access denied or invalid file format.',
-          ),
-        );
-        continue;
-      }
-
-      if (content.trim().isEmpty) {
-        issues.add(
-          createIssue(
-            Chki18nCheckCode.invalidFile,
-            file: path,
-            message: '${readError}File content is empty.',
-          ),
-        );
-        continue;
-      }
-
-      Object? json;
-
-      try {
-        json = jsonDecode(content);
-      } on FormatException {
-        issues.add(
-          createIssue(
-            Chki18nCheckCode.invalidFile,
-            file: path,
-            message:
-                '${readError}Content is not json format or parse failed due to an invalid '
-                'character.',
-          ),
-        );
-        continue;
-      }
-
-      files.add(
-        _ScannedFile(
-          path: path,
-          relativePath: relativePath,
-          segments: [...segments, name],
-          json: json,
-          // Read off the text, because the decoder has already discarded it.
-          duplicateKeys:
-              options.enabledChecks.contains(Chki18nCheckCode.duplicateKey)
-                  ? findDuplicateJsonKeys(content)
-                  : const [],
-          interpolation: detectInterpolationDelimiters(content),
+    try {
+      content = await File(file.path).readAsString();
+    } catch (_) {
+      issues.add(
+        createIssue(
+          Chki18nCheckCode.invalidFile,
+          file: file.path,
+          message: '${readError}May be read access denied or invalid file format.',
         ),
       );
+      continue;
     }
-  }
 
-  await walk(root, const []);
+    if (content.trim().isEmpty) {
+      issues.add(
+        createIssue(
+          Chki18nCheckCode.invalidFile,
+          file: file.path,
+          message: '${readError}File content is empty.',
+        ),
+      );
+      continue;
+    }
+
+    Object? json;
+
+    try {
+      json = jsonDecode(content);
+    } on FormatException {
+      issues.add(
+        createIssue(
+          Chki18nCheckCode.invalidFile,
+          file: file.path,
+          message:
+              '${readError}Content is not json format or parse failed due to an invalid '
+              'character.',
+        ),
+      );
+      continue;
+    }
+
+    files.add(
+      _ScannedFile(
+        path: file.path,
+        relativePath: relativePath,
+        segments: file.segments,
+        json: json,
+        // Read off the text, because the decoder has already discarded it.
+        duplicateKeys:
+            options.enabledChecks.contains(Chki18nCheckCode.duplicateKey)
+                ? findDuplicateJsonKeys(content)
+                : const [],
+        interpolation: detectInterpolationDelimiters(content),
+      ),
+    );
+  }
 
   return files;
 }

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
+
+import pytest
 
 from chki18n import Options, check_translation_files
 
@@ -151,3 +154,16 @@ def test_only_runs_the_checks_it_was_asked_for() -> None:
     )
 
     assert list(result.issues_by_code) == ["NO_KEY"]
+
+
+def test_does_not_follow_a_link_back_up_the_tree(tmp_path: Path) -> None:
+    (tmp_path / "en.json").write_text('{"a": "A"}', encoding="utf-8")
+
+    try:
+        os.symlink(tmp_path, tmp_path / "loop", target_is_directory=True)
+    except OSError:
+        pytest.skip("this system does not let a test create a symbolic link")
+
+    result = check_translation_files(str(tmp_path))
+
+    assert [file.relative_path for file in result.files] == ["en.json"]

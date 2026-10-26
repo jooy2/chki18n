@@ -17,6 +17,7 @@ import 'package:chki18n/src/constants.dart';
 import 'package:chki18n/src/core/exclude.dart';
 import 'package:chki18n/src/core/plural.dart';
 import 'package:chki18n/src/loader/paths.dart';
+import 'package:chki18n/src/loader/walk.dart';
 import 'package:chki18n/src/types.dart';
 
 final Set<String> _extensions = sourceExtensions.toSet();
@@ -169,84 +170,58 @@ Future<Chki18nUsageScan> findUnusedKeys(
   final isExcludedFile = createFileExcluder(options.excludeFiles);
   var scannedFileCount = 0;
 
-  Future<void> walk(String directory, List<String> segments) async {
+  // Absolute from here on, so `skipFiles` (which are absolute) compare equal.
+  // There is no `onUnreadable`: a folder that cannot be read degrades the scan
+  // rather than failing it.
+  final walk = walkFiles(
+    absolutePath(sourcePath),
+    isExcludedDirectory: isExcludedDirectory,
+    // The path excluder answers for a file too, because this walk has always let
+    // `exclude` name one; `excludeFiles` is the pattern form of the same
+    // question.
+    isWanted:
+        (file) =>
+            _isScannableName(file.segments.last) &&
+            !isExcludedDirectory(file.segments) &&
+            !isExcludedFile(file.segments.last) &&
+            !skip.contains(file.path),
+  );
+
+  await for (final file in walk) {
     if (remaining.isEmpty && !wantsUndefined) {
-      return;
+      break;
     }
 
-    List<FileSystemEntity> entries;
+    final path = file.path;
+    String content;
 
     try {
-      entries = await Directory(directory).list(followLinks: false).toList();
+      if (await File(path).length() > sourceMaxFileBytes) {
+        continue;
+      }
+
+      content = await File(path).readAsString();
     } catch (_) {
-      // A folder that cannot be read should degrade the scan, not fail it.
-      return;
+      continue;
     }
 
-    for (final entry in entries) {
-      if (remaining.isEmpty && !wantsUndefined) {
-        return;
-      }
+    scannedFileCount += 1;
 
-      final name = basenameOf(entry.path);
+    remaining.removeWhere(content.contains);
 
-      if (name.startsWith('.')) {
+    if (addresses == null) {
+      continue;
+    }
+
+    for (final key in _callsIn(content, patterns)) {
+      if (addresses.contains(key) || reported.contains(key)) {
         continue;
       }
 
-      final path = joinPath(directory, name);
-
-      if (entry is Directory) {
-        if (!isExcludedDirectory([...segments, name])) {
-          await walk(path, [...segments, name]);
-        }
-
-        continue;
-      }
-
-      // The path excluder answers for a file too, because this walk has always
-      // let `exclude` name one; `excludeFiles` is the pattern form of the same
-      // question.
-      if (!_isScannableName(name) ||
-          isExcludedDirectory([...segments, name]) ||
-          isExcludedFile(name) ||
-          skip.contains(path)) {
-        continue;
-      }
-
-      String content;
-
-      try {
-        if (await File(path).length() > sourceMaxFileBytes) {
-          continue;
-        }
-
-        content = await File(path).readAsString();
-      } catch (_) {
-        continue;
-      }
-
-      scannedFileCount += 1;
-
-      remaining.removeWhere(content.contains);
-
-      if (addresses == null) {
-        continue;
-      }
-
-      for (final key in _callsIn(content, patterns)) {
-        if (addresses.contains(key) || reported.contains(key)) {
-          continue;
-        }
-
-        reported.add(key);
-        undefinedKeys.add(Chki18nKeyUsage(key: key, file: path));
-      }
+      reported.add(key);
+      undefinedKeys.add(Chki18nKeyUsage(key: key, file: path));
     }
   }
-
-  // Absolute from here on, so `skipFiles` (which are absolute) compare equal.
-  await walk(absolutePath(sourcePath), const []);
 
   final unusedKeys = <String>[];
 

@@ -1,4 +1,6 @@
 import assert from 'node:assert';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import {
@@ -27,6 +29,27 @@ describe('findUnusedKeys, on the keys the source asks for', () => {
 			['attr.missing']
 		);
 		assert.ok(undefinedKeys[0].file?.endsWith('app.ts'));
+	});
+
+	it('names the first file in name order that asks for a key', async () => {
+		const dir = await mkdtemp(join(tmpdir(), 'chki18n-order-'));
+
+		try {
+			for (const name of ['b.ts', 'c.ts', 'a.ts']) {
+				await writeFile(join(dir, name), "t('nowhere.defined');");
+			}
+
+			const { undefinedKeys } = await findUnusedKeys(
+				dir,
+				KEYS,
+				resolveOptions({ target: 'en' }).options
+			);
+
+			assert.strictEqual(undefinedKeys.length, 1);
+			assert.ok(undefinedKeys[0].file?.endsWith('a.ts'));
+		} finally {
+			await rm(dir, { recursive: true, force: true });
+		}
 	});
 
 	it('reads a key through the namespace written in front of it', async () => {

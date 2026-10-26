@@ -13,6 +13,8 @@
 - A file holding `NaN` or `Infinity` is reported as `INVALID_FILE`. JSON has neither, and the other two packages already refused such a file
 - i18next ordinal keys such as `place_ordinal_one` are judged by ordinal rules rather than by the cardinal table, which asked German and Russian for an `_ordinal_one` they never write. `NO_KEY` failed the run over it and `NO_PLURAL_FORM` warned. Only `_ordinal_other` is required now, and the unused and undefined key scans read `place_ordinal_one` as `place`, which is what the source asks for
 - Issues, sections and summary rows are ordered by UTF-16 code units, as the other two packages order them. Python compares code points, which put a key starting with a character above U+FFFF, such as an emoji, after one starting with `！` rather than before it
+- The source tree `source` names is read in name order, as the translation directory already was. When two files ask for the same missing key, `UNDEFINED_KEY` names the same one of them on every machine
+- A symbolic link to a directory is not followed, as the other two packages never followed one. A link pointing back up the tree made the scan fail with an `OSError`
 
 ## 1.2.0 (2026-09-05)
 

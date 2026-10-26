@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:chki18n/chki18n.dart';
 import 'package:test/test.dart';
 
@@ -20,6 +22,27 @@ void main() {
 
       expect([for (final usage in found.undefinedKeys) usage.key], ['attr.missing']);
       expect(found.undefinedKeys.first.file, endsWith('app.ts'));
+    });
+
+    test('names the first file in name order that asks for a key', () async {
+      final dir = await Directory.systemTemp.createTemp('chki18n-order-');
+
+      try {
+        for (final name in ['b.ts', 'c.ts', 'a.ts']) {
+          await File('${dir.path}/$name').writeAsString("t('nowhere.defined');");
+        }
+
+        final found = await findUnusedKeys(
+          dir.path,
+          sampleKeys,
+          resolveOptions(const Chki18nOptions(target: 'en')).options,
+        );
+
+        expect(found.undefinedKeys.length, 1);
+        expect(found.undefinedKeys.first.file, endsWith('a.ts'));
+      } finally {
+        await dir.delete(recursive: true);
+      }
     });
 
     test('reads a key through the namespace written in front of it', () async {

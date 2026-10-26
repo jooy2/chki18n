@@ -1,4 +1,5 @@
 import { CHECK_CODE, GROUP_BY } from '../constants.js';
+import { compareText } from '../core/order.js';
 import { relativeTo } from './text.js';
 import type {
 	Chki18nGroupBy,
@@ -30,14 +31,6 @@ const GENERAL_LABEL = '(general)';
 const DEFAULT_GROUP_LABEL = '(default)';
 
 const codeRank = (code: string): number => CODE_ORDER.get(code) ?? CODE_ORDER.size;
-
-/**
- * Two strings by their UTF-16 code units, which is how the Dart package sorts
- * them. `localeCompare` would follow the collation of whatever locale the
- * process runs in, so the same files could be reported in a different order on
- * another machine, and in a different order from the other two packages.
- */
-export const compareText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
 /**
  * Report order within a section: what fails the run first, then the checks in

@@ -24,6 +24,7 @@ from chki18n._types import KeyUsage, ResolvedOptions
 from chki18n.constants import SOURCE_EXTENSIONS, SOURCE_MAX_FILE_BYTES
 from chki18n.core.exclude import create_file_excluder, create_path_excluder
 from chki18n.core.plural import plural_base_of
+from chki18n.loader.walk import walk_files
 
 _EXTENSIONS: Final[frozenset[str]] = frozenset(SOURCE_EXTENSIONS)
 
@@ -174,70 +175,50 @@ def find_unused_keys(
     is_excluded_file = create_file_excluder(options.exclude_files)
     scanned_file_count = 0
 
-    def walk(directory: str, segments: tuple[str, ...]) -> None:
-        nonlocal scanned_file_count
+    # Absolute from here on, so `skip_files` (which are absolute) compare equal.
+    # There is no `on_unreadable`: a folder that cannot be read degrades the scan
+    # rather than failing it.
+    walk = walk_files(
+        os.path.abspath(source_path),
+        is_excluded_directory=is_excluded_directory,
+        # The path excluder answers for a file too, because this walk has always
+        # let `exclude` name one; `exclude_files` is the pattern form of the same
+        # question.
+        is_wanted=lambda file: (
+            _is_scannable_name(file.segments[-1])
+            and not is_excluded_directory(file.segments)
+            and not is_excluded_file(file.segments[-1])
+            and file.path not in skip
+        ),
+    )
 
+    for file in walk:
         if not remaining and not wants_undefined:
-            return
+            break
 
         try:
-            entries = list(os.scandir(directory))
-        except OSError:
-            # A folder that cannot be read should degrade the scan, not fail it.
-            return
-
-        for entry in entries:
-            if not remaining and not wants_undefined:
-                return
-
-            if entry.name.startswith("."):
+            if os.stat(file.path).st_size > SOURCE_MAX_FILE_BYTES:
                 continue
 
-            path = os.path.join(directory, entry.name)
+            with open(file.path, encoding="utf-8") as handle:
+                content = handle.read()
+        except (OSError, UnicodeDecodeError):
+            continue
 
-            if entry.is_dir():
-                if not is_excluded_directory((*segments, entry.name)):
-                    walk(path, (*segments, entry.name))
+        scanned_file_count += 1
 
+        for leaf in [leaf for leaf in remaining if leaf in content]:
+            del remaining[leaf]
+
+        if addresses is None:
+            continue
+
+        for key in _calls_in(content, patterns):
+            if key in addresses or key in reported:
                 continue
 
-            # The path excluder answers for a file too, because this walk has
-            # always let `exclude` name one; `exclude_files` is the pattern form
-            # of the same question.
-            if (
-                not _is_scannable_name(entry.name)
-                or is_excluded_directory((*segments, entry.name))
-                or is_excluded_file(entry.name)
-                or path in skip
-            ):
-                continue
-
-            try:
-                if entry.stat().st_size > SOURCE_MAX_FILE_BYTES:
-                    continue
-
-                with open(path, encoding="utf-8") as handle:
-                    content = handle.read()
-            except (OSError, UnicodeDecodeError):
-                continue
-
-            scanned_file_count += 1
-
-            for leaf in [leaf for leaf in remaining if leaf in content]:
-                del remaining[leaf]
-
-            if addresses is None:
-                continue
-
-            for key in _calls_in(content, patterns):
-                if key in addresses or key in reported:
-                    continue
-
-                reported.add(key)
-                undefined_keys.append(KeyUsage(key=key, file=path))
-
-    # Absolute from here on, so `skip_files` (which are absolute) compare equal.
-    walk(os.path.abspath(source_path), ())
+            reported.add(key)
+            undefined_keys.append(KeyUsage(key=key, file=file.path))
 
     unused_keys: list[str] = []
 

@@ -8,6 +8,7 @@ from typing import Final
 
 from chki18n._types import Issue, LevelCount
 from chki18n.constants import CHECK_CODES, CheckCode, GroupBy, Level
+from chki18n.core.order import text_sort_key
 from chki18n.reporter.text import relative_to
 
 
@@ -38,15 +39,6 @@ DEFAULT_GROUP_LABEL: Final = "(default)"
 
 def _code_rank(code: str) -> int:
     return _CODE_ORDER.get(code, len(_CODE_ORDER))
-
-
-def text_sort_key(text: str) -> bytes:
-    """`text` as UTF-16 code units, which is the order JavaScript and Dart sort in.
-
-    Python compares code points, which puts a character above U+FFFF after the
-    ones from U+E000 to U+FFFF rather than before them.
-    """
-    return text.encode("utf-16-be", "surrogatepass")
 
 
 def issue_sort_key(issue: Issue) -> tuple[int, int, bytes, bytes]:

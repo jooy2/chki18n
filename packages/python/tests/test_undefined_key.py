@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from chki18n import (
@@ -105,3 +106,15 @@ def test_never_fails_a_run_on_its_own() -> None:
 
     assert result.success is True
     assert result.summary.warn == 1
+
+
+def test_names_the_first_file_in_name_order_that_asks_for_a_key(tmp_path: Path) -> None:
+    for name in ("b.ts", "c.ts", "a.ts"):
+        (tmp_path / name).write_text("t('nowhere.defined');", encoding="utf-8")
+
+    resolved, _ = resolve_options(Options(target="en"))
+    found = find_unused_keys(str(tmp_path), KEYS, resolved)
+
+    assert len(found.undefined_keys) == 1
+    assert found.undefined_keys[0].file is not None
+    assert found.undefined_keys[0].file.endswith("a.ts")

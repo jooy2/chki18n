@@ -1,5 +1,6 @@
 import { CHECK_META, GROUP_BY } from '../constants.js';
-import { compareText, subGroupIssues, type Chki18nIssueGroup } from './group.js';
+import { compareText } from '../core/order.js';
+import { subGroupIssues, type Chki18nIssueGroup } from './group.js';
 import { paintOfLevel } from './paint.js';
 import {
 	countsPhrase,

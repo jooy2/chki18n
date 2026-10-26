@@ -1,5 +1,4 @@
-import { readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { CHECK_CODE, FILE_FORMAT, SUPPORTED_EXTENSIONS } from '../constants.js';
 import { createFileExcluder, createPathExcluder } from '../core/exclude.js';
 import {
@@ -10,6 +9,7 @@ import {
 import { createIssue } from '../core/issue.js';
 import { isLocaleCode } from '../core/locale.js';
 import { findDuplicateJsonKeys, type JsonDuplicateKey } from './jsonDuplicates.js';
+import { extensionOf, walkFiles } from './walk.js';
 import type {
 	Chki18nFileFormat,
 	Chki18nIssue,
@@ -73,102 +73,75 @@ async function collectFiles(
 	const isExcludedDirectory = createPathExcluder(options.exclude);
 	const isExcludedFile = createFileExcluder(options.excludeFiles);
 
-	const walk = async (directory: string, segments: string[]): Promise<void> => {
-		let entries;
+	const walk = walkFiles(root, {
+		isExcludedDirectory,
+		isWanted: ({ segments }) => {
+			const name = segments[segments.length - 1];
 
-		try {
-			entries = await readdir(directory, { withFileTypes: true });
-		} catch {
+			return SUPPORTED_EXTENSIONS.includes(extensionOf(name)) && !isExcludedFile(name);
+		},
+		onUnreadable: (directory) =>
 			issues.push(
 				createIssue(CHECK_CODE.INVALID_FILE, {
 					file: directory,
 					message: `Failed to read the directory '${directory}'. It may not exist or read access may be denied.`
 				})
+			)
+	});
+
+	for await (const { path, segments } of walk) {
+		const relativePath = segments.join('/');
+		const readError = `Failed to read file '${relativePath}': `;
+		let content: string;
+
+		try {
+			content = withoutByteOrderMark(await readFile(path, { encoding: 'utf-8' }));
+		} catch {
+			issues.push(
+				createIssue(CHECK_CODE.INVALID_FILE, {
+					file: path,
+					message: `${readError}May be read access denied or invalid file format.`
+				})
 			);
-			return;
+			continue;
 		}
 
-		// `readdir` order is filesystem dependent; sort so a scan of the same
-		// tree always reports its issues in the same order.
-		entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
-
-		for (const entry of entries) {
-			// Hidden entries are tooling state, never translations.
-			if (entry.name.startsWith('.')) {
-				continue;
-			}
-
-			const path = join(directory, entry.name);
-
-			if (entry.isDirectory()) {
-				if (!isExcludedDirectory([...segments, entry.name])) {
-					await walk(path, [...segments, entry.name]);
-				}
-
-				continue;
-			}
-
-			const extension = entry.name.split('.').pop()?.toLowerCase() ?? '';
-
-			if (!SUPPORTED_EXTENSIONS.includes(extension) || isExcludedFile(entry.name)) {
-				continue;
-			}
-
-			const relativePath = [...segments, entry.name].join('/');
-			const readError = `Failed to read file '${relativePath}': `;
-			let content: string;
-
-			try {
-				content = withoutByteOrderMark(await readFile(path, { encoding: 'utf-8' }));
-			} catch {
-				issues.push(
-					createIssue(CHECK_CODE.INVALID_FILE, {
-						file: path,
-						message: `${readError}May be read access denied or invalid file format.`
-					})
-				);
-				continue;
-			}
-
-			if (content.trim().length < 1) {
-				issues.push(
-					createIssue(CHECK_CODE.INVALID_FILE, {
-						file: path,
-						message: `${readError}File content is empty.`
-					})
-				);
-				continue;
-			}
-
-			let json;
-
-			try {
-				json = JSON.parse(content);
-			} catch {
-				issues.push(
-					createIssue(CHECK_CODE.INVALID_FILE, {
-						file: path,
-						message: `${readError}Content is not json format or parse failed due to an invalid character.`
-					})
-				);
-				continue;
-			}
-
-			files.push({
-				path,
-				relativePath,
-				segments: [...segments, entry.name],
-				json,
-				// Read off the text, because `JSON.parse` has already discarded it.
-				duplicateKeys: options.enabledChecks.has(CHECK_CODE.DUPLICATE_KEY)
-					? findDuplicateJsonKeys(content)
-					: [],
-				interpolation: detectInterpolationDelimiters(content)
-			});
+		if (content.trim().length < 1) {
+			issues.push(
+				createIssue(CHECK_CODE.INVALID_FILE, {
+					file: path,
+					message: `${readError}File content is empty.`
+				})
+			);
+			continue;
 		}
-	};
 
-	await walk(root, []);
+		let json;
+
+		try {
+			json = JSON.parse(content);
+		} catch {
+			issues.push(
+				createIssue(CHECK_CODE.INVALID_FILE, {
+					file: path,
+					message: `${readError}Content is not json format or parse failed due to an invalid character.`
+				})
+			);
+			continue;
+		}
+
+		files.push({
+			path,
+			relativePath,
+			segments,
+			json,
+			// Read off the text, because `JSON.parse` has already discarded it.
+			duplicateKeys: options.enabledChecks.has(CHECK_CODE.DUPLICATE_KEY)
+				? findDuplicateJsonKeys(content)
+				: [],
+			interpolation: detectInterpolationDelimiters(content)
+		});
+	}
 
 	return files;
 }

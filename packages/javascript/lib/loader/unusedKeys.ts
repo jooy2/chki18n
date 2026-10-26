@@ -12,11 +12,12 @@
  * `UNUSED_KEY` is reported at `info` and never fails a run.
  */
 
-import { readdir, readFile, stat } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { readFile, stat } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { CHECK_CODE, SOURCE_EXTENSIONS, SOURCE_MAX_FILE_BYTES } from '../constants.js';
 import { createFileExcluder, createPathExcluder } from '../core/exclude.js';
 import { pluralBaseOf } from '../core/plural.js';
+import { extensionOf, walkFiles } from './walk.js';
 import type { Chki18nKeyUsage, Chki18nResolvedOptions } from '../_types/global.js';
 
 const EXTENSIONS = new Set(SOURCE_EXTENSIONS);
@@ -35,11 +36,7 @@ export const leafOfKey = (key: string): string => {
 	return pluralBaseOf(leaf) ?? leaf;
 };
 
-const isScannableName = (name: string): boolean => {
-	const dot = name.lastIndexOf('.');
-
-	return dot > 0 && EXTENSIONS.has(name.slice(dot + 1).toLowerCase());
-};
+const isScannableName = (name: string): boolean => EXTENSIONS.has(extensionOf(name));
 
 export type Chki18nUsageScan = {
 	/** Keys whose leaf segment was found in no scanned file. */
@@ -175,88 +172,59 @@ export async function findUnusedKeys(
 	const isExcludedFile = createFileExcluder(options.excludeFiles);
 	let scannedFileCount = 0;
 
-	const walk = async (directory: string, segments: string[]): Promise<void> => {
+	// Absolute from here on, so `skipFiles` (which are absolute) compare equal.
+	// There is no `onUnreadable`: a folder that cannot be read degrades the scan
+	// rather than failing it.
+	const walk = walkFiles(resolve(sourcePath), {
+		isExcludedDirectory,
+		// The path excluder answers for a file too, because this walk has always
+		// let `exclude` name one; `excludeFiles` is the pattern form of the same
+		// question.
+		isWanted: ({ path, segments }) =>
+			isScannableName(segments[segments.length - 1]) &&
+			!isExcludedDirectory(segments) &&
+			!isExcludedFile(segments[segments.length - 1]) &&
+			!skip.has(path)
+	});
+
+	for await (const { path } of walk) {
 		if (remaining.size < 1 && !wantsUndefined) {
-			return;
+			break;
 		}
 
-		let entries;
+		let content: string;
 
 		try {
-			entries = await readdir(directory, { withFileTypes: true });
+			if ((await stat(path)).size > SOURCE_MAX_FILE_BYTES) {
+				continue;
+			}
+
+			content = await readFile(path, { encoding: 'utf-8' });
 		} catch {
-			// A folder that cannot be read should degrade the scan, not fail it.
-			return;
+			continue;
 		}
 
-		for (const entry of entries) {
-			if (remaining.size < 1 && !wantsUndefined) {
-				return;
-			}
+		scannedFileCount += 1;
 
-			if (entry.name.startsWith('.')) {
-				continue;
-			}
-
-			const path = join(directory, entry.name);
-
-			if (entry.isDirectory()) {
-				if (!isExcludedDirectory([...segments, entry.name])) {
-					await walk(path, [...segments, entry.name]);
-				}
-
-				continue;
-			}
-
-			// The path excluder answers for a file too, because this walk has always
-			// let `exclude` name one; `excludeFiles` is the pattern form of the
-			// same question.
-			if (
-				!isScannableName(entry.name) ||
-				isExcludedDirectory([...segments, entry.name]) ||
-				isExcludedFile(entry.name) ||
-				skip.has(path)
-			) {
-				continue;
-			}
-
-			let content: string;
-
-			try {
-				if ((await stat(path)).size > SOURCE_MAX_FILE_BYTES) {
-					continue;
-				}
-
-				content = await readFile(path, { encoding: 'utf-8' });
-			} catch {
-				continue;
-			}
-
-			scannedFileCount += 1;
-
-			for (const leaf of remaining) {
-				if (content.includes(leaf)) {
-					remaining.delete(leaf);
-				}
-			}
-
-			if (!addresses) {
-				continue;
-			}
-
-			for (const key of callsIn(content, patterns)) {
-				if (addresses.has(key) || reported.has(key)) {
-					continue;
-				}
-
-				reported.add(key);
-				undefinedKeys.push({ key, file: path });
+		for (const leaf of remaining) {
+			if (content.includes(leaf)) {
+				remaining.delete(leaf);
 			}
 		}
-	};
 
-	// Absolute from here on, so `skipFiles` (which are absolute) compare equal.
-	await walk(resolve(sourcePath), []);
+		if (!addresses) {
+			continue;
+		}
+
+		for (const key of callsIn(content, patterns)) {
+			if (addresses.has(key) || reported.has(key)) {
+				continue;
+			}
+
+			reported.add(key);
+			undefinedKeys.push({ key, file: path });
+		}
+	}
 
 	const unusedKeys: string[] = [];
 
