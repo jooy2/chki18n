@@ -247,6 +247,21 @@ function buildGroups(
 	const skipped: string[] = [];
 
 	const add = (group: string, locale: string, translations: any, file: ScannedFile) => {
+		// A translation file is an object of keys. Anything else, a top level
+		// array or a bare string, has no keys to compare and is reported rather
+		// than read: an array would be compared as keys named `0` and `1`.
+		if (!isPlainObject(translations)) {
+			issues.push(
+				createIssue(CHECK_CODE.INVALID_FILE, {
+					locale,
+					group,
+					file: file.path,
+					message: `The translations of \`${locale}\` in '${file.relativePath}' are not an object.`
+				})
+			);
+			return;
+		}
+
 		(groups[group] ??= {})[locale] = translations;
 		sources.push({ path: file.path, relativePath: file.relativePath, group, locale });
 

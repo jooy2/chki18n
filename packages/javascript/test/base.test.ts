@@ -26,6 +26,22 @@ describe('checkTranslationFiles', () => {
 		assert.strictEqual(result.success, true);
 	});
 
+	it('reports a translation file that is not an object instead of comparing it', async () => {
+		const result = await checkTranslationFiles(samplePath('locales-not-an-object'), {
+			target: 'en'
+		});
+
+		assert.deepStrictEqual(
+			result.issuesByCode.INVALID_FILE?.map((issue) => issue.message),
+			[
+				"The translations of `de` in 'de.json' are not an object.",
+				"The translations of `ko` in 'ko.json' are not an object."
+			]
+		);
+		// An array read as keys `0` and `1` would have been compared, and missed.
+		assert.strictEqual(result.issuesByCode.DUMMY_KEY, undefined);
+	});
+
 	it('reads a file that starts with a byte order mark', async () => {
 		const result = await checkTranslationFiles(samplePath('locales-byte-order-mark'));
 
