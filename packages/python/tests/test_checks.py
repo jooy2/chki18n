@@ -607,3 +607,26 @@ def test_the_target_language_can_be_silenced_by_switching_the_check_off() -> Non
     assert (
         check_all({"en": {"a": ""}, "ko": {"a": "비어 있음"}}, ignore_checks=["EMPTY_VALUE"]) == []
     )
+
+
+def test_reads_whitespace_the_way_javascript_does() -> None:
+    # A byte order mark is space to JavaScript and not to Python, and a record
+    # separator the other way round.
+    found = check("SURROUNDING_WHITESPACE", {"en": {"a": "A"}, "ko": {"a": "\ufeff가"}})
+    missed = check("SURROUNDING_WHITESPACE", {"en": {"a": "A"}, "ko": {"a": "\u001e가"}})
+
+    assert len(found) == 1
+    assert missed == []
+
+
+def test_counts_only_letters_as_translatable_text() -> None:
+    # `½` is a number, so a Korean value of nothing else has no script to judge.
+    assert check("UNTRANSLATED_SCRIPT", {"en": {"a": "Half"}, "ko": {"a": "½"}}) == []
+
+
+def test_rounds_a_length_ratio_half_up_as_javascript_does() -> None:
+    issues = check(
+        "SUSPICIOUS_LENGTH", {"en": {"a": "abcdefgh"}, "ko": {"a": "ab"}}, length_ratio=3
+    )
+
+    assert issues[0].message == "The value is 0.3 times the length of the target language value."

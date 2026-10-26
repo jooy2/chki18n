@@ -12,6 +12,7 @@ source file nobody can review.
 from __future__ import annotations
 
 import re
+import unicodedata
 from bisect import bisect_right
 from typing import Final
 
@@ -19,7 +20,13 @@ _NOTHING: Final[list[str]] = []
 
 #: Markup tags, as they are written. The character after the `<` may not be a
 #: space, so prose comparing two numbers is not mistaken for a tag.
-TAG_PATTERN: Final = re.compile(r"</?[^<>\s][^<>]*>")
+#: What JavaScript's `\s` matches, as a character class. Python's `\s` reads
+#: the file and record separators and U+0085 as space and the byte order mark as
+#: not, so a pattern written with it would disagree with the other two packages
+#: about exactly the characters that are hardest to see.
+WHITESPACE: Final = "\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
+
+TAG_PATTERN: Final = re.compile(f"</?[^<>{WHITESPACE}][^<>]*>")
 
 #: The zero of every set of decimal digits Unicode 17 defines, each followed by
 #: the nine digits after it. A translation into Arabic, Hindi or Japanese often
@@ -132,7 +139,6 @@ _NAMED_INVISIBLE: Final[dict[str, str]] = {
     "\ufeff": "a byte order mark",
 }
 
-_LETTER_PATTERN: Final = re.compile(r"[^\W\d_]", re.UNICODE)
 
 _SCRIPT_CACHE: Final[dict[str, re.Pattern[str] | None]] = {}
 
@@ -264,4 +270,6 @@ def has_translatable_text(value: str, prefix: str, suffix: str) -> bool:
         text = f"{text[:start]} {text[end + len(suffix) :]}"
         start = text.find(prefix)
 
-    return _LETTER_PATTERN.search(text) is not None
+    # A letter is what JavaScript's `\p{L}` calls one. Python's `\w` takes in
+    # numbers such as `½` too, which would make a value of them translatable.
+    return any(unicodedata.category(char).startswith("L") for char in text)

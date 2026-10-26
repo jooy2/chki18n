@@ -38,6 +38,7 @@ from chki18n.constants import (
     Reporter,
 )
 from chki18n.core.issue import create_issue
+from chki18n.core.value import WHITESPACE
 
 #: What a command line flag carries after its name.
 OptionType = Literal["string", "boolean", "list"]
@@ -232,7 +233,7 @@ OPTION_DEFINITIONS: Final[tuple[OptionDefinition, ...]] = (
     ),
 )
 
-_LIST_SEPARATOR: Final = re.compile(r"[,\s]+")
+_LIST_SEPARATOR: Final = re.compile(f"[,{WHITESPACE}]+")
 
 _FLAG_TO_SNAKE: Final = re.compile(r"-")
 

@@ -24,11 +24,17 @@ from chki18n._types import KeyUsage, ResolvedOptions
 from chki18n.constants import SOURCE_EXTENSIONS, SOURCE_MAX_FILE_BYTES
 from chki18n.core.exclude import create_file_excluder, create_path_excluder
 from chki18n.core.plural import plural_base_of
+from chki18n.core.value import WHITESPACE
 from chki18n.loader.walk import walk_files
 
 _EXTENSIONS: Final[frozenset[str]] = frozenset(SOURCE_EXTENSIONS)
 
-_WORD_START: Final = re.compile(r"^\w")
+#: A name a translation call goes by starts with a word character in the ASCII
+#: sense, as JavaScript reads `\w` and `\b`. Python's would take `한` or `é` for
+#: one, and miss `t('key')` written straight after either.
+_WORD_START: Final = re.compile(r"[A-Za-z0-9_]")
+
+_WORD_BOUNDARY: Final = r"(?<![A-Za-z0-9_])"
 
 
 def leaf_of_key(key: str) -> str:
@@ -113,16 +119,14 @@ class UsageScan:
 
 def _call_patterns(names: Sequence[str]) -> list[re.Pattern[str]]:
     """A key written as the first argument of a translation call, or as `i18nKey`."""
-    # A backslash cannot appear inside an f-string expression before Python
-    # 3.12, so the word boundary is a name rather than a literal in place.
-    boundary = r"\b"
     alternatives = "|".join(
-        (boundary if _WORD_START.match(name) else "") + re.escape(name) for name in names
+        (_WORD_BOUNDARY if _WORD_START.match(name) else "") + re.escape(name) for name in names
     )
+    space = f"[{WHITESPACE}]*"
 
     return [
-        re.compile(rf"(?:{alternatives})\s*\(\s*(['\"`])([^'\"`\r\n]*)\1"),
-        re.compile(r"\bi18nKey\s*=\s*\{?\s*(['\"`])([^'\"`\r\n]*)\1"),
+        re.compile(rf"(?:{alternatives}){space}\({space}(['\"`])([^'\"`\r\n]*)\1"),
+        re.compile(rf"{_WORD_BOUNDARY}i18nKey{space}={space}\{{?{space}(['\"`])([^'\"`\r\n]*)\1"),
     ]
 
 

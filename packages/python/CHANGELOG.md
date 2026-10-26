@@ -19,6 +19,8 @@
 - A key written twice in an object inside an array is reported at the key flattening gives it, such as `list.0.label`. The position was left out, so the report named a key that did not exist
 - Column widths come from Unicode's own tables. A combining mark, such as a Thai or Hindi vowel sign or an accent written on its own, takes no column, and an emoji takes two, where the report counted one for each and pushed its columns out of line. `SUSPICIOUS_LENGTH` measures a Thai or Hindi value the way it is drawn. Measuring a value is also several times faster, which `lengthRatio` used to make the slowest check of a run
 - The Markdown report shows the markup in a value as it is written. GitHub rendered it, so `<b>` turned the rest of a row bold and the tag a `TAG_MISMATCH` was about disappeared from the table
+- Whitespace, word boundaries and letters are read the way the other two packages read them. Python's `\s` took a record separator for space and a byte order mark for not, so `SURROUNDING_WHITESPACE` disagreed about both; its `\b` took `한` for a word character, so a `t('key')` written straight after one was not read as a call; and its `\w` took `½` for a letter
+- A length ratio is rounded the way JavaScript's `toFixed` rounds it, so an exact `0.25` reads `0.3` in a `SUSPICIOUS_LENGTH` message rather than `0.2`
 
 ## 1.2.0 (2026-09-05)
 

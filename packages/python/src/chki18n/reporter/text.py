@@ -8,10 +8,11 @@ from typing import Final
 
 from chki18n._types import Issue, LevelCount, Result, Summary
 from chki18n.constants import CHECK_META
+from chki18n.core.value import WHITESPACE
 from chki18n.core.width import char_width, display_width
 from chki18n.reporter.paint import Paint
 
-_WHITESPACE_RUN: Final = re.compile(r"\s+")
+_WHITESPACE_RUN: Final = re.compile(f"[{WHITESPACE}]+")
 
 
 def plural(count: int, noun: str) -> str:

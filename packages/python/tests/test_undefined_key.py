@@ -118,3 +118,13 @@ def test_names_the_first_file_in_name_order_that_asks_for_a_key(tmp_path: Path) 
     assert len(found.undefined_keys) == 1
     assert found.undefined_keys[0].file is not None
     assert found.undefined_keys[0].file.endswith("a.ts")
+
+
+def test_reads_a_call_written_straight_after_a_letter_outside_ascii(tmp_path: Path) -> None:
+    # JavaScript's `\b` takes `한` for a non-word character, so the call counts.
+    (tmp_path / "a.ts").write_text("한t('nowhere.defined')", encoding="utf-8")
+
+    resolved, _ = resolve_options(Options(target="en"))
+    found = find_unused_keys(str(tmp_path), KEYS, resolved)
+
+    assert [usage.key for usage in found.undefined_keys] == ["nowhere.defined"]

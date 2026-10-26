@@ -6,7 +6,7 @@ import json
 import re
 import time
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Final
 
 from chki18n._types import (
@@ -33,6 +33,7 @@ from chki18n.core.plural import (
 )
 from chki18n.core.result import build_result
 from chki18n.core.value import (
+    WHITESPACE,
     ascii_digits_of,
     extract_numbers,
     extract_tags,
@@ -45,7 +46,7 @@ from chki18n.core.value import (
 from chki18n.core.width import display_width
 from chki18n.options import resolve_options
 
-_SURROUNDING_WHITESPACE_PATTERN: Final = re.compile(r"^\s|\s$")
+_SURROUNDING_WHITESPACE_PATTERN: Final = re.compile(f"^[{WHITESPACE}]|[{WHITESPACE}]$")
 
 _NO_KEYS: Final[list[str]] = []
 
@@ -182,6 +183,15 @@ def _as_display_value(value: Any) -> str:
     quotes `null` and `true` and reads the same in every package.
     """
     return value if isinstance(value, str) else _json_text(value)
+
+
+def _fixed_one(number: float) -> str:
+    """`number` to one decimal place, as JavaScript's `toFixed(1)` writes it.
+
+    Python rounds an exact half to the even digit and JavaScript rounds it up, so
+    a ratio of exactly `0.25` would read `0.2` here and `0.3` in the other two.
+    """
+    return str(Decimal(number).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
 
 
 def _json_text(value: Any) -> str:
@@ -545,7 +555,7 @@ def _check_key_slots(
                             **base,
                             value=value,
                             message=(
-                                f"The value is {ratio:.1f} times the length of the target "
+                                f"The value is {_fixed_one(ratio)} times the length of the target "
                                 "language value."
                             ),
                         )
