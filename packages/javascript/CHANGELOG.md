@@ -9,6 +9,7 @@
 ### Changed
 
 - `qsu` is no longer a dependency. The three helpers taken from it are written out, which also takes about 20 ms off loading the package
+- `MISSING_NUMBER` and `NUMBER_MISMATCH` read the digits of every script, and compare a number by its value. A translation that writes `٣` or `３` for `3` holds the same number, where it was reported as having dropped it. `extractNumbers` returns runs of those digits too, as they are written
 
 ### Fixed
 

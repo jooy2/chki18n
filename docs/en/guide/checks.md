@@ -163,7 +163,7 @@ The value begins or ends with whitespace. Almost always accidental, usually a tr
 
 ### `MISSING_NUMBER`
 
-The target language's value contains digits and the translation does not. It catches a number dropped while translating, as in `You have 3 items` becoming `여러 개 있습니다`. This is a heuristic and reports as a warning, since a translation that deliberately spells the number out will trip it.
+The target language's value contains digits and the translation does not. It catches a number dropped while translating, as in `You have 3 items` becoming `여러 개 있습니다`. This is a heuristic and reports as a warning, since a translation that deliberately spells the number out will trip it. Digits are read in every script, so a translation that writes `٣` or `３` for `3` still holds a number.
 
 ### `INVALID_VALUE_TYPE`
 
@@ -190,7 +190,7 @@ Like `DUPLICATE_KEY` and `UNUSED_KEY`, this one has to see more than a single ke
 { "count": "5개 있습니다" }
 ```
 
-Numbers the translation reordered are fine, since `3 of 5` and `5 중 3` hold the same numbers. A translation that spells its numbers out is left to `MISSING_NUMBER`.
+Numbers the translation reordered are fine, since `3 of 5` and `5 중 3` hold the same numbers, and so are numbers written in the translation's own digits: `الخطوة ٣ من ٥` holds the same two as `Step 3 of 5`. A translation that spells its numbers out is left to `MISSING_NUMBER`.
 
 ### `TAG_MISMATCH`
 

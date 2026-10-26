@@ -311,6 +311,27 @@ describe('NUMBER_MISMATCH', () => {
 			1
 		);
 	});
+
+	it("reads the same number in the digits of the translation's own script", () => {
+		const locales = {
+			en: { a: 'Step 3 of 5' },
+			ar: { a: 'الخطوة ٣ من ٥' },
+			ja: { a: 'ステップ３／５' },
+			hi: { a: 'चरण ३ / ५' }
+		};
+
+		assert.strictEqual(check(CHECK_CODE.NUMBER_MISMATCH, locales).length, 0);
+		assert.strictEqual(check(CHECK_CODE.MISSING_NUMBER, locales).length, 0);
+	});
+
+	it('quotes a changed number the way the translation writes it', () => {
+		const [issue] = check(CHECK_CODE.NUMBER_MISMATCH, {
+			en: { a: 'Step 3' },
+			ar: { a: 'الخطوة ٤' }
+		});
+
+		assert.strictEqual(issue.message, 'The target language uses 3 and this value uses ٤.');
+	});
 });
 
 describe('SUSPICIOUS_LENGTH', () => {

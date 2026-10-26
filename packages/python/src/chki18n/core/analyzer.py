@@ -28,17 +28,17 @@ from chki18n.core.key import check_key_shape
 from chki18n.core.plural import plural_categories_of, plural_parts_of, uses_plural_category
 from chki18n.core.result import build_result
 from chki18n.core.value import (
+    ascii_digits_of,
     extract_numbers,
     extract_tags,
     find_invisible_character,
+    has_digit,
     has_translatable_text,
     name_of_invisible_character,
     script_of_locale,
 )
 from chki18n.core.width import display_width
 from chki18n.options import resolve_options
-
-_DIGIT_PATTERN: Final = re.compile(r"\d")
 
 _SURROUNDING_WHITESPACE_PATTERN: Final = re.compile(r"^\s|\s$")
 
@@ -365,11 +365,15 @@ def _check_key_slots(
         if target_is_string
         else _NO_KEYS
     )
-    target_has_digit = target_is_string and _DIGIT_PATTERN.search(str(target_value)) is not None
+    target_has_digit = target_is_string and has_digit(str(target_value))
     target_numbers = (
         extract_numbers(str(target_value))
         if flags.number_mismatch and target_has_digit
         else _NO_KEYS
+    )
+    # Compared in ASCII, quoted as written.
+    target_digits = (
+        [ascii_digits_of(number) for number in target_numbers] if target_numbers else _NO_KEYS
     )
     # Counted once per key rather than once per locale: what the target language
     # carries does not change while the locales are walked.
@@ -486,13 +490,13 @@ def _check_key_slots(
                 if flags.not_translated_value and value == target_value:
                     issues.append(create_issue("NOT_TRANSLATED_VALUE", **base, value=value))
 
-                if flags.missing_number and target_has_digit and not _DIGIT_PATTERN.search(value):
+                if flags.missing_number and target_has_digit and not has_digit(value):
                     issues.append(create_issue("MISSING_NUMBER", **base, value=value))
 
-                if flags.number_mismatch and target_has_digit and _DIGIT_PATTERN.search(value):
+                if flags.number_mismatch and target_has_digit and has_digit(value):
                     numbers = extract_numbers(value)
 
-                    if not _same_items(target_numbers, numbers):
+                    if not _same_items(target_digits, [ascii_digits_of(n) for n in numbers]):
                         issues.append(
                             create_issue(
                                 "NUMBER_MISMATCH",

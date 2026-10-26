@@ -15,8 +15,6 @@ import 'package:chki18n/src/core/width.dart';
 import 'package:chki18n/src/options.dart';
 import 'package:chki18n/src/types.dart';
 
-final RegExp _digitPattern = RegExp(r'\d');
-
 final RegExp _surroundingWhitespacePattern = RegExp(r'^\s|\s$');
 
 const List<String> _noKeys = [];
@@ -361,9 +359,12 @@ void _checkKeySlots(
             options.interpolationSuffix,
           )
           : _noKeys;
-  final targetHasDigit = targetIsString && _digitPattern.hasMatch(targetValue);
+  final targetHasDigit = targetIsString && hasDigit(targetValue);
   final targetNumbers =
       flags.numberMismatch && targetHasDigit ? extractNumbers(targetValue) : _noKeys;
+  // Compared in ASCII, quoted as written.
+  final targetDigits =
+      targetNumbers.isNotEmpty ? targetNumbers.map(asciiDigitsOf).toList() : _noKeys;
   // Counted once per key rather than once per locale: what the target language
   // carries does not change while the locales are walked.
   final targetTagCounts =
@@ -536,7 +537,7 @@ void _checkKeySlots(
           );
         }
 
-        if (flags.missingNumber && targetHasDigit && !_digitPattern.hasMatch(value)) {
+        if (flags.missingNumber && targetHasDigit && !hasDigit(value)) {
           issues.add(
             createIssue(
               Chki18nCheckCode.missingNumber,
@@ -550,10 +551,10 @@ void _checkKeySlots(
           );
         }
 
-        if (flags.numberMismatch && targetHasDigit && _digitPattern.hasMatch(value)) {
+        if (flags.numberMismatch && targetHasDigit && hasDigit(value)) {
           final numbers = extractNumbers(value);
 
-          if (!_sameItems(targetNumbers, numbers)) {
+          if (!_sameItems(targetDigits, numbers.map(asciiDigitsOf).toList())) {
             issues.add(
               createIssue(
                 Chki18nCheckCode.numberMismatch,

@@ -18,7 +18,32 @@ const NOTHING: readonly string[] = Object.freeze([]);
  */
 const TAG_PATTERN = /<\/?[^<>\s][^<>]*>/g;
 
-const NUMBER_PATTERN = /\d+/g;
+/**
+ * The zero of every set of decimal digits Unicode 17 defines, each followed by
+ * the nine digits after it. A translation into Arabic, Hindi or Japanese often
+ * writes its numbers in that language's own digits, and `٣` says the same as
+ * `3`. Written out rather than read from the runtime: each package runs on a
+ * different Unicode version, and the three must agree on what a digit is.
+ */
+const DIGIT_ZEROS = [
+	0x30, 0x660, 0x6f0, 0x7c0, 0x966, 0x9e6, 0xa66, 0xae6, 0xb66, 0xbe6, 0xc66, 0xce6, 0xd66, 0xde6,
+	0xe50, 0xed0, 0xf20, 0x1040, 0x1090, 0x17e0, 0x1810, 0x1946, 0x19d0, 0x1a80, 0x1a90, 0x1b50,
+	0x1bb0, 0x1c40, 0x1c50, 0xa620, 0xa8d0, 0xa900, 0xa9d0, 0xa9f0, 0xaa50, 0xabf0, 0xff10, 0x104a0,
+	0x10d30, 0x10d40, 0x11066, 0x110f0, 0x11136, 0x111d0, 0x112f0, 0x11450, 0x114d0, 0x11650, 0x116c0,
+	0x116d0, 0x116da, 0x11730, 0x118e0, 0x11950, 0x11bf0, 0x11c50, 0x11d50, 0x11da0, 0x11de0, 0x11f50,
+	0x16130, 0x16a60, 0x16ac0, 0x16b50, 0x16d70, 0x1ccf0, 0x1d7ce, 0x1d7d8, 0x1d7e2, 0x1d7ec, 0x1d7f6,
+	0x1e140, 0x1e2f0, 0x1e4f0, 0x1e5f1, 0x1e950, 0x1fbf0
+];
+
+const DIGIT_CLASS = DIGIT_ZEROS.map(
+	(zero) => `\\u{${zero.toString(16)}}-\\u{${(zero + 9).toString(16)}}`
+).join('');
+
+const NUMBER_PATTERN = new RegExp(`[${DIGIT_CLASS}]+`, 'gu');
+
+const DIGIT_PATTERN = new RegExp(`[${DIGIT_CLASS}]`, 'u');
+
+const ASCII_NUMBER_PATTERN = /^[0-9]+$/;
 
 /**
  * Characters that take no space and are invisible in a review: zero width
@@ -90,9 +115,47 @@ export function extractTags(value: string): readonly string[] {
 	return value.match(TAG_PATTERN) ?? NOTHING;
 }
 
-/** Runs of digits a value carries, as text so `03` and `3` stay apart. */
+/** Whether a value holds a digit of any script. */
+export function hasDigit(value: string): boolean {
+	return DIGIT_PATTERN.test(value);
+}
+
+/**
+ * Runs of digits a value carries, as they are written and as text so `03` and
+ * `3` stay apart. A run may be written in any script's digits.
+ */
 export function extractNumbers(value: string): readonly string[] {
 	return value.match(NUMBER_PATTERN) ?? NOTHING;
+}
+
+/** A run of digits in ASCII, so `٠٣` and `03` compare equal. */
+export function asciiDigitsOf(digits: string): string {
+	if (ASCII_NUMBER_PATTERN.test(digits)) {
+		return digits;
+	}
+
+	let ascii = '';
+
+	for (const char of digits) {
+		const code = char.codePointAt(0) ?? 0;
+		let low = 0;
+		let high = DIGIT_ZEROS.length - 1;
+
+		// The last zero at or below the digit is the one its set starts from.
+		while (low < high) {
+			const middle = (low + high + 1) >> 1;
+
+			if (DIGIT_ZEROS[middle] <= code) {
+				low = middle;
+			} else {
+				high = middle - 1;
+			}
+		}
+
+		ascii += String.fromCharCode(0x30 + code - DIGIT_ZEROS[low]);
+	}
+
+	return ascii;
 }
 
 /** The first character in a value that nothing will draw, if there is one. */

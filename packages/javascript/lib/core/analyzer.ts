@@ -8,9 +8,11 @@ import { checkKeyShape } from './key.js';
 import { pluralCategoriesOf, pluralPartsOf, usesPluralCategory } from './plural.js';
 import { buildResult } from './result.js';
 import {
+	asciiDigitsOf,
 	extractNumbers,
 	extractTags,
 	findInvisibleCharacter,
+	hasDigit,
 	hasTranslatableText,
 	nameOfInvisibleCharacter,
 	scriptOfLocale
@@ -28,8 +30,6 @@ import type {
 	TranslationGroups,
 	TranslationMap
 } from '../_types/global.js';
-
-const DIGIT_PATTERN = /\d/;
 
 const SURROUNDING_WHITESPACE_PATTERN = /^\s|\s$/;
 
@@ -297,9 +297,11 @@ function checkKeySlots(
 				options.interpolationSuffix
 			)
 		: NO_KEYS;
-	const targetHasDigit = targetIsString && DIGIT_PATTERN.test(targetValue as string);
+	const targetHasDigit = targetIsString && hasDigit(targetValue as string);
 	const targetNumbers =
 		flags.numberMismatch && targetHasDigit ? extractNumbers(targetValue as string) : NO_KEYS;
+	// Compared in ASCII, quoted as written.
+	const targetDigits = targetNumbers.length > 0 ? targetNumbers.map(asciiDigitsOf) : NO_KEYS;
 	// Counted once per key rather than once per locale: what the target language
 	// carries does not change while the locales are walked.
 	const targetTagCounts =
@@ -402,14 +404,14 @@ function checkKeySlots(
 					issues.push(createIssue(CHECK_CODE.NOT_TRANSLATED_VALUE, { ...base, value }));
 				}
 
-				if (flags.missingNumber && targetHasDigit && !DIGIT_PATTERN.test(value)) {
+				if (flags.missingNumber && targetHasDigit && !hasDigit(value)) {
 					issues.push(createIssue(CHECK_CODE.MISSING_NUMBER, { ...base, value }));
 				}
 
-				if (flags.numberMismatch && targetHasDigit && DIGIT_PATTERN.test(value)) {
+				if (flags.numberMismatch && targetHasDigit && hasDigit(value)) {
 					const numbers = extractNumbers(value);
 
-					if (!sameItems(targetNumbers, numbers)) {
+					if (!sameItems(targetDigits, numbers.map(asciiDigitsOf))) {
 						issues.push(
 							createIssue(CHECK_CODE.NUMBER_MISMATCH, {
 								...base,

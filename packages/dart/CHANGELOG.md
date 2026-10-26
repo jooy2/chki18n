@@ -2,6 +2,10 @@
 
 ## vNext (2026--)
 
+### Changed
+
+- `MISSING_NUMBER` and `NUMBER_MISMATCH` read the digits of every script, and compare a number by its value. A translation that writes `٣` or `３` for `3` holds the same number, where it was reported as having dropped it. `extractNumbers` returns runs of those digits too, as they are written
+
 ### Fixed
 
 - A number that is not a string is quoted the way the JavaScript package quotes it, so `1.0` in a file reads `1` in the report. The message calls an object an `object` with the right article

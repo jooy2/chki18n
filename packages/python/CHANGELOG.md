@@ -2,6 +2,10 @@
 
 ## vNext (2026--)
 
+### Changed
+
+- `MISSING_NUMBER` and `NUMBER_MISMATCH` compare a number written in another script's digits by its value, so `٣` in a translation matches `3`, where it was reported as a different number. What counts as a digit is the set Unicode 17 defines, whatever version the interpreter ships, so the three packages agree. `extract_numbers` returns runs of those digits, as they are written
+
 ### Fixed
 
 - A translation file that starts with a byte order mark is read like any other. Several Windows editors write one, and such a file was reported as `INVALID_FILE` and left out of the comparison

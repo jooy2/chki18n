@@ -12,6 +12,7 @@ source file nobody can review.
 from __future__ import annotations
 
 import re
+from bisect import bisect_right
 from typing import Final
 
 _NOTHING: Final[list[str]] = []
@@ -20,7 +21,98 @@ _NOTHING: Final[list[str]] = []
 #: space, so prose comparing two numbers is not mistaken for a tag.
 TAG_PATTERN: Final = re.compile(r"</?[^<>\s][^<>]*>")
 
-_NUMBER_PATTERN: Final = re.compile(r"\d+")
+#: The zero of every set of decimal digits Unicode 17 defines, each followed by
+#: the nine digits after it. A translation into Arabic, Hindi or Japanese often
+#: writes its numbers in that language's own digits, and `٣` says the same as
+#: `3`. Written out rather than read from the runtime: each package runs on a
+#: different Unicode version, and the three must agree on what a digit is.
+_DIGIT_ZEROS: Final = (
+    0x30,
+    0x660,
+    0x6F0,
+    0x7C0,
+    0x966,
+    0x9E6,
+    0xA66,
+    0xAE6,
+    0xB66,
+    0xBE6,
+    0xC66,
+    0xCE6,
+    0xD66,
+    0xDE6,
+    0xE50,
+    0xED0,
+    0xF20,
+    0x1040,
+    0x1090,
+    0x17E0,
+    0x1810,
+    0x1946,
+    0x19D0,
+    0x1A80,
+    0x1A90,
+    0x1B50,
+    0x1BB0,
+    0x1C40,
+    0x1C50,
+    0xA620,
+    0xA8D0,
+    0xA900,
+    0xA9D0,
+    0xA9F0,
+    0xAA50,
+    0xABF0,
+    0xFF10,
+    0x104A0,
+    0x10D30,
+    0x10D40,
+    0x11066,
+    0x110F0,
+    0x11136,
+    0x111D0,
+    0x112F0,
+    0x11450,
+    0x114D0,
+    0x11650,
+    0x116C0,
+    0x116D0,
+    0x116DA,
+    0x11730,
+    0x118E0,
+    0x11950,
+    0x11BF0,
+    0x11C50,
+    0x11D50,
+    0x11DA0,
+    0x11DE0,
+    0x11F50,
+    0x16130,
+    0x16A60,
+    0x16AC0,
+    0x16B50,
+    0x16D70,
+    0x1CCF0,
+    0x1D7CE,
+    0x1D7D8,
+    0x1D7E2,
+    0x1D7EC,
+    0x1D7F6,
+    0x1E140,
+    0x1E2F0,
+    0x1E4F0,
+    0x1E5F1,
+    0x1E950,
+    0x1FBF0,
+)
+
+_DIGIT_CLASS: Final = "".join(f"\\U{zero:08x}-\\U{zero + 9:08x}" for zero in _DIGIT_ZEROS)
+
+_NUMBER_PATTERN: Final = re.compile(f"[{_DIGIT_CLASS}]+")
+
+_DIGIT_PATTERN: Final = re.compile(f"[{_DIGIT_CLASS}]")
+
+_ASCII_NUMBER_PATTERN: Final = re.compile(r"[0-9]+")
 
 #: Characters that take no space and are invisible in a review: zero width
 #: joiners and spaces, the byte order mark, and the bidirectional controls a copy
@@ -93,9 +185,30 @@ def extract_tags(value: str) -> list[str]:
     return TAG_PATTERN.findall(value)
 
 
+def has_digit(value: str) -> bool:
+    """Whether a value holds a digit of any script."""
+    return _DIGIT_PATTERN.search(value) is not None
+
+
 def extract_numbers(value: str) -> list[str]:
-    """Runs of digits a value carries, as text so `03` and `3` stay apart."""
+    """Runs of digits a value carries, as they are written.
+
+    Kept as text so `03` and `3` stay apart. A run may be written in any
+    script's digits.
+    """
     return _NUMBER_PATTERN.findall(value)
+
+
+def ascii_digits_of(digits: str) -> str:
+    """A run of digits in ASCII, so `٠٣` and `03` compare equal."""
+    if _ASCII_NUMBER_PATTERN.fullmatch(digits):
+        return digits
+
+    # The last zero at or below each digit is the one its set starts from.
+    return "".join(
+        chr(0x30 + ord(char) - _DIGIT_ZEROS[bisect_right(_DIGIT_ZEROS, ord(char)) - 1])
+        for char in digits
+    )
 
 
 def find_invisible_character(value: str) -> str | None:
