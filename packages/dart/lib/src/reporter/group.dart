@@ -71,6 +71,25 @@ int compareIssues(Chki18nIssue a, Chki18nIssue b) {
   return byLocale != 0 ? byLocale : a.key.compareTo(b.key);
 }
 
+/// Sorts [list] by [compare], keeping the ones it calls equal in the order
+/// they were in.
+///
+/// `List.sort` makes no such promise, and two findings about one key, such as
+/// a missing and an extra tag, could trade places and be reported in another
+/// order than the other two packages report them, whose sorts are stable.
+void _sortStably<T>(List<T> list, int Function(T a, T b) compare) {
+  final indexed = [for (var index = 0; index < list.length; index += 1) (index, list[index])]
+    ..sort((a, b) {
+      final order = compare(a.$2, b.$2);
+
+      return order != 0 ? order : a.$1 - b.$1;
+    });
+
+  for (var index = 0; index < list.length; index += 1) {
+    list[index] = indexed[index].$2;
+  }
+}
+
 String _axisValueOf(Chki18nIssue issue, Chki18nGroupBy groupBy) => switch (groupBy) {
   Chki18nGroupBy.code => issue.code.code,
   Chki18nGroupBy.group => issue.group,
@@ -132,7 +151,7 @@ List<Chki18nIssueGroup> groupIssues(
   }
 
   for (final section in sections.values) {
-    section.issues.sort(compareIssues);
+    _sortStably(section.issues, compareIssues);
   }
 
   final ordered =

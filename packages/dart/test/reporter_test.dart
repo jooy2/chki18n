@@ -342,6 +342,25 @@ void main() {
 
       expect(sections.first.label, '(general)');
     });
+
+    test('keeps two findings about one key in the order they were found', () {
+      // Enough of them that `List.sort` leaves its stable insertion sort behind.
+      final issues = [
+        for (var index = 0; index < 64; index += 1)
+          Chki18nIssue(
+            code: Chki18nCheckCode.tagMismatch,
+            level: Chki18nLevel.warn,
+            locale: 'ko',
+            key: 'a',
+            message: 'finding $index',
+          ),
+      ];
+      final sections = groupIssues(issues, Chki18nGroupBy.locale);
+
+      expect(sections.single.issues.map((issue) => issue.message), [
+        for (final issue in issues) issue.message,
+      ]);
+    });
   });
 
   group('column arithmetic', () {
