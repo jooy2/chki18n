@@ -24,7 +24,7 @@ export type Chki18nScanResult = {
 	/** Parsed translations, ready to hand to the analyzer. */
 	groups: TranslationGroups;
 	files: Chki18nSourceFile[];
-	/** Files that were read but did not belong to any locale. */
+	/** Files that belong to no locale, whether read or left unread for their path. */
 	skipped: string[];
 	/**
 	 * Interpolation delimiters the files appear to be written with, or `null`

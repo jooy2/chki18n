@@ -46,7 +46,7 @@ class FileSession(Session):
 
     @property
     def skipped(self) -> list[str]:
-        """Files that were read but did not belong to any locale."""
+        """Files that belong to no locale, whether read or left unread for their path."""
         return self._skipped
 
     @property

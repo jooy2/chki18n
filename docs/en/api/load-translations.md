@@ -168,7 +168,7 @@ session.groups; // every group held, in scan order
 session.files; // the files they were read from
 session.fileFormat; // 'single' | 'folder' | 'nested'
 session.path; // the absolute path that was scanned
-session.skipped; // files read but not belonging to any locale
+session.skipped; // files that belong to no locale
 session.detectedInterpolation; // { prefix: '{{', suffix: '}}' } — what the files look like
 ```
 
@@ -183,7 +183,7 @@ session.groups; // every group held, in scan order
 session.files; // the files they were read from
 session.fileFormat; // Chki18nFileFormat.single, .folder or .nested
 session.path; // the absolute path that was scanned
-session.skipped; // files read but not belonging to any locale
+session.skipped; // files that belong to no locale
 session.detectedInterpolation; // Chki18nDelimiters('{{', '}}') — what the files look like
 ```
 
@@ -198,7 +198,7 @@ session.groups  # every group held, in scan order
 session.files  # the files they were read from
 session.file_format  # 'single' | 'folder' | 'nested'
 session.path  # the absolute path that was scanned
-session.skipped  # files read but not belonging to any locale
+session.skipped  # files that belong to no locale
 session.detected_interpolation  # Delimiters('{{', '}}') — what the files look like
 ```
 

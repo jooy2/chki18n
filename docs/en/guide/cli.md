@@ -319,7 +319,7 @@ chki18n ./locales --target en --no-info || exit 1
 
 ## When a scan finds nothing
 
-`--debug` prints the resolved options, the layout that was detected, and every file that was read but did not belong to a locale:
+`--debug` prints the resolved options, the layout that was detected, and every file that did not belong to a locale:
 
 ```bash
 chki18n ./locales --debug

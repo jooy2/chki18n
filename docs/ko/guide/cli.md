@@ -319,7 +319,7 @@ chki18n ./locales --target en --no-info || exit 1
 
 ## 검사 결과가 비어 있을 때
 
-`--debug`는 해석된 옵션, 감지된 파일 구조, 그리고 읽었지만 로케일에 속하지 않아 건너뛴 파일을 출력합니다.
+`--debug`는 해석된 옵션, 감지된 파일 구조, 그리고 로케일에 속하지 않아 건너뛴 파일을 출력합니다.
 
 ```bash
 chki18n ./locales --debug

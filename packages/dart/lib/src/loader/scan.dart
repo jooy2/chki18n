@@ -37,7 +37,7 @@ class Chki18nScanResult {
   /// The files that became part of a group.
   final List<Chki18nSourceFile> files;
 
-  /// Files that were read but did not belong to any locale.
+  /// Files that belong to no locale, whether read or left unread for their path.
   final List<String> skipped;
 
   /// Interpolation delimiters the files appear to be written with, or `null`

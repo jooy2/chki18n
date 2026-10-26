@@ -167,7 +167,7 @@ check_translation_files("./locales", Options(exclude=["tmp", "vendor"]))
 
 Note that `exclude` **replaces** the default list rather than adding to it, so include the defaults you still want. An entry with a separator names a path from the scanned root (`src/legacy`) rather than a name at any depth, and `excludeFiles` does the same for file names.
 
-A file that is read but does not belong to a locale is skipped without a message. `--debug` names every one of them, which is the fastest way to find out why a scan came back empty.
+A file that does not belong to a locale is skipped without a message. In the `single` and `folder` layouts, whose paths name the locales, such a file is not even opened, so a broken JSON file elsewhere in an application cannot fail the run. `--debug` names every skipped file, which is the fastest way to find out why a scan came back empty.
 
 ## Nested keys
 

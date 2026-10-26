@@ -35,7 +35,7 @@ class ScanResult:
     groups: TranslationGroups
     #: The files that became part of a group.
     files: list[SourceFile]
-    #: Files that were read but did not belong to any locale.
+    #: Files that belong to no locale, whether read or left unread for their path.
     skipped: list[str]
     #: Interpolation delimiters the files appear to be written with, or ``None``
     #: when nothing in them looks like one. A guess to offer a user setting a

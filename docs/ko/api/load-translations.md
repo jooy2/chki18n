@@ -168,7 +168,7 @@ session.groups; // 들고 있는 모든 그룹, 검사 순서대로
 session.files; // 읽어들인 파일들
 session.fileFormat; // 'single' | 'folder' | 'nested'
 session.path; // 검사한 절대 경로
-session.skipped; // 읽었지만 로케일에 속하지 않은 파일들
+session.skipped; // 로케일에 속하지 않은 파일
 session.detectedInterpolation; // { prefix: '{{', suffix: '}}' } — 파일이 쓰는 것으로 보이는 구분자
 ```
 
@@ -183,7 +183,7 @@ session.groups; // 들고 있는 모든 그룹, 검사 순서대로
 session.files; // 읽어들인 파일들
 session.fileFormat; // Chki18nFileFormat.single, .folder, .nested
 session.path; // 검사한 절대 경로
-session.skipped; // 읽었지만 로케일에 속하지 않은 파일들
+session.skipped; // 로케일에 속하지 않은 파일
 session.detectedInterpolation; // Chki18nDelimiters('{{', '}}') — 파일이 쓰는 것으로 보이는 구분자
 ```
 
@@ -198,7 +198,7 @@ session.groups  # 들고 있는 모든 그룹, 검사 순서대로
 session.files  # 읽어들인 파일들
 session.file_format  # 'single' | 'folder' | 'nested'
 session.path  # 검사한 절대 경로
-session.skipped  # 읽었지만 로케일에 속하지 않은 파일들
+session.skipped  # 로케일에 속하지 않은 파일
 session.detected_interpolation  # Delimiters('{{', '}}') — 파일이 쓰는 것으로 보이는 구분자
 ```
 

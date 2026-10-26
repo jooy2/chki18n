@@ -30,7 +30,7 @@ class Chki18nFileSession extends Chki18nSession {
 
   List<String> _skipped = const [];
 
-  /// Files that were read but did not belong to any locale.
+  /// Files that belong to no locale, whether read or left unread for their path.
   List<String> get skipped => _skipped;
 
   Chki18nDelimiters? _detectedInterpolation;

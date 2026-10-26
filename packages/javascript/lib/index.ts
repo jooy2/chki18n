@@ -21,7 +21,7 @@ import type {
 export type Chki18nFileSession = Chki18nSession & {
 	/** Absolute path the translations were read from. */
 	readonly path: string;
-	/** Files that were read but did not belong to any locale. */
+	/** Files that belong to no locale, whether read or left unread for their path. */
 	readonly skipped: string[];
 	/**
 	 * Interpolation delimiters the files look like they are written with, or
