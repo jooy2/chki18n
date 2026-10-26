@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
-import { CHECK_CODE, checkTranslationFiles, FILE_FORMAT } from '../dist/index.js';
+import { CHECK_CODE, checkTranslationFiles, FILE_FORMAT, loadTranslations } from '../dist/index.js';
 
 const samplePath = (name: string) => join('test', 'samples', name);
 
@@ -14,6 +14,16 @@ describe('checkTranslationFiles', () => {
 		assert.strictEqual(result.fileFormat, FILE_FORMAT.SINGLE);
 		assert.deepStrictEqual([...result.locales].sort(), ['en', 'ko']);
 		assert.strictEqual(result.files.length, 2);
+	});
+
+	it('does not read a file whose path names no locale', async () => {
+		const session = await loadTranslations(samplePath('app-root'));
+		const result = session.analyze();
+
+		// The broken fixture was never parsed, so it cannot fail the run.
+		assert.strictEqual(result.issuesByCode.INVALID_FILE, undefined);
+		assert.deepStrictEqual(session.skipped, ['data/settings.json', 'fixtures/broken.json']);
+		assert.strictEqual(result.success, true);
 	});
 
 	it('reads a file that starts with a byte order mark', async () => {

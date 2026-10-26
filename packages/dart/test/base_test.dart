@@ -15,6 +15,16 @@ void main() {
       expect(result.files.length, 2);
     });
 
+    test('does not read a file whose path names no locale', () async {
+      final session = await loadTranslations(path: samplePath('app-root'));
+      final result = session.analyze();
+
+      // The broken fixture was never parsed, so it cannot fail the run.
+      expect(result.of(Chki18nCheckCode.invalidFile), isEmpty);
+      expect(session.skipped, ['data/settings.json', 'fixtures/broken.json']);
+      expect(result.success, isTrue);
+    });
+
     test('reads a file that starts with a byte order mark', () async {
       final result = await checkTranslationFiles(path: samplePath('locales-byte-order-mark'));
 

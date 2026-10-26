@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from chki18n import Options, check_translation_files
+from chki18n import Options, check_translation_files, load_translations
 
 
 def sample_path(name: str) -> str:
@@ -22,6 +22,16 @@ def test_passes_a_directory_with_no_critical_issue() -> None:
     assert result.file_format == "single"
     assert sorted(result.locales) == ["en", "ko"]
     assert len(result.files) == 2
+
+
+def test_does_not_read_a_file_whose_path_names_no_locale() -> None:
+    session = load_translations(sample_path("app-root"))
+    result = session.analyze()
+
+    # The broken fixture was never parsed, so it cannot fail the run.
+    assert result.of("INVALID_FILE") == []
+    assert session.skipped == ["data/settings.json", "fixtures/broken.json"]
+    assert result.success is True
 
 
 def test_reads_a_file_that_starts_with_a_byte_order_mark() -> None:

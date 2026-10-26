@@ -57,7 +57,20 @@ class _ScannedFile {
     required this.json,
     required this.duplicateKeys,
     required this.interpolation,
-  });
+  }) : read = true;
+
+  /// A file the scan found and did not read, because its path names no locale.
+  const _ScannedFile.unread({
+    required this.path,
+    required this.relativePath,
+    required this.segments,
+  }) : read = false,
+       json = null,
+       duplicateKeys = const [],
+       interpolation = null;
+
+  /// Whether the file was read at all.
+  final bool read;
 
   final String path;
   final String relativePath;
@@ -85,128 +98,164 @@ List<String> _nestedLocaleKeys(Object? json) {
   ];
 }
 
-/// Reads every supported file below [root], parsed and in a stable order.
-Future<List<_ScannedFile>> _collectFiles(
-  String root,
-  Chki18nResolvedOptions options,
-  List<Chki18nIssue> issues,
-) async {
-  final files = <_ScannedFile>[];
-  final isExcludedDirectory = createPathExcluder(options.exclude);
+/// Whether a file's own name is a locale, as the `single` layout names them.
+bool _isNamedForLocale(List<String> segments) => isLocaleCode(stemOf(segments.last));
+
+/// Whether a file sits in a folder named for a locale, as `folder` puts them.
+bool _isInLocaleFolder(List<String> segments) =>
+    segments.length > 1 && isLocaleCode(segments[segments.length - 2]);
+
+/// Whether a file has to be read in a layout.
+///
+/// Every layout but `nested` names its locales in the path, so a file whose path
+/// names none can hold no locale's translations, and reading it would only parse
+/// a fixture or a data file of the application the scan was pointed at.
+bool _mayHoldLocale(List<String> segments, Chki18nFileFormat format) => switch (format) {
+  Chki18nFileFormat.single => _isNamedForLocale(segments),
+  Chki18nFileFormat.folder => _isInLocaleFolder(segments),
+  Chki18nFileFormat.nested => true,
+  Chki18nFileFormat.auto => _isNamedForLocale(segments) || _isInLocaleFolder(segments),
+};
+
+/// The layout the files' paths say they are in, or `null` when no path names
+/// a locale.
+///
+/// The path shape alone is ambiguous (`a/ko.json` and `ko/common.json` both
+/// have two segments), so the decision is made by which segment is a real
+/// locale code: a locale named file means `single`, a locale named folder means
+/// `folder`. Only a file that could be read decides.
+Chki18nFileFormat? _fileFormatOfPaths(Iterable<_ScannedFile> files) {
+  for (final file in files) {
+    if (_isNamedForLocale(file.segments)) {
+      return Chki18nFileFormat.single;
+    }
+
+    if (_isInLocaleFolder(file.segments)) {
+      return Chki18nFileFormat.folder;
+    }
+  }
+
+  return null;
+}
+
+/// A place in the walk: a file found there, or a directory it could not list.
+class _Slot {
+  _Slot.file(Chki18nWalkedFile this.file) : issue = null;
+
+  _Slot.issue(Chki18nIssue this.issue) : file = null;
+
+  final Chki18nWalkedFile? file;
+  final Chki18nIssue? issue;
+
+  /// What reading [file] gave: a [_ScannedFile], or the [Chki18nIssue] it ran into.
+  Object? read;
+}
+
+/// Every supported file below [root] and every directory that could not be
+/// listed, in walk order.
+Future<List<_Slot>> _walkTranslationTree(String root, Chki18nResolvedOptions options) async {
+  final slots = <_Slot>[];
   final isExcludedFile = createFileExcluder(options.excludeFiles);
 
   final walk = walkFiles(
     root,
-    isExcludedDirectory: isExcludedDirectory,
+    isExcludedDirectory: createPathExcluder(options.exclude),
     isWanted: (file) {
       final name = file.segments.last;
 
       return supportedExtensions.contains(extensionOf(name)) && !isExcludedFile(name);
     },
     onUnreadable: (directory) {
-      issues.add(
-        createIssue(
-          Chki18nCheckCode.invalidFile,
-          file: directory,
-          message:
-              "Failed to read the directory '$directory'. It may not exist or read access "
-              'may be denied.',
+      slots.add(
+        _Slot.issue(
+          createIssue(
+            Chki18nCheckCode.invalidFile,
+            file: directory,
+            message:
+                "Failed to read the directory '$directory'. It may not exist or read access "
+                'may be denied.',
+          ),
         ),
       );
     },
   );
 
   await for (final file in walk) {
-    final relativePath = file.segments.join('/');
-    final readError = "Failed to read file '$relativePath': ";
-    String content;
+    slots.add(_Slot.file(file));
+  }
 
-    try {
-      content = await File(file.path).readAsString();
-    } catch (_) {
-      issues.add(
-        createIssue(
-          Chki18nCheckCode.invalidFile,
-          file: file.path,
-          message: '${readError}May be read access denied or invalid file format.',
-        ),
-      );
-      continue;
-    }
+  return slots;
+}
 
-    if (content.trim().isEmpty) {
-      issues.add(
-        createIssue(
-          Chki18nCheckCode.invalidFile,
-          file: file.path,
-          message: '${readError}File content is empty.',
-        ),
-      );
-      continue;
-    }
+/// One file read and parsed, or the [Chki18nIssue] it ran into.
+Future<Object> _readTranslationFile(Chki18nWalkedFile file, Chki18nResolvedOptions options) async {
+  final relativePath = file.segments.join('/');
+  final readError = "Failed to read file '$relativePath': ";
+  String content;
 
-    Object? json;
-
-    try {
-      json = jsonDecode(content);
-    } on FormatException {
-      issues.add(
-        createIssue(
-          Chki18nCheckCode.invalidFile,
-          file: file.path,
-          message:
-              '${readError}Content is not json format or parse failed due to an invalid '
-              'character.',
-        ),
-      );
-      continue;
-    }
-
-    files.add(
-      _ScannedFile(
-        path: file.path,
-        relativePath: relativePath,
-        segments: file.segments,
-        json: json,
-        // Read off the text, because the decoder has already discarded it.
-        duplicateKeys:
-            options.enabledChecks.contains(Chki18nCheckCode.duplicateKey)
-                ? findDuplicateJsonKeys(content)
-                : const [],
-        interpolation: detectInterpolationDelimiters(content),
-      ),
+  try {
+    content = await File(file.path).readAsString();
+  } catch (_) {
+    return createIssue(
+      Chki18nCheckCode.invalidFile,
+      file: file.path,
+      message: '${readError}May be read access denied or invalid file format.',
     );
   }
 
-  return files;
-}
-
-/// Works out how the files are laid out.
-///
-/// The path shape alone is ambiguous (`a/ko.json` and `ko/common.json` both
-/// have two segments), so the decision is made by which segment is a real
-/// locale code: a locale named file means `single`, a locale named folder means
-/// `folder`. When no path segment is a locale, a file whose top level keys are
-/// locales means `nested`.
-Chki18nFileFormat _detectFileFormat(List<_ScannedFile> files) {
-  for (final file in files) {
-    if (isLocaleCode(stemOf(file.segments.last))) {
-      return Chki18nFileFormat.single;
-    }
-
-    if (file.segments.length > 1 && isLocaleCode(file.segments[file.segments.length - 2])) {
-      return Chki18nFileFormat.folder;
-    }
+  if (content.trim().isEmpty) {
+    return createIssue(
+      Chki18nCheckCode.invalidFile,
+      file: file.path,
+      message: '${readError}File content is empty.',
+    );
   }
 
-  for (final file in files) {
-    if (_nestedLocaleKeys(file.json).isNotEmpty) {
-      return Chki18nFileFormat.nested;
-    }
+  Object? json;
+
+  try {
+    json = jsonDecode(content);
+  } on FormatException {
+    return createIssue(
+      Chki18nCheckCode.invalidFile,
+      file: file.path,
+      message:
+          '${readError}Content is not json format or parse failed due to an invalid '
+          'character.',
+    );
   }
 
-  return Chki18nFileFormat.single;
+  return _ScannedFile(
+    path: file.path,
+    relativePath: relativePath,
+    segments: file.segments,
+    json: json,
+    // Read off the text, because the decoder has already discarded it.
+    duplicateKeys:
+        options.enabledChecks.contains(Chki18nCheckCode.duplicateKey)
+            ? findDuplicateJsonKeys(content)
+            : const [],
+    interpolation: detectInterpolationDelimiters(content),
+  );
 }
+
+/// Reads the files of [slots] that [isWanted] asks for, each into its own slot.
+Future<void> _readSlots(
+  List<_Slot> slots,
+  bool Function(Chki18nWalkedFile file) isWanted,
+  Chki18nResolvedOptions options,
+) async {
+  for (final slot in slots) {
+    final file = slot.file;
+
+    if (file != null && slot.read == null && isWanted(file)) {
+      slot.read = await _readTranslationFile(file, options);
+    }
+  }
+}
+
+Iterable<_ScannedFile> _scannedOf(List<_Slot> slots) =>
+    slots.map((slot) => slot.read).whereType<_ScannedFile>();
 
 class _BuiltGroups {
   const _BuiltGroups(this.groups, this.files, this.skipped);
@@ -288,6 +337,12 @@ _BuiltGroups _buildGroups(
     final segments = file.segments;
     final fileName = segments.last;
 
+    // Left unread because its path names no locale, so it belongs to none.
+    if (!file.read) {
+      skipped.add(file.relativePath);
+      continue;
+    }
+
     if (fileFormat == Chki18nFileFormat.nested) {
       final locales = _nestedLocaleKeys(file.json);
 
@@ -361,10 +416,51 @@ Future<Chki18nScanResult> scanTranslationDirectory(
   Chki18nResolvedOptions options,
 ) async {
   final issues = <Chki18nIssue>[];
-  final files = await _collectFiles(path, options, issues);
-  final fileFormat =
-      options.format == Chki18nFileFormat.auto ? _detectFileFormat(files) : options.format;
-  final built = _buildGroups(files, fileFormat, issues);
+  final slots = await _walkTranslationTree(path, options);
+
+  await _readSlots(slots, (file) => _mayHoldLocale(file.segments, options.format), options);
+
+  var fileFormat =
+      options.format == Chki18nFileFormat.auto
+          ? _fileFormatOfPaths(_scannedOf(slots))
+          : options.format;
+
+  if (fileFormat == null) {
+    // No path names a locale, so only the files' content can tell whether
+    // their top level keys do, as the `nested` layout writes them.
+    await _readSlots(slots, (_) => true, options);
+
+    fileFormat =
+        _scannedOf(slots).any((file) => _nestedLocaleKeys(file.json).isNotEmpty)
+            ? Chki18nFileFormat.nested
+            : Chki18nFileFormat.single;
+  }
+
+  // The issues go out in walk order.
+  final entries = <_ScannedFile>[];
+
+  for (final slot in slots) {
+    final file = slot.file;
+    final read = slot.read;
+
+    if (slot.issue != null) {
+      issues.add(slot.issue!);
+    } else if (file != null && read == null) {
+      entries.add(
+        _ScannedFile.unread(
+          path: file.path,
+          relativePath: file.segments.join('/'),
+          segments: file.segments,
+        ),
+      );
+    } else if (read is _ScannedFile) {
+      entries.add(read);
+    } else if (read is Chki18nIssue) {
+      issues.add(read);
+    }
+  }
+
+  final built = _buildGroups(entries, fileFormat, issues);
 
   if (built.files.isEmpty) {
     issues.add(
@@ -372,7 +468,7 @@ Future<Chki18nScanResult> scanTranslationDirectory(
         Chki18nCheckCode.invalidFile,
         file: path,
         message:
-            files.isNotEmpty
+            entries.isNotEmpty
                 ? 'No translation file matching the `${fileFormat.name}` format was found in '
                     "'$path'. Check the `format` option."
                 : "No translation file was found in '$path'.",
@@ -385,7 +481,10 @@ Future<Chki18nScanResult> scanTranslationDirectory(
     groups: built.groups,
     files: built.files,
     skipped: built.skipped,
-    detectedInterpolation: _detectedInterpolationOf(files, built.skipped),
+    detectedInterpolation: _detectedInterpolationOf(
+      entries.where((entry) => entry.read).toList(),
+      built.skipped,
+    ),
     issues: issues,
   );
 }

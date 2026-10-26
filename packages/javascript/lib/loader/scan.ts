@@ -9,7 +9,7 @@ import {
 import { createIssue } from '../core/issue.js';
 import { isLocaleCode } from '../core/locale.js';
 import { findDuplicateJsonKeys, type JsonDuplicateKey } from './jsonDuplicates.js';
-import { extensionOf, walkFiles } from './walk.js';
+import { extensionOf, walkFiles, type WalkedFile } from './walk.js';
 import type {
 	Chki18nFileFormat,
 	Chki18nIssue,
@@ -63,115 +63,173 @@ const isPlainObject = (value: unknown): boolean =>
 const nestedLocaleKeys = (json: unknown): string[] =>
 	isPlainObject(json) ? Object.keys(json as object).filter(isLocaleCode) : [];
 
-/** Read every supported file below `root`, parsed and in a stable order. */
-async function collectFiles(
-	root: string,
-	options: Chki18nResolvedOptions,
-	issues: Chki18nIssue[]
-): Promise<ScannedFile[]> {
-	const files: ScannedFile[] = [];
-	const isExcludedDirectory = createPathExcluder(options.exclude);
-	const isExcludedFile = createFileExcluder(options.excludeFiles);
+/**
+ * The layout the files' paths say they are in, or `null` when no path names a
+ * locale. The path shape alone is ambiguous (`a/ko.json` and `ko/common.json`
+ * both have two segments), so the decision is made by which segment is a real
+ * locale code: a locale named file means `single`, a locale named folder means
+ * `folder`. Only a file that could be read decides.
+ */
+function fileFormatOfPaths(files: ScannedFile[]): Chki18nFileFormat | null {
+	for (const { segments } of files) {
+		if (isNamedForLocale(segments)) {
+			return FILE_FORMAT.SINGLE;
+		}
 
+		if (isInLocaleFolder(segments)) {
+			return FILE_FORMAT.FOLDER;
+		}
+	}
+
+	return null;
+}
+
+/** A file the scan found and did not read, because its path names no locale. */
+type UnreadFile = { path: string; relativePath: string; segments: string[]; json?: undefined };
+
+/** A place in the walk: a file found there, or a directory it could not list. */
+type Slot = { issue: Chki18nIssue } | { file: WalkedFile; read?: ScannedFile | Chki18nIssue };
+
+/**
+ * How many files are read at once. Enough to keep the disk busy, few enough
+ * that a large tree does not run out of file handles.
+ */
+const READ_CONCURRENCY = 16;
+
+/** Whether a file's own name is a locale, as the `single` layout names them. */
+const isNamedForLocale = (segments: string[]): boolean =>
+	isLocaleCode(stemOf(segments[segments.length - 1]));
+
+/** Whether a file sits in a folder named for a locale, as `folder` puts them. */
+const isInLocaleFolder = (segments: string[]): boolean =>
+	isLocaleCode(segments[segments.length - 2] ?? '');
+
+/**
+ * Whether a file has to be read in a layout. Every layout but `nested` names its
+ * locales in the path, so a file whose path names none can hold no locale's
+ * translations, and reading it would only parse a fixture or a data file of the
+ * application the scan was pointed at.
+ */
+function mayHoldLocale(segments: string[], format: Chki18nFileFormat): boolean {
+	if (format === FILE_FORMAT.SINGLE) {
+		return isNamedForLocale(segments);
+	}
+
+	if (format === FILE_FORMAT.FOLDER) {
+		return isInLocaleFolder(segments);
+	}
+
+	return format === FILE_FORMAT.NESTED || isNamedForLocale(segments) || isInLocaleFolder(segments);
+}
+
+/** Every supported file below `root` and every directory that could not be listed, in walk order. */
+async function walkTranslationTree(root: string, options: Chki18nResolvedOptions): Promise<Slot[]> {
+	const slots: Slot[] = [];
+	const isExcludedFile = createFileExcluder(options.excludeFiles);
 	const walk = walkFiles(root, {
-		isExcludedDirectory,
+		isExcludedDirectory: createPathExcluder(options.exclude),
 		isWanted: ({ segments }) => {
 			const name = segments[segments.length - 1];
 
 			return SUPPORTED_EXTENSIONS.includes(extensionOf(name)) && !isExcludedFile(name);
 		},
 		onUnreadable: (directory) =>
-			issues.push(
-				createIssue(CHECK_CODE.INVALID_FILE, {
+			slots.push({
+				issue: createIssue(CHECK_CODE.INVALID_FILE, {
 					file: directory,
 					message: `Failed to read the directory '${directory}'. It may not exist or read access may be denied.`
 				})
-			)
+			})
 	});
 
-	for await (const { path, segments } of walk) {
-		const relativePath = segments.join('/');
-		const readError = `Failed to read file '${relativePath}': `;
-		let content: string;
+	for await (const file of walk) {
+		slots.push({ file });
+	}
 
-		try {
-			content = withoutByteOrderMark(await readFile(path, { encoding: 'utf-8' }));
-		} catch {
-			issues.push(
-				createIssue(CHECK_CODE.INVALID_FILE, {
-					file: path,
-					message: `${readError}May be read access denied or invalid file format.`
-				})
-			);
-			continue;
-		}
+	return slots;
+}
 
-		if (content.trim().length < 1) {
-			issues.push(
-				createIssue(CHECK_CODE.INVALID_FILE, {
-					file: path,
-					message: `${readError}File content is empty.`
-				})
-			);
-			continue;
-		}
+/** One file read and parsed, or the reason it could not be. */
+async function readTranslationFile(
+	{ path, segments }: WalkedFile,
+	options: Chki18nResolvedOptions
+): Promise<ScannedFile | Chki18nIssue> {
+	const relativePath = segments.join('/');
+	const readError = `Failed to read file '${relativePath}': `;
+	let content: string;
 
-		let json;
-
-		try {
-			json = JSON.parse(content);
-		} catch {
-			issues.push(
-				createIssue(CHECK_CODE.INVALID_FILE, {
-					file: path,
-					message: `${readError}Content is not json format or parse failed due to an invalid character.`
-				})
-			);
-			continue;
-		}
-
-		files.push({
-			path,
-			relativePath,
-			segments,
-			json,
-			// Read off the text, because `JSON.parse` has already discarded it.
-			duplicateKeys: options.enabledChecks.has(CHECK_CODE.DUPLICATE_KEY)
-				? findDuplicateJsonKeys(content)
-				: [],
-			interpolation: detectInterpolationDelimiters(content)
+	try {
+		content = withoutByteOrderMark(await readFile(path, { encoding: 'utf-8' }));
+	} catch {
+		return createIssue(CHECK_CODE.INVALID_FILE, {
+			file: path,
+			message: `${readError}May be read access denied or invalid file format.`
 		});
 	}
 
-	return files;
+	if (content.trim().length < 1) {
+		return createIssue(CHECK_CODE.INVALID_FILE, {
+			file: path,
+			message: `${readError}File content is empty.`
+		});
+	}
+
+	let json;
+
+	try {
+		json = JSON.parse(content);
+	} catch {
+		return createIssue(CHECK_CODE.INVALID_FILE, {
+			file: path,
+			message: `${readError}Content is not json format or parse failed due to an invalid character.`
+		});
+	}
+
+	return {
+		path,
+		relativePath,
+		segments,
+		json,
+		// Read off the text, because `JSON.parse` has already discarded it.
+		duplicateKeys: options.enabledChecks.has(CHECK_CODE.DUPLICATE_KEY)
+			? findDuplicateJsonKeys(content)
+			: [],
+		interpolation: detectInterpolationDelimiters(content)
+	};
 }
 
 /**
- * Work out how the files are laid out. The path shape alone is ambiguous
- * (`a/ko.json` and `ko/common.json` both have two segments), so the decision is
- * made by which segment is a real locale code: a locale named file means
- * `single`, a locale named folder means `folder`. When no path segment is a
- * locale, a file whose top level keys are locales means `nested`.
+ * Read the files of `slots` that `isWanted` asks for, several at a time. Each
+ * result lands in its own slot, so whatever reads the slots afterwards meets
+ * them in walk order, however the reads finished.
  */
-function detectFileFormat(files: ScannedFile[]): Chki18nFileFormat {
-	for (const file of files) {
-		if (isLocaleCode(stemOf(file.segments[file.segments.length - 1]))) {
-			return FILE_FORMAT.SINGLE;
-		}
+async function readSlots(
+	slots: Slot[],
+	isWanted: (file: WalkedFile) => boolean,
+	options: Chki18nResolvedOptions
+): Promise<void> {
+	const pending = slots.filter(
+		(slot): slot is Extract<Slot, { file: WalkedFile }> =>
+			'file' in slot && slot.read === undefined && isWanted(slot.file)
+	);
+	let next = 0;
 
-		if (isLocaleCode(file.segments[file.segments.length - 2] ?? '')) {
-			return FILE_FORMAT.FOLDER;
-		}
-	}
+	const worker = async (): Promise<void> => {
+		while (next < pending.length) {
+			const slot = pending[next];
 
-	for (const file of files) {
-		if (nestedLocaleKeys(file.json).length > 0) {
-			return FILE_FORMAT.NESTED;
+			next += 1;
+			slot.read = await readTranslationFile(slot.file, options);
 		}
-	}
+	};
 
-	return FILE_FORMAT.SINGLE;
+	await Promise.all(Array.from({ length: Math.min(READ_CONCURRENCY, pending.length) }, worker));
 }
+
+const isRead = (file: ScannedFile | UnreadFile): file is ScannedFile => file.json !== undefined;
+
+const isScanned = (read: ScannedFile | Chki18nIssue | undefined): read is ScannedFile =>
+	read !== undefined && 'json' in read;
 
 /**
  * Sort the files into comparable groups. A group is one set of files that hold
@@ -180,7 +238,7 @@ function detectFileFormat(files: ScannedFile[]): Chki18nFileFormat {
  * one flat pile of keys.
  */
 function buildGroups(
-	files: ScannedFile[],
+	files: (ScannedFile | UnreadFile)[],
 	fileFormat: Chki18nFileFormat,
 	issues: Chki18nIssue[]
 ): Pick<Chki18nScanResult, 'groups' | 'files' | 'skipped'> {
@@ -216,6 +274,12 @@ function buildGroups(
 	for (const file of files) {
 		const segments = file.segments;
 		const fileName = segments[segments.length - 1];
+
+		// Left unread because its path names no locale, so it belongs to none.
+		if (!isRead(file)) {
+			skipped.push(file.relativePath);
+			continue;
+		}
 
 		if (fileFormat === FILE_FORMAT.NESTED) {
 			const locales = nestedLocaleKeys(file.json);
@@ -292,15 +356,51 @@ export async function scanTranslationDirectory(
 	options: Chki18nResolvedOptions
 ): Promise<Chki18nScanResult> {
 	const issues: Chki18nIssue[] = [];
-	const files = await collectFiles(path, options, issues);
-	const fileFormat = options.format === FILE_FORMAT.AUTO ? detectFileFormat(files) : options.format;
-	const built = buildGroups(files, fileFormat, issues);
+	const slots = await walkTranslationTree(path, options);
+
+	await readSlots(slots, ({ segments }) => mayHoldLocale(segments, options.format), options);
+
+	const scannedOf = (): ScannedFile[] =>
+		slots.flatMap((slot) => ('file' in slot && isScanned(slot.read) ? [slot.read] : []));
+	let fileFormat =
+		options.format === FILE_FORMAT.AUTO ? fileFormatOfPaths(scannedOf()) : options.format;
+
+	if (fileFormat === null) {
+		// No path names a locale, so only the files' content can tell whether
+		// their top level keys do, as the `nested` layout writes them.
+		await readSlots(slots, () => true, options);
+
+		fileFormat = scannedOf().some((file) => nestedLocaleKeys(file.json).length > 0)
+			? FILE_FORMAT.NESTED
+			: FILE_FORMAT.SINGLE;
+	}
+
+	// The issues go out in walk order, whatever order the reads finished in.
+	const entries: (ScannedFile | UnreadFile)[] = [];
+
+	for (const slot of slots) {
+		if ('issue' in slot) {
+			issues.push(slot.issue);
+		} else if (slot.read === undefined) {
+			entries.push({
+				path: slot.file.path,
+				relativePath: slot.file.segments.join('/'),
+				segments: slot.file.segments
+			});
+		} else if (isScanned(slot.read)) {
+			entries.push(slot.read);
+		} else {
+			issues.push(slot.read);
+		}
+	}
+
+	const built = buildGroups(entries, fileFormat, issues);
 
 	if (built.files.length < 1) {
 		issues.push(
 			createIssue(CHECK_CODE.INVALID_FILE, {
 				file: path,
-				message: files.length
+				message: entries.length
 					? `No translation file matching the \`${fileFormat}\` format was found in '${path}'. Check the \`format\` option.`
 					: `No translation file was found in '${path}'.`
 			})
@@ -310,7 +410,7 @@ export async function scanTranslationDirectory(
 	return {
 		fileFormat,
 		...built,
-		detectedInterpolation: detectedInterpolationOf(files, built.skipped),
+		detectedInterpolation: detectedInterpolationOf(entries.filter(isRead), built.skipped),
 		issues
 	};
 }

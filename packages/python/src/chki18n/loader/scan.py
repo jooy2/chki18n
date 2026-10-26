@@ -7,6 +7,7 @@ translations.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -21,7 +22,7 @@ from chki18n.core.interpolation import (
 from chki18n.core.issue import create_issue
 from chki18n.core.locale import is_locale_code
 from chki18n.loader.json_duplicates import JsonDuplicateKey, find_duplicate_json_keys
-from chki18n.loader.walk import walk_files
+from chki18n.loader.walk import WalkedFile, walk_files
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,31 +86,92 @@ def _nested_locale_keys(data: Any) -> list[str]:
     return [str(key) for key in data if is_locale_code(str(key))]
 
 
-def _collect_files(
-    root: str,
-    options: ResolvedOptions,
-    issues: list[Issue],
-) -> list[_ScannedFile]:
-    """Read every supported file below `root`, parsed and in a stable order."""
-    files: list[_ScannedFile] = []
-    is_excluded_directory = create_path_excluder(options.exclude)
+def _is_named_for_locale(segments: tuple[str, ...]) -> bool:
+    """Whether a file's own name is a locale, as the `single` layout names them."""
+    return is_locale_code(_stem_of(segments[-1]))
+
+
+def _is_in_locale_folder(segments: tuple[str, ...]) -> bool:
+    """Whether a file sits in a folder named for a locale, as `folder` puts them."""
+    return len(segments) > 1 and is_locale_code(segments[-2])
+
+
+def _may_hold_locale(segments: tuple[str, ...], file_format: str) -> bool:
+    """Whether a file has to be read in a layout.
+
+    Every layout but `nested` names its locales in the path, so a file whose path
+    names none can hold no locale's translations, and reading it would only parse
+    a fixture or a data file of the application the scan was pointed at.
+    """
+    if file_format == "single":
+        return _is_named_for_locale(segments)
+
+    if file_format == "folder":
+        return _is_in_locale_folder(segments)
+
+    return (
+        file_format == "nested" or _is_named_for_locale(segments) or _is_in_locale_folder(segments)
+    )
+
+
+def _file_format_of_paths(files: list[_ScannedFile]) -> FileFormat | None:
+    """The layout the files' paths say they are in, or ``None`` when no path names a locale.
+
+    The path shape alone is ambiguous (`a/ko.json` and `ko/common.json` both have
+    two segments), so the decision is made by which segment is a real locale
+    code: a locale named file means `single`, a locale named folder means
+    `folder`. Only a file that could be read decides.
+    """
+    for file in files:
+        if _is_named_for_locale(file.segments):
+            return "single"
+
+        if _is_in_locale_folder(file.segments):
+            return "folder"
+
+    return None
+
+
+@dataclass(frozen=True, slots=True)
+class _UnreadFile:
+    """A file the scan found and did not read, because its path names no locale."""
+
+    path: str
+    relative_path: str
+    segments: tuple[str, ...]
+
+
+@dataclass(slots=True)
+class _Slot:
+    """A place in the walk: a file found there, or a directory it could not list."""
+
+    file: WalkedFile | None = None
+    issue: Issue | None = None
+    read: _ScannedFile | Issue | None = None
+
+
+def _walk_translation_tree(root: str, options: ResolvedOptions) -> list[_Slot]:
+    """Every supported file below `root` and every directory that could not be listed."""
+    slots: list[_Slot] = []
     is_excluded_file = create_file_excluder(options.exclude_files)
 
     def report_unreadable(directory: str) -> None:
-        issues.append(
-            create_issue(
-                "INVALID_FILE",
-                file=directory,
-                message=(
-                    f"Failed to read the directory '{directory}'. It may not exist or "
-                    "read access may be denied."
-                ),
+        slots.append(
+            _Slot(
+                issue=create_issue(
+                    "INVALID_FILE",
+                    file=directory,
+                    message=(
+                        f"Failed to read the directory '{directory}'. It may not exist or "
+                        "read access may be denied."
+                    ),
+                )
             )
         )
 
     walk = walk_files(
         root,
-        is_excluded_directory=is_excluded_directory,
+        is_excluded_directory=create_path_excluder(options.exclude),
         is_wanted=lambda file: (
             _extension_of(file.segments[-1]) in SUPPORTED_EXTENSIONS
             and not is_excluded_file(file.segments[-1])
@@ -118,94 +180,75 @@ def _collect_files(
     )
 
     for file in walk:
-        relative_path = "/".join(file.segments)
-        read_error = f"Failed to read file '{relative_path}': "
+        slots.append(_Slot(file=file))
 
-        try:
-            # `utf-8-sig` drops the byte order mark a Windows editor often
-            # writes first, which `json.loads` would otherwise refuse.
-            with open(file.path, encoding="utf-8-sig") as handle:
-                content = handle.read()
-        except (OSError, UnicodeDecodeError):
-            issues.append(
-                create_issue(
-                    "INVALID_FILE",
-                    file=file.path,
-                    message=f"{read_error}May be read access denied or invalid file format.",
-                )
-            )
-            continue
+    return slots
 
-        if not content.strip():
-            issues.append(
-                create_issue(
-                    "INVALID_FILE",
-                    file=file.path,
-                    message=f"{read_error}File content is empty.",
-                )
-            )
-            continue
 
-        try:
-            data = json.loads(content, parse_constant=_reject_constant)
-        except ValueError:
-            issues.append(
-                create_issue(
-                    "INVALID_FILE",
-                    file=file.path,
-                    message=(
-                        f"{read_error}Content is not json format or parse failed due to "
-                        "an invalid character."
-                    ),
-                )
-            )
-            continue
+def _read_translation_file(file: WalkedFile, options: ResolvedOptions) -> _ScannedFile | Issue:
+    """One file read and parsed, or the reason it could not be."""
+    relative_path = "/".join(file.segments)
+    read_error = f"Failed to read file '{relative_path}': "
 
-        files.append(
-            _ScannedFile(
-                path=file.path,
-                relative_path=relative_path,
-                segments=file.segments,
-                data=data,
-                interpolation=detect_interpolation_delimiters(content),
-                # Read off the text, because the decoder has already
-                # discarded it.
-                duplicate_keys=(
-                    find_duplicate_json_keys(content)
-                    if "DUPLICATE_KEY" in options.enabled_checks
-                    else []
-                ),
-            )
+    try:
+        # `utf-8-sig` drops the byte order mark a Windows editor often writes
+        # first, which `json.loads` would otherwise refuse.
+        with open(file.path, encoding="utf-8-sig") as handle:
+            content = handle.read()
+    except (OSError, UnicodeDecodeError):
+        return create_issue(
+            "INVALID_FILE",
+            file=file.path,
+            message=f"{read_error}May be read access denied or invalid file format.",
         )
 
-    return files
+    if not content.strip():
+        return create_issue(
+            "INVALID_FILE",
+            file=file.path,
+            message=f"{read_error}File content is empty.",
+        )
+
+    try:
+        data = json.loads(content, parse_constant=_reject_constant)
+    except ValueError:
+        return create_issue(
+            "INVALID_FILE",
+            file=file.path,
+            message=(
+                f"{read_error}Content is not json format or parse failed due to an invalid "
+                "character."
+            ),
+        )
+
+    return _ScannedFile(
+        path=file.path,
+        relative_path=relative_path,
+        segments=file.segments,
+        data=data,
+        interpolation=detect_interpolation_delimiters(content),
+        # Read off the text, because the decoder has already discarded it.
+        duplicate_keys=(
+            find_duplicate_json_keys(content) if "DUPLICATE_KEY" in options.enabled_checks else []
+        ),
+    )
 
 
-def _detect_file_format(files: list[_ScannedFile]) -> FileFormat:
-    """Work out how the files are laid out.
+def _read_slots(
+    slots: list[_Slot], is_wanted: Callable[[WalkedFile], bool], options: ResolvedOptions
+) -> None:
+    """Read the files of `slots` that `is_wanted` asks for, each into its own slot."""
+    for slot in slots:
+        if slot.file is not None and slot.read is None and is_wanted(slot.file):
+            slot.read = _read_translation_file(slot.file, options)
 
-    The path shape alone is ambiguous (`a/ko.json` and `ko/common.json` both have
-    two segments), so the decision is made by which segment is a real locale
-    code: a locale named file means `single`, a locale named folder means
-    `folder`. When no path segment is a locale, a file whose top level keys are
-    locales means `nested`.
-    """
-    for file in files:
-        if is_locale_code(_stem_of(file.segments[-1])):
-            return "single"
 
-        if len(file.segments) > 1 and is_locale_code(file.segments[-2]):
-            return "folder"
-
-    for file in files:
-        if _nested_locale_keys(file.data):
-            return "nested"
-
-    return "single"
+def _scanned_of(slots: list[_Slot]) -> list[_ScannedFile]:
+    return [slot.read for slot in slots if isinstance(slot.read, _ScannedFile)]
 
 
 def _build_groups(
-    files: list[_ScannedFile],
+    files: list[_ScannedFile | _UnreadFile],
     file_format: FileFormat,
     issues: list[Issue],
 ) -> tuple[TranslationGroups, list[SourceFile], list[str]]:
@@ -276,6 +319,11 @@ def _build_groups(
         segments = file.segments
         file_name = segments[-1]
 
+        # Left unread because its path names no locale, so it belongs to none.
+        if isinstance(file, _UnreadFile):
+            skipped.append(file.relative_path)
+            continue
+
         if file_format == "nested":
             locales = _nested_locale_keys(file.data)
 
@@ -337,9 +385,42 @@ def _detected_interpolation_of(files: list[_ScannedFile], skipped: list[str]) ->
 def scan_translation_directory(path: str, options: ResolvedOptions) -> ScanResult:
     """Read a directory of translation files into the shape the analyzer compares."""
     issues: list[Issue] = []
-    files = _collect_files(path, options, issues)
-    file_format = _detect_file_format(files) if options.format == "auto" else options.format
-    groups, sources, skipped = _build_groups(files, file_format, issues)
+    slots = _walk_translation_tree(path, options)
+
+    _read_slots(slots, lambda file: _may_hold_locale(file.segments, options.format), options)
+
+    file_format: FileFormat | None = (
+        _file_format_of_paths(_scanned_of(slots)) if options.format == "auto" else options.format
+    )
+
+    if file_format is None:
+        # No path names a locale, so only the files' content can tell whether
+        # their top level keys do, as the `nested` layout writes them.
+        _read_slots(slots, lambda _: True, options)
+
+        nested = any(_nested_locale_keys(file.data) for file in _scanned_of(slots))
+        file_format = "nested" if nested else "single"
+
+    # The issues go out in walk order.
+    entries: list[_ScannedFile | _UnreadFile] = []
+
+    for slot in slots:
+        if slot.issue is not None:
+            issues.append(slot.issue)
+        elif slot.file is not None and slot.read is None:
+            entries.append(
+                _UnreadFile(
+                    path=slot.file.path,
+                    relative_path="/".join(slot.file.segments),
+                    segments=slot.file.segments,
+                )
+            )
+        elif isinstance(slot.read, _ScannedFile):
+            entries.append(slot.read)
+        elif slot.read is not None:
+            issues.append(slot.read)
+
+    groups, sources, skipped = _build_groups(entries, file_format, issues)
 
     if not sources:
         issues.append(
@@ -349,17 +430,19 @@ def scan_translation_directory(path: str, options: ResolvedOptions) -> ScanResul
                 message=(
                     f"No translation file matching the `{file_format}` format was found in "
                     f"'{path}'. Check the `format` option."
-                    if files
+                    if entries
                     else f"No translation file was found in '{path}'."
                 ),
             )
         )
+
+    read = [entry for entry in entries if isinstance(entry, _ScannedFile)]
 
     return ScanResult(
         file_format=file_format,
         groups=groups,
         files=sources,
         skipped=skipped,
-        detected_interpolation=_detected_interpolation_of(files, skipped),
+        detected_interpolation=_detected_interpolation_of(read, skipped),
         issues=issues,
     )

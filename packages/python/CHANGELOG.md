@@ -6,6 +6,7 @@
 
 - `MISSING_NUMBER` and `NUMBER_MISMATCH` compare a number written in another script's digits by its value, so `٣` in a translation matches `3`, where it was reported as a different number. What counts as a digit is the set Unicode 17 defines, whatever version the interpreter ships, so the three packages agree. `extract_numbers` returns runs of those digits, as they are written
 - The unused key scan reads each file once instead of once per key it is still looking for. A thousand source files and five thousand unused keys took sixteen seconds and now take a quarter of one; the keys it reports are the same
+- A scan reads only the files whose path names a locale when the layout is `single` or `folder`, which is what the path decides for every layout but `nested`. Pointed at an application's root, it used to read and parse every JSON file there, its fixtures and data files included, and a broken one among them was reported as `INVALID_FILE` and failed the run. Such a file is now listed in `skipped` without being opened
 
 ### Fixed
 
