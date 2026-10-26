@@ -318,6 +318,13 @@ def test_counts_a_korean_or_japanese_character_as_two_columns() -> None:
     assert display_width("日本語") == 6
 
 
+def test_gives_a_combining_mark_no_column_and_an_emoji_two() -> None:
+    assert display_width("ที่นี่") == 2
+    assert display_width("हिन्दी") == 5
+    assert display_width("Save 🚀") == 7
+    assert display_width("e\u0301") == 1
+
+
 def test_pads_to_a_column_count_rather_than_a_character_count() -> None:
     assert display_width(pad_to("한국어", 10)) == 10
     assert display_width(pad_to("abc", 10)) == 10

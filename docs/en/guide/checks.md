@@ -259,7 +259,7 @@ A value far longer or shorter than the one it translates, which is how a truncat
 chki18n ./locales --length-ratio 3
 ```
 
-Lengths are counted in columns rather than characters, so Korean and Japanese are not short by default. Originals under eight columns are skipped, because a ratio means nothing for a value like `OK`. It is reported at `info`, since languages genuinely differ in length and this is a prompt to look rather than a defect.
+Lengths are counted in columns rather than characters, so Korean and Japanese are not short by default, and a Thai or Hindi vowel sign written on the letter before it adds nothing. Originals under eight columns are skipped, because a ratio means nothing for a value like `OK`. It is reported at `info`, since languages genuinely differ in length and this is a prompt to look rather than a defect.
 
 ## Usage checks
 

@@ -351,6 +351,13 @@ void main() {
       expect(displayWidth('日本語'), 6);
     });
 
+    test('gives a combining mark no column and an emoji two', () {
+      expect(displayWidth('ที่นี่'), 2);
+      expect(displayWidth('हिन्दी'), 5);
+      expect(displayWidth('Save 🚀'), 7);
+      expect(displayWidth('e\u0301'), 1);
+    });
+
     test('pads to a column count rather than a character count', () {
       expect(displayWidth(padTo('한국어', 10)), 10);
       expect(displayWidth(padTo('abc', 10)), 10);

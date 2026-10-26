@@ -334,6 +334,13 @@ describe('column arithmetic', () => {
 		assert.strictEqual(displayWidth('日本語'), 6);
 	});
 
+	it('gives a combining mark no column and an emoji two', () => {
+		assert.strictEqual(displayWidth('ที่นี่'), 2);
+		assert.strictEqual(displayWidth('हिन्दी'), 5);
+		assert.strictEqual(displayWidth('Save 🚀'), 7);
+		assert.strictEqual(displayWidth('e\u0301'), 1);
+	});
+
 	it('pads to a column count rather than a character count', () => {
 		assert.strictEqual(displayWidth(padTo('한국어', 10)), 10);
 		assert.strictEqual(displayWidth(padTo('abc', 10)), 10);

@@ -12,6 +12,7 @@
 - i18next ordinal keys such as `place_ordinal_one` are judged by ordinal rules rather than by the cardinal table, which asked German and Russian for an `_ordinal_one` they never write. `NO_KEY` failed the run over it and `NO_PLURAL_FORM` warned. Only `_ordinal_other` is required now, and the unused and undefined key scans read `place_ordinal_one` as `place`, which is what the source asks for
 - The source tree `source` names is read in name order, as the translation directory already was. When two files ask for the same missing key, `UNDEFINED_KEY` names the same one of them on every machine
 - A key written twice in an object inside an array is reported at the key flattening gives it, such as `list.0.label`. The position was left out, so the report named a key that did not exist
+- Column widths come from Unicode's own tables. A combining mark, such as a Thai or Hindi vowel sign or an accent written on its own, takes no column, and an emoji takes two, where the report counted one for each and pushed its columns out of line. `SUSPICIOUS_LENGTH` measures a Thai or Hindi value the way it is drawn. Measuring a value is also several times faster, which `lengthRatio` used to make the slowest check of a run
 
 ## 1.2.0 (2026-09-05)
 
