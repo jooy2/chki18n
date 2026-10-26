@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://chki18n.cdget.com/sitemap.xml

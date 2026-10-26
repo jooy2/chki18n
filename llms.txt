@@ -1,0 +1,53 @@
+# chki18n
+
+> Find the missing keys, the empty values and the broken interpolation in your i18n translation files. One check engine for the command line, for CI and for your own code, in JavaScript, Dart or Python.
+
+chki18n compares a set of i18n translation files against one target language and reports what
+is wrong with them: keys one locale is missing, values left empty, strings still identical to
+the original, and interpolation placeholders that do not match. Twenty-five checks in all.
+
+It runs from the command line and from code, and both share one definition of every check and
+every option. The comparison itself does no file system work, so it also runs where there is no
+file system: `chki18n/core` in JavaScript, `package:chki18n/core.dart` in Dart and
+`chki18n.core` in Python are the same engine with the directory scanner left out.
+
+The library ships for **JavaScript, Dart and Python**. The code below is the JavaScript one.
+The other two are the same functions under their own spelling: `checkTranslationFiles` is
+`check_translation_files` in Python, and an option named `interpolationPrefix` is
+`interpolation_prefix` there. Dart keeps the JavaScript spelling and takes its options as one
+`Chki18nOptions` object with named parameters.
+
+Every page below also exists in Korean at the same path under `/ko/`.
+
+## Guide
+
+- [Guide](https://chki18n.cdget.com/guide/): chki18n reads a folder of i18n translation files, compares every language against one target language, and reports what does not line up. This section covers…
+- [Getting started](https://chki18n.cdget.com/guide/getting-started): Install chki18n, point it at the folder your translation files live in, and name the language everything else is compared against. There is no configuration…
+- [Command line](https://chki18n.cdget.com/guide/cli): The chki18n command checks a folder of translation files and prints what is wrong with them. It exits with 1 when it finds an error level issue, so it drops…
+- [Continuous integration](https://chki18n.cdget.com/guide/ci): A translation file that no longer lines up does not break a build. Nothing crashes and no test fails, so the missing key ships and is only noticed when someone…
+- [File layouts](https://chki18n.cdget.com/guide/file-layouts): Translation files are laid out in one of three ways, and chki18n recognises all of them without being told which. Files that hold the same keys in different…
+- [Checks](https://chki18n.cdget.com/guide/checks): Every problem chki18n reports has a check code, a severity and a sentence describing it. Errors fail the run; warnings are reported and do not. This page lists…
+- [Options](https://chki18n.cdget.com/guide/options): The command line and the API take the same options. Every CLI flag is an API option with the same name, resolved from one definition, so the two cannot drift…
+
+## API
+
+- [API](https://chki18n.cdget.com/api/): chki18n has four entry points. Which one you want depends on who owns the translations and how often you check them. They share one comparison engine, one…
+- [checkTranslationFiles](https://chki18n.cdget.com/api/check-translation-files): Reads a directory of translation files and compares every language against the target language, in one call. It does what the CLI does and returns the result…
+- [analyzeTranslations](https://chki18n.cdget.com/api/analyze-translations): Compares translations you already hold in memory. It does no file system work at all, so it runs anywhere the language does: in a browser, in a Flutter web…
+- [loadTranslations](https://chki18n.cdget.com/api/load-translations): Reads a directory once and hands back a session that holds the parsed translations. A full analysis, a single key check and an edit all work on what is already…
+- [createAnalyzer](https://chki18n.cdget.com/api/create-analyzer): Returns a reusable analyzer bound to one set of options. Its checkEntry compares a single key across locales in about two microseconds, which suits an editor…
+- [The core entry point](https://chki18n.cdget.com/api/core): The comparison engine on its own, without the directory scanner, so it runs where there is no file system to read.
+
+## Reference
+
+- [Reference](https://chki18n.cdget.com/reference/): What a check hands back, and what has changed between releases.
+- [The result object](https://chki18n.cdget.com/reference/result): Every entry point returns the same result, whether the translations came from a directory, from memory or from a session. It carries every issue found, the…
+- [Changelog](https://chki18n.cdget.com/reference/changelog): Every release of chki18n, newest first. Each package versions on its own, so a release on one side is not a release on the others.
+
+## Optional
+
+- [Full documentation as one file](https://chki18n.cdget.com/llms-full.txt): every page above, concatenated.
+- [Source repository](https://github.com/jooy2/chki18n): the packages and this site.
+- [npm](https://www.npmjs.com/package/chki18n): the published package.
+- [pub.dev](https://pub.dev/packages/chki18n): the published package.
+- [PyPI](https://pypi.org/project/chki18n/): the published package.
