@@ -445,6 +445,38 @@ describe('NO_PLURAL_FORM', () => {
 });
 
 describe('plural forms and the keys they excuse', () => {
+	const ordinals = {
+		en: {
+			place_ordinal_one: '{count}st',
+			place_ordinal_two: '{count}nd',
+			place_ordinal_few: '{count}rd',
+			place_ordinal_other: '{count}th'
+		},
+		de: { place_ordinal_other: '{count}.' },
+		ru: { place_ordinal_other: '{count}-й' }
+	};
+
+	it('asks a language for no ordinal form but `other`', () => {
+		assert.deepStrictEqual(check(CHECK_CODE.NO_KEY, ordinals), []);
+		assert.deepStrictEqual(check(CHECK_CODE.NO_PLURAL_FORM, ordinals), []);
+		assert.deepStrictEqual(
+			check(CHECK_CODE.DUMMY_KEY, {
+				en: { place_ordinal_other: '{count}th' },
+				ru: { place_ordinal_other: '{count}-й', place_ordinal_few: '{count}-й' }
+			}),
+			[]
+		);
+	});
+
+	it('still asks for the ordinal `other`', () => {
+		const issues = check(CHECK_CODE.NO_KEY, { ...ordinals, de: { place_ordinal_one: '{count}.' } });
+
+		assert.deepStrictEqual(
+			issues.map((issue) => [issue.locale, issue.key]),
+			[['de', 'place_ordinal_other']]
+		);
+	});
+
 	it('does not ask a language for a form it never uses', () => {
 		const issues = check(CHECK_CODE.NO_KEY, {
 			en: { item_one: '1 item', item_other: '{count} items' },

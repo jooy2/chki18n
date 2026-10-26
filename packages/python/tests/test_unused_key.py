@@ -31,6 +31,10 @@ def test_leaf_of_key_takes_the_plural_suffix_off() -> None:
     assert leaf_of_key("item_plural") == "item"
 
 
+def test_leaf_of_key_takes_the_ordinal_infix_off_with_it() -> None:
+    assert leaf_of_key("desc.place_ordinal_two") == "place"
+
+
 def test_finds_the_key_no_source_file_mentions() -> None:
     options, _ = resolve_options(Options(target="en"))
     scan = find_unused_keys(SOURCE_PATH, ["desc.hello", "desc.orphan", "attr.folder"], options)

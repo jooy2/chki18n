@@ -24,6 +24,10 @@ describe('leafOfKey', () => {
 		assert.strictEqual(leafOfKey('desc.item_one'), 'item');
 		assert.strictEqual(leafOfKey('item_plural'), 'item');
 	});
+
+	it('takes the ordinal infix off with it', () => {
+		assert.strictEqual(leafOfKey('desc.place_ordinal_two'), 'place');
+	});
 });
 
 describe('findUnusedKeys', () => {

@@ -159,7 +159,8 @@ def plural_base_of(key: str) -> str | None:
     parts = plural_parts_of(key)
 
     if parts is not None:
-        return parts[0]
+        # The source asks for `place` with `ordinal: True`, never for the infix.
+        return parts[0][: -len(_ORDINAL_INFIX)] if is_ordinal_base(parts[0]) else parts[0]
 
     separator = key.rfind("_")
 
@@ -178,3 +179,38 @@ def uses_plural_category(locale: str, category: PluralCategory) -> bool:
     categories = plural_categories_of(locale)
 
     return categories is None or category in categories
+
+
+#: What i18next writes between a key and the category of an ordinal form, as in
+#: `place_ordinal_one`. Ordinal forms follow rules of their own, which the table
+#: above does not hold: English needs `two` and `few` for `2nd` and `3rd`, while
+#: German and Russian need only `other`.
+_ORDINAL_INFIX: Final = "_ordinal"
+
+
+def is_ordinal_base(base: str) -> bool:
+    """Whether the base of a plural key names ordinal forms, as `place_ordinal` does."""
+    return len(base) > len(_ORDINAL_INFIX) and base.endswith(_ORDINAL_INFIX)
+
+
+def uses_plural_form(locale: str, parts: tuple[str, PluralCategory]) -> bool:
+    """Whether a locale's language uses the form a plural key names.
+
+    An ordinal form is asked for nothing beyond `other`: which ordinal forms a
+    language needs is not in the table, and `other` is the one every language
+    has.
+    """
+    base, category = parts
+
+    return category == "other" if is_ordinal_base(base) else uses_plural_category(locale, category)
+
+
+def plural_forms_needed(locale: str, base: str) -> tuple[PluralCategory, ...] | None:
+    """The forms a plural key needs in a locale.
+
+    ``None`` when its language is not one the table is sure about. Ordinal forms
+    need `other` alone, for the reason `uses_plural_form` gives.
+    """
+    categories = plural_categories_of(locale)
+
+    return _ONLY_OTHER if categories is not None and is_ordinal_base(base) else categories

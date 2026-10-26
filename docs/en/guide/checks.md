@@ -376,11 +376,13 @@ Only the named categories are read: `_zero`, `_one`, `_two`, `_few`, `_many` and
 
 A language the table does not cover is never judged. The table is deliberately conservative, because recent CLDR releases added a `many` category to several languages for compact decimals and a project on an older runtime does not write it.
 
+Ordinal forms, which i18next writes as `place_ordinal_one`, follow rules of their own that the table does not hold: English needs `two` and `few` for `2nd` and `3rd`, while German and Russian need only `other`. For those keys only `_ordinal_other` is required.
+
 ### Plural keys in `NO_KEY` and `DUMMY_KEY`
 
 A plural form belongs to one language's grammar, so the two key checks do not ask every language for every form. Korean needs only `item_other`, so `item_one` being absent from it is correct rather than missing. Russian needs an `item_few` that English never writes, and that is not a stray key.
 
-This holds only for keys ending in a named plural category, and only for languages the table covers. Every other key is compared normally.
+This holds only for keys ending in a named plural category, and only for languages the table covers. Every other key is compared normally. An ordinal form other than `_ordinal_other` is never asked of a language, so a German file with only `place_ordinal_other` is complete.
 
 ## Key shape checks
 

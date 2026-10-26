@@ -217,7 +217,10 @@ String? pluralBaseOf(String key) {
   final parts = pluralPartsOf(key);
 
   if (parts != null) {
-    return parts.base;
+    // The source asks for `place` with `ordinal: true`, never for the infix.
+    return isOrdinalBase(parts.base)
+        ? parts.base.substring(0, parts.base.length - _ordinalInfix.length)
+        : parts.base;
   }
 
   final separator = key.lastIndexOf('_');
@@ -235,4 +238,36 @@ bool usesPluralCategory(String locale, Chki18nPluralCategory category) {
   final categories = pluralCategoriesOf(locale);
 
   return categories == null || categories.contains(category);
+}
+
+/// What i18next writes between a key and the category of an ordinal form, as in
+/// `place_ordinal_one`. Ordinal forms follow rules of their own, which the table
+/// above does not hold: English needs `two` and `few` for `2nd` and `3rd`, while
+/// German and Russian need only `other`.
+const String _ordinalInfix = '_ordinal';
+
+/// Whether the base of a plural key names ordinal forms, as `place_ordinal`
+/// does.
+bool isOrdinalBase(String base) =>
+    base.length > _ordinalInfix.length && base.endsWith(_ordinalInfix);
+
+/// Whether a locale's language uses the form a plural key names.
+///
+/// An ordinal form is asked for nothing beyond `other`: which ordinal forms a
+/// language needs is not in the table, and `other` is the one every language
+/// has.
+bool usesPluralForm(String locale, Chki18nPluralParts parts) =>
+    isOrdinalBase(parts.base)
+        ? parts.category == Chki18nPluralCategory.other
+        : usesPluralCategory(locale, parts.category);
+
+/// The forms a plural key needs in a locale, or `null` when its language is
+/// not one the table is sure about. Ordinal forms need `other` alone, for the
+/// reason [usesPluralForm] gives.
+List<Chki18nPluralCategory>? pluralFormsNeeded(String locale, String base) {
+  final categories = pluralCategoriesOf(locale);
+
+  return categories != null && isOrdinalBase(base)
+      ? const [Chki18nPluralCategory.other]
+      : categories;
 }

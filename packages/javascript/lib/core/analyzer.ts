@@ -5,7 +5,7 @@ import { extractInterpolationKeys } from './interpolation.js';
 import { findDuplicateKeys } from './duplicate.js';
 import { applyLevelOverrides, createIssue } from './issue.js';
 import { checkKeyShape } from './key.js';
-import { pluralCategoriesOf, pluralPartsOf, usesPluralCategory } from './plural.js';
+import { pluralCategoriesOf, pluralFormsNeeded, pluralPartsOf, usesPluralForm } from './plural.js';
 import { buildResult } from './result.js';
 import {
 	asciiDigitsOf,
@@ -334,7 +334,7 @@ function checkKeySlots(
 		const base = { locale, key, group, file, targetValue: isTarget ? undefined : targetText };
 
 		if (!present[index]) {
-			if (hasTargetKey && flags.noKey && (!plural || usesPluralCategory(locale, plural.category))) {
+			if (hasTargetKey && flags.noKey && (!plural || usesPluralForm(locale, plural))) {
 				issues.push(createIssue(CHECK_CODE.NO_KEY, base));
 			}
 
@@ -347,7 +347,7 @@ function checkKeySlots(
 			!hasTargetKey &&
 			flags.dummyKey &&
 			// The target language may simply have no use for this plural form.
-			(!plural || usesPluralCategory(options.target, plural.category))
+			(!plural || usesPluralForm(options.target, plural))
 		) {
 			issues.push(createIssue(CHECK_CODE.DUMMY_KEY, { ...base, value: text }));
 		}
@@ -708,7 +708,9 @@ function checkPluralForms(
 		}
 
 		for (const [base, found] of formsOfBase) {
-			const missing = categories.filter((category) => !found.has(category));
+			const missing = (pluralFormsNeeded(locale, base) ?? categories).filter(
+				(category) => !found.has(category)
+			);
 
 			if (missing.length < 1) {
 				continue;

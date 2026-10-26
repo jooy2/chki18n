@@ -404,9 +404,7 @@ void _checkKeySlots(
     );
 
     if (!present[index]) {
-      if (hasTargetKey &&
-          flags.noKey &&
-          (plural == null || usesPluralCategory(locale, plural.category))) {
+      if (hasTargetKey && flags.noKey && (plural == null || usesPluralForm(locale, plural))) {
         issues.add(
           createIssue(
             Chki18nCheckCode.noKey,
@@ -427,7 +425,7 @@ void _checkKeySlots(
     if (!hasTargetKey &&
         flags.dummyKey &&
         // The target language may simply have no use for this plural form.
-        (plural == null || usesPluralCategory(options.target, plural.category))) {
+        (plural == null || usesPluralForm(options.target, plural))) {
       issues.add(
         createIssue(
           Chki18nCheckCode.dummyKey,
@@ -888,7 +886,10 @@ void _checkPluralForms(
     }
 
     for (final entry in formsOfBase.entries) {
-      final missing = categories.where((category) => !entry.value.contains(category)).toList();
+      final missing =
+          (pluralFormsNeeded(locale, entry.key) ?? categories)
+              .where((category) => !entry.value.contains(category))
+              .toList();
 
       if (missing.isEmpty) {
         continue;

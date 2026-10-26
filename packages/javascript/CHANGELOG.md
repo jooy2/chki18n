@@ -17,6 +17,7 @@
 - `interpolationPrefix` and `interpolationSuffix` of different lengths, such as `%{` and `}`, are read the way the Dart and Python packages read them. The run used to stop with an exception at the first value holding the prefix, and so did a prefix equal to the suffix
 - A translation file that starts with a byte order mark is read like any other. Several Windows editors write one, and such a file was reported as `INVALID_FILE` and left out of the comparison
 - A value that is not a string is quoted as JSON: an empty object as `{}` and an empty list as `[]`, where the report showed `[object Object]` and an empty string. The message calls an object an `object` with the right article
+- i18next ordinal keys such as `place_ordinal_one` are judged by ordinal rules rather than by the cardinal table, which asked German and Russian for an `_ordinal_one` they never write. `NO_KEY` failed the run over it and `NO_PLURAL_FORM` warned. Only `_ordinal_other` is required now, and the unused and undefined key scans read `place_ordinal_one` as `place`, which is what the source asks for
 
 ## 1.2.0 (2026-09-05)
 

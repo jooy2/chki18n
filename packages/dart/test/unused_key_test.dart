@@ -19,6 +19,10 @@ void main() {
       expect(leafOfKey('desc.item_one'), 'item');
       expect(leafOfKey('item_plural'), 'item');
     });
+
+    test('takes the ordinal infix off with it', () {
+      expect(leafOfKey('desc.place_ordinal_two'), 'place');
+    });
   });
 
   group('findUnusedKeys', () {

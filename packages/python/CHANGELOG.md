@@ -11,6 +11,7 @@
 - A translation file that starts with a byte order mark is read like any other. Several Windows editors write one, and such a file was reported as `INVALID_FILE` and left out of the comparison
 - A number that is not a string is quoted the way the JavaScript package quotes it, so `1.0` in a file reads `1` and `0.0000001` reads `1e-7`. The message calls an object an `object` with the right article
 - A file holding `NaN` or `Infinity` is reported as `INVALID_FILE`. JSON has neither, and the other two packages already refused such a file
+- i18next ordinal keys such as `place_ordinal_one` are judged by ordinal rules rather than by the cardinal table, which asked German and Russian for an `_ordinal_one` they never write. `NO_KEY` failed the run over it and `NO_PLURAL_FORM` warned. Only `_ordinal_other` is required now, and the unused and undefined key scans read `place_ordinal_one` as `place`, which is what the source asks for
 
 ## 1.2.0 (2026-09-05)
 

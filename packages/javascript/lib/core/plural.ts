@@ -31,6 +31,14 @@ const CATEGORY_NAMES = new Set<string>(PLURAL_CATEGORIES);
  */
 const LEGACY_PLURAL_SUFFIX = 'plural';
 
+/**
+ * What i18next writes between a key and the category of an ordinal form, as in
+ * `place_ordinal_one`. Ordinal forms follow rules of their own, which the
+ * table below does not hold: English needs `two` and `few` for `2nd` and
+ * `3rd`, while German and Russian need only `other`.
+ */
+const ORDINAL_INFIX = '_ordinal';
+
 const ONLY_OTHER: Chki18nPluralCategory[] = ['other'];
 
 const ONE_OTHER: Chki18nPluralCategory[] = ['one', 'other'];
@@ -164,7 +172,8 @@ export function pluralBaseOf(key: string): string | null {
 	const parts = pluralPartsOf(key);
 
 	if (parts) {
-		return parts.base;
+		// The source asks for `place` with `ordinal: true`, never for the infix.
+		return isOrdinalBase(parts.base) ? parts.base.slice(0, -ORDINAL_INFIX.length) : parts.base;
 	}
 
 	const separator = key.lastIndexOf('_');
@@ -182,4 +191,34 @@ export function usesPluralCategory(locale: string, category: Chki18nPluralCatego
 	const categories = pluralCategoriesOf(locale);
 
 	return categories === null || categories.includes(category);
+}
+
+/** Whether the base of a plural key names ordinal forms, as `place_ordinal` does. */
+export function isOrdinalBase(base: string): boolean {
+	return base.length > ORDINAL_INFIX.length && base.endsWith(ORDINAL_INFIX);
+}
+
+/**
+ * Whether a locale's language uses the form a plural key names. An ordinal form
+ * is asked for nothing beyond `other`: which ordinal forms a language needs is
+ * not in the table, and `other` is the one every language has.
+ */
+export function usesPluralForm(
+	locale: string,
+	parts: { base: string; category: Chki18nPluralCategory }
+): boolean {
+	return isOrdinalBase(parts.base)
+		? parts.category === 'other'
+		: usesPluralCategory(locale, parts.category);
+}
+
+/**
+ * The forms a plural key needs in a locale, or `null` when its language is not
+ * one the table is sure about. Ordinal forms need `other` alone, for the reason
+ * `usesPluralForm` gives.
+ */
+export function pluralFormsNeeded(locale: string, base: string): Chki18nPluralCategory[] | null {
+	const categories = pluralCategoriesOf(locale);
+
+	return categories && isOrdinalBase(base) ? ONLY_OTHER : categories;
 }

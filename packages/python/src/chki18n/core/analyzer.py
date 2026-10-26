@@ -25,7 +25,12 @@ from chki18n.core.duplicate import find_duplicate_keys, flatten_translations
 from chki18n.core.interpolation import extract_interpolation_keys
 from chki18n.core.issue import apply_level_overrides, create_issue
 from chki18n.core.key import check_key_shape
-from chki18n.core.plural import plural_categories_of, plural_parts_of, uses_plural_category
+from chki18n.core.plural import (
+    plural_categories_of,
+    plural_forms_needed,
+    plural_parts_of,
+    uses_plural_form,
+)
 from chki18n.core.result import build_result
 from chki18n.core.value import (
     ascii_digits_of,
@@ -421,7 +426,7 @@ def _check_key_slots(
             if (
                 has_target_key
                 and flags.no_key
-                and (plural is None or uses_plural_category(locale, plural[1]))
+                and (plural is None or uses_plural_form(locale, plural))
             ):
                 issues.append(create_issue("NO_KEY", **base))
 
@@ -433,7 +438,7 @@ def _check_key_slots(
             not has_target_key
             and flags.dummy_key
             # The target language may simply have no use for this plural form.
-            and (plural is None or uses_plural_category(options.target, plural[1]))
+            and (plural is None or uses_plural_form(options.target, plural))
         ):
             issues.append(create_issue("DUMMY_KEY", **base, value=text))
 
@@ -766,7 +771,8 @@ def _check_plural_forms(
             forms_of_base.setdefault(parts[0], set()).add(parts[1])
 
         for base, found in forms_of_base.items():
-            missing = [category for category in categories if category not in found]
+            needed = plural_forms_needed(locale, base) or categories
+            missing = [category for category in needed if category not in found]
 
             if not missing:
                 continue
