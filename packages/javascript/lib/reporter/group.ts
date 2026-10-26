@@ -32,6 +32,14 @@ const DEFAULT_GROUP_LABEL = '(default)';
 const codeRank = (code: string): number => CODE_ORDER.get(code) ?? CODE_ORDER.size;
 
 /**
+ * Two strings by their UTF-16 code units, which is how the Dart package sorts
+ * them. `localeCompare` would follow the collation of whatever locale the
+ * process runs in, so the same files could be reported in a different order on
+ * another machine, and in a different order from the other two packages.
+ */
+export const compareText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
+/**
  * Report order within a section: what fails the run first, then the checks in
  * the order they are declared, then alphabetically. Two runs over unchanged
  * files therefore print the same lines in the same places, which is what makes
@@ -41,8 +49,8 @@ export function compareIssues(a: Chki18nIssue, b: Chki18nIssue): number {
 	return (
 		LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level] ||
 		codeRank(a.code) - codeRank(b.code) ||
-		a.locale.localeCompare(b.locale) ||
-		a.key.localeCompare(b.key)
+		compareText(a.locale, b.locale) ||
+		compareText(a.key, b.key)
 	);
 }
 
@@ -120,7 +128,7 @@ export function groupIssues(
 			severityRank(a.counts) - severityRank(b.counts) ||
 			b.counts.error - a.counts.error ||
 			b.counts.warn - a.counts.warn ||
-			(groupBy === GROUP_BY.CODE ? codeRank(a.id) - codeRank(b.id) : a.id.localeCompare(b.id))
+			(groupBy === GROUP_BY.CODE ? codeRank(a.id) - codeRank(b.id) : compareText(a.id, b.id))
 	);
 }
 

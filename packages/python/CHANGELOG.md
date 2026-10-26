@@ -12,6 +12,7 @@
 - A number that is not a string is quoted the way the JavaScript package quotes it, so `1.0` in a file reads `1` and `0.0000001` reads `1e-7`. The message calls an object an `object` with the right article
 - A file holding `NaN` or `Infinity` is reported as `INVALID_FILE`. JSON has neither, and the other two packages already refused such a file
 - i18next ordinal keys such as `place_ordinal_one` are judged by ordinal rules rather than by the cardinal table, which asked German and Russian for an `_ordinal_one` they never write. `NO_KEY` failed the run over it and `NO_PLURAL_FORM` warned. Only `_ordinal_other` is required now, and the unused and undefined key scans read `place_ordinal_one` as `place`, which is what the source asks for
+- Issues, sections and summary rows are ordered by UTF-16 code units, as the other two packages order them. Python compares code points, which put a key starting with a character above U+FFFF, such as an emoji, after one starting with `！` rather than before it
 
 ## 1.2.0 (2026-09-05)
 

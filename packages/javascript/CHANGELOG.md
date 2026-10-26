@@ -18,6 +18,7 @@
 - A translation file that starts with a byte order mark is read like any other. Several Windows editors write one, and such a file was reported as `INVALID_FILE` and left out of the comparison
 - A value that is not a string is quoted as JSON: an empty object as `{}` and an empty list as `[]`, where the report showed `[object Object]` and an empty string. The message calls an object an `object` with the right article
 - i18next ordinal keys such as `place_ordinal_one` are judged by ordinal rules rather than by the cardinal table, which asked German and Russian for an `_ordinal_one` they never write. `NO_KEY` failed the run over it and `NO_PLURAL_FORM` warned. Only `_ordinal_other` is required now, and the unused and undefined key scans read `place_ordinal_one` as `place`, which is what the source asks for
+- Issues, sections and summary rows are ordered by their code units rather than by `localeCompare`, which followed the collation of whatever locale the process ran in. The order is now the same on every machine and the same as the Dart and Python packages give, which puts `Zebra` before `apple`
 
 ## 1.2.0 (2026-09-05)
 

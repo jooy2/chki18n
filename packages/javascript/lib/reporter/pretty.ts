@@ -1,5 +1,5 @@
 import { CHECK_META, GROUP_BY } from '../constants.js';
-import { subGroupIssues, type Chki18nIssueGroup } from './group.js';
+import { compareText, subGroupIssues, type Chki18nIssueGroup } from './group.js';
 import { paintOfLevel } from './paint.js';
 import {
 	countsPhrase,
@@ -240,7 +240,7 @@ function crossTabRows(context: Chki18nReportContext): string[] {
 				b.count.error - a.count.error ||
 				b.count.warn - a.count.warn ||
 				b.count.info - a.count.info ||
-				a.label.localeCompare(b.label)
+				compareText(a.label, b.label)
 		);
 
 	if (rows.length < 1) {

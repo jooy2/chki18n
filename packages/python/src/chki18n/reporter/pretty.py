@@ -10,7 +10,7 @@ from chki18n._types import Issue, LevelCount
 from chki18n.constants import CHECK_META
 from chki18n.core.width import display_width
 from chki18n.reporter.context import ReportContext
-from chki18n.reporter.group import GENERAL_LABEL, IssueGroup, sub_group_issues
+from chki18n.reporter.group import GENERAL_LABEL, IssueGroup, sub_group_issues, text_sort_key
 from chki18n.reporter.paint import paint_of_level
 from chki18n.reporter.text import (
     counts_phrase,
@@ -251,7 +251,7 @@ def _cross_tab_rows(context: ReportContext) -> list[str]:
 
     rows = sorted(
         ((identifier or GENERAL_LABEL, count) for identifier, count in counts.items()),
-        key=lambda row: (-row[1].error, -row[1].warn, -row[1].info, row[0]),
+        key=lambda row: (-row[1].error, -row[1].warn, -row[1].info, text_sort_key(row[0])),
     )
 
     if not rows:

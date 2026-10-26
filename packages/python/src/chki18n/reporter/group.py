@@ -40,14 +40,28 @@ def _code_rank(code: str) -> int:
     return _CODE_ORDER.get(code, len(_CODE_ORDER))
 
 
-def issue_sort_key(issue: Issue) -> tuple[int, int, str, str]:
+def text_sort_key(text: str) -> bytes:
+    """`text` as UTF-16 code units, which is the order JavaScript and Dart sort in.
+
+    Python compares code points, which puts a character above U+FFFF after the
+    ones from U+E000 to U+FFFF rather than before them.
+    """
+    return text.encode("utf-16-be", "surrogatepass")
+
+
+def issue_sort_key(issue: Issue) -> tuple[int, int, bytes, bytes]:
     """Report order within a section.
 
     What fails the run first, then the checks in the order they are declared,
     then alphabetically. Two runs over unchanged files therefore print the same
     lines in the same places, which is what makes a saved report worth diffing.
     """
-    return (_LEVEL_ORDER[issue.level], _code_rank(issue.code), issue.locale, issue.key)
+    return (
+        _LEVEL_ORDER[issue.level],
+        _code_rank(issue.code),
+        text_sort_key(issue.locale),
+        text_sort_key(issue.key),
+    )
 
 
 def _axis_value_of(issue: Issue, group_by: GroupBy) -> str:
@@ -115,7 +129,7 @@ def group_issues(
             _severity_rank(section.counts),
             -section.counts.error,
             -section.counts.warn,
-            _code_rank(section.id) if group_by == "code" else section.id,
+            _code_rank(section.id) if group_by == "code" else text_sort_key(section.id),
         )
 
     return sorted(sections.values(), key=order)

@@ -308,6 +308,23 @@ describe('groupIssues', () => {
 
 		assert.strictEqual(sections[0].label, '(general)');
 	});
+
+	it('orders keys by their code units, whatever locale the process runs in', () => {
+		const issueOf = (key: string) => ({
+			code: 'NO_KEY' as const,
+			level: 'error' as const,
+			locale: 'ko',
+			key,
+			group: '',
+			message: 'missing'
+		});
+		const [section] = groupIssues(['apple', 'a_b', 'Zebra', 'a-b'].map(issueOf), GROUP_BY.LOCALE);
+
+		assert.deepStrictEqual(
+			section.issues.map((issue) => issue.key),
+			['Zebra', 'a-b', 'a_b', 'apple']
+		);
+	});
 });
 
 describe('column arithmetic', () => {
