@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from chki18n import Options, check_translation_files
 
 
@@ -24,6 +26,15 @@ def test_reads_a_file_that_starts_with_a_byte_order_mark() -> None:
 
     assert result.of("INVALID_FILE") == []
     assert [issue.key for issue in result.of("NO_KEY")] == ["farewell"]
+
+
+def test_refuses_a_file_holding_a_number_json_does_not_have(tmp_path: Path) -> None:
+    # `json.loads` reads `NaN`; JavaScript and Dart refuse the file, so this does.
+    (tmp_path / "en.json").write_text('{"a": NaN}', encoding="utf-8")
+
+    result = check_translation_files(str(tmp_path))
+
+    assert any("not json format" in issue.message for issue in result.of("INVALID_FILE"))
 
 
 def test_reports_a_key_the_target_has_and_another_locale_does_not() -> None:

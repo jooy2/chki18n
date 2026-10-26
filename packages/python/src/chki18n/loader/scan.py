@@ -57,6 +57,14 @@ class _ScannedFile:
     duplicate_keys: list[JsonDuplicateKey] = field(default_factory=list)
 
 
+def _reject_constant(name: str) -> Any:
+    """Refuse `NaN` and `Infinity`, which `json.loads` accepts and JSON does not.
+
+    The other two packages refuse a file holding one, so this one has to as well.
+    """
+    raise ValueError(f"{name} is not JSON")
+
+
 def _stem_of(file_name: str) -> str:
     cut = file_name.rfind(".")
 
@@ -159,7 +167,7 @@ def _collect_files(
                 continue
 
             try:
-                data = json.loads(content)
+                data = json.loads(content, parse_constant=_reject_constant)
             except ValueError:
                 issues.append(
                     create_issue(

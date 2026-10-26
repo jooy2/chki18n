@@ -5,6 +5,8 @@
 ### Fixed
 
 - A translation file that starts with a byte order mark is read like any other. Several Windows editors write one, and such a file was reported as `INVALID_FILE` and left out of the comparison
+- A number that is not a string is quoted the way the JavaScript package quotes it, so `1.0` in a file reads `1` and `0.0000001` reads `1e-7`. The message calls an object an `object` with the right article
+- A file holding `NaN` or `Infinity` is reported as `INVALID_FILE`. JSON has neither, and the other two packages already refused such a file
 
 ## 1.2.0 (2026-09-05)
 

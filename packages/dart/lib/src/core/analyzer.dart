@@ -1,6 +1,8 @@
 /// The comparison itself: every check that reads translation data.
 library;
 
+import 'dart:convert';
+
 import 'package:chki18n/src/constants.dart';
 import 'package:chki18n/src/core/duplicate.dart';
 import 'package:chki18n/src/core/interpolation.dart';
@@ -148,8 +150,53 @@ class _CheckFlags {
 /// The file one group's locale was read from, or `null` when nothing was read.
 typedef _FileLookup = String? Function(String group, String locale);
 
-/// Values are reported as text, whatever their original type was.
-String _asDisplayValue(Object? value) => value is String ? value : '$value';
+/// Values are reported as text, whatever their original type was. Anything
+/// that is not a string is spelled the way JavaScript's `JSON.stringify` spells
+/// it, so a report quotes `{}` and `1` and reads the same in every package.
+String _asDisplayValue(Object? value) => value is String ? value : _jsonText(value);
+
+/// [value] as JSON, with its numbers written the way JavaScript writes them.
+String _jsonText(Object? value) {
+  if (value is String) {
+    return jsonEncode(value);
+  }
+
+  if (value is num) {
+    return _numberText(value);
+  }
+
+  if (value is Map) {
+    final entries = value.entries.map(
+      (entry) => '${jsonEncode('${entry.key}')}:${_jsonText(entry.value)}',
+    );
+
+    return '{${entries.join(',')}}';
+  }
+
+  if (value is List) {
+    return '[${value.map(_jsonText).join(',')}]';
+  }
+
+  return '$value';
+}
+
+/// A number as JavaScript spells it. A Dart `double` keeps a trailing `.0`
+/// that JavaScript, which has only the one number type, never writes.
+String _numberText(num value) {
+  if (value is int && value.abs() <= 9007199254740992) {
+    return '$value';
+  }
+
+  final number = value.toDouble();
+
+  if (number == 0) {
+    return '0';
+  }
+
+  final text = number.toString();
+
+  return text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
+}
 
 /// What JavaScript's `typeof` would call this value, so the wording of an
 /// `INVALID_VALUE_TYPE` message is the same in every package.
@@ -164,6 +211,9 @@ String _typeNameOf(Object? value) {
 
   return 'object';
 }
+
+/// The article [_typeNameOf] reads with: `an object`, `a number`.
+String _articleOf(Object? value) => _typeNameOf(value) == 'object' ? 'an' : 'a';
 
 _FileLookup? _buildFileLookup(List<Chki18nSourceFile>? files) {
   if (files == null || files.isEmpty) {
@@ -402,7 +452,7 @@ void _checkKeySlots(
             targetValue: reference,
             value: text,
             message:
-                'The value is ${value == null ? '`null`' : 'a `${_typeNameOf(value)}`'}, '
+                'The value is ${value == null ? '`null`' : '${_articleOf(value)} `${_typeNameOf(value)}`'}, '
                 'not a translatable string.',
           ),
         );

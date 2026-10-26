@@ -631,6 +631,18 @@ describe('the target language', () => {
 		assert.strictEqual(issues[0].code, CHECK_CODE.INVALID_VALUE_TYPE);
 	});
 
+	it('quotes a value that is not a string the way JSON writes it', () => {
+		const issues = checkAll({ en: { a: {}, b: [] }, ko: { a: 'A', b: 'B' } });
+
+		assert.deepStrictEqual(
+			issues.map((issue) => [issue.value, issue.message]),
+			[
+				['{}', 'The value is an `object`, not a translatable string.'],
+				['[]', 'The value is an `object`, not a translatable string.']
+			]
+		);
+	});
+
 	it('reports a value of its own written in the wrong script', () => {
 		const issues = analyzeTranslations(
 			{ locales: { ko: { a: 'Hello' }, en: { a: 'Hello' } } },

@@ -1,5 +1,11 @@
 # Changelog
 
+## vNext (2026--)
+
+### Fixed
+
+- A number that is not a string is quoted the way the JavaScript package quotes it, so `1.0` in a file reads `1` in the report. The message calls an object an `object` with the right article
+
 ## 1.2.0 (2026-09-05)
 
 > A scan can be pointed at an application's root rather than at a folder of locales. It skips the configuration and lock files that root is full of, an exclude can name a path rather than a bare directory name, and it reports which interpolation delimiters the files it read appear to use.

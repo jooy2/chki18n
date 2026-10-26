@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import re
 import time
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Any, Final
 
 from chki18n._types import (
@@ -174,16 +176,76 @@ def _as_display_value(value: Any) -> str:
     Spelled the way JSON spells them rather than the way Python does, so a report
     quotes `null` and `true` and reads the same in every package.
     """
-    if isinstance(value, str):
-        return value
+    return value if isinstance(value, str) else _json_text(value)
 
+
+def _json_text(value: Any) -> str:
+    """`value` as JSON, with its numbers written the way JavaScript writes them."""
     if value is None:
         return "null"
 
     if isinstance(value, bool):
         return "true" if value else "false"
 
+    if isinstance(value, int | float):
+        return _number_text(value)
+
+    if isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False)
+
+    if isinstance(value, dict):
+        entries = (
+            f"{json.dumps(str(key), ensure_ascii=False)}:{_json_text(item)}"
+            for key, item in value.items()
+        )
+
+        return "{" + ",".join(entries) + "}"
+
+    if isinstance(value, list | tuple):
+        return "[" + ",".join(_json_text(item) for item in value) + "]"
+
     return str(value)
+
+
+def _number_text(value: int | float) -> str:
+    """A number as JavaScript's `Number.prototype.toString` spells it.
+
+    JavaScript has one number type, so `1.0` in a file is `1` there, and it
+    switches to an exponent below `1e-6` and from `1e21` on rather than where
+    Python's `repr` does.
+    """
+    if isinstance(value, int) and abs(value) <= 2**53:
+        return str(value)
+
+    number = float(value)
+
+    if number == 0:
+        return "0"
+
+    if number < 0:
+        return f"-{_number_text(-number)}"
+
+    # `repr` gives the shortest digits that read back as the same number, which
+    # is what JavaScript starts from too; only the layout differs.
+    _, digits, exponent = Decimal(repr(number)).as_tuple()
+    text = "".join(map(str, digits)).rstrip("0")
+    exponent = int(exponent) + len(digits) - len(text)
+    count = len(text)
+    point = count + exponent
+
+    if count <= point <= 21:
+        return text + "0" * (point - count)
+
+    if 0 < point <= 21:
+        return f"{text[:point]}.{text[point:]}"
+
+    if -6 < point <= 0:
+        return f"0.{'0' * -point}{text}"
+
+    power = point - 1
+    mantissa = text if count == 1 else f"{text[0]}.{text[1:]}"
+
+    return f"{mantissa}e{'+' if power >= 0 else '-'}{abs(power)}"
 
 
 def _type_name_of(value: Any) -> str:
@@ -373,7 +435,9 @@ def _check_key_slots(
 
         if not isinstance(value, str):
             if flags.invalid_value_type:
-                spelled = "`null`" if value is None else f"a `{_type_name_of(value)}`"
+                type_name = _type_name_of(value)
+                article = "an" if type_name == "object" else "a"
+                spelled = "`null`" if value is None else f"{article} `{type_name}`"
 
                 issues.append(
                     create_issue(

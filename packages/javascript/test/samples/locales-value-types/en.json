@@ -1,0 +1,10 @@
+{
+	"empty-object": {},
+	"empty-list": [],
+	"whole": 1.0,
+	"tiny": 0.0000001,
+	"huge": 1e21,
+	"flag": true,
+	"nothing": null,
+	"text": "Text"
+}

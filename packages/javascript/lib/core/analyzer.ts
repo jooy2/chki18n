@@ -159,13 +159,30 @@ const buildCheckFlags = (enabled: Set<Chki18nCheckCode>): CheckFlags => ({
 	suspiciousLength: enabled.has(CHECK_CODE.SUSPICIOUS_LENGTH)
 });
 
-/** Values are reported as text, whatever their original type was. */
+/**
+ * Values are reported as text, whatever their original type was. An object or
+ * an array is written as JSON, the way the file holding it spells it, rather
+ * than as `[object Object]` or as nothing at all.
+ */
 const asDisplayValue = (value: unknown): string | undefined => {
 	if (value === undefined) {
 		return undefined;
 	}
 
-	return typeof value === 'string' ? value : String(value);
+	if (typeof value === 'string') {
+		return value;
+	}
+
+	if (value !== null && typeof value === 'object') {
+		try {
+			return JSON.stringify(value) ?? String(value);
+		} catch {
+			// A structure that refers to itself, which only memory can hold.
+			return String(value);
+		}
+	}
+
+	return String(value);
 };
 
 const buildFileLookup = (files?: Chki18nSourceFile[]): FileLookup => {
@@ -339,7 +356,7 @@ function checkKeySlots(
 					createIssue(CHECK_CODE.INVALID_VALUE_TYPE, {
 						...base,
 						value: text,
-						message: `The value is ${value === null ? '`null`' : `a \`${typeof value}\``}, not a translatable string.`
+						message: `The value is ${value === null ? '`null`' : `${typeof value === 'object' ? 'an' : 'a'} \`${typeof value}\``}, not a translatable string.`
 					})
 				);
 			}
