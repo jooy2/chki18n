@@ -47,7 +47,7 @@ pnpm add chki18n
 yarn add chki18n
 ```
 
-The package is ESM with type declarations and has four small runtime dependencies.
+The package is ESM with type declarations and has two small runtime dependencies, both used only by the command line.
 
 :::
 

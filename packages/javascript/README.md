@@ -16,7 +16,7 @@ The documentation site has every check, every option and every example. This REA
 - **Every layout** — one file per locale, one folder per locale, or one file holding them all.
 - **CLI and library** share one set of checks and one set of options.
 - **A report in the shape you need** — grouped by language, check, file or nothing; rendered for a terminal, for `grep`, as JSON, as Markdown or as GitHub Actions annotations; saved to a file on request.
-- **ESM and typed**, with four small runtime dependencies. An in-memory comparison of 5,000 keys across 5 locales takes about 17ms.
+- **ESM and typed**, with two small runtime dependencies, both for the command line. An in-memory comparison of 5,000 keys across 5 locales takes about 17ms.
 
 ## Install
 
