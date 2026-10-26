@@ -534,9 +534,9 @@ function checkKeySlots(
 }
 
 /**
- * Report keys of one locale that repeat a value another key already uses. This
- * is the one check that has to see a whole locale at once, so it cannot live in
- * `checkKeySlots`. A `Map` keyed by the value keeps it linear.
+ * Report keys of one locale that repeat a value another key already uses. It
+ * has to see a whole locale at once, so it cannot live in `checkKeySlots`. A
+ * `Map` keyed by the value keeps it linear.
  */
 function checkDuplicateValues(
 	issues: Chki18nIssue[],

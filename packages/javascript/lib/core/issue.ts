@@ -7,7 +7,8 @@ import type {
 	Chki18nSummary
 } from '../_types/global.js';
 
-const emptyLevelCount = (): Chki18nLevelCount => ({ error: 0, warn: 0, info: 0 });
+/** A tally with nothing counted yet. */
+export const emptyLevelCount = (): Chki18nLevelCount => ({ error: 0, warn: 0, info: 0 });
 
 /**
  * Build an issue, taking its severity and its default description from

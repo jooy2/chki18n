@@ -1,4 +1,5 @@
 import { CHECK_CODE, GROUP_BY } from '../constants.js';
+import { emptyLevelCount } from '../core/issue.js';
 import { compareText } from '../core/order.js';
 import { relativeTo } from './text.js';
 import type {
@@ -103,7 +104,7 @@ export function groupIssues(
 				id,
 				label: labelOf(id, groupBy, cwd),
 				issues: [],
-				counts: { error: 0, warn: 0, info: 0 }
+				counts: emptyLevelCount()
 			};
 			sections.set(id, section);
 		}
@@ -140,7 +141,7 @@ export function subGroupIssues(
 		if (position === undefined) {
 			position = parts.length;
 			index.set(id, position);
-			parts.push({ id, issues: [], counts: { error: 0, warn: 0, info: 0 } });
+			parts.push({ id, issues: [], counts: emptyLevelCount() });
 		}
 
 		parts[position].issues.push(issue);

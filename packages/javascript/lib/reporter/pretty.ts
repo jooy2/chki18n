@@ -1,4 +1,5 @@
 import { CHECK_META, GROUP_BY } from '../constants.js';
+import { emptyLevelCount } from '../core/issue.js';
 import { compareText } from '../core/order.js';
 import { subGroupIssues, type Chki18nIssueGroup } from './group.js';
 import { paintOfLevel } from './paint.js';
@@ -204,7 +205,7 @@ const tally = (
 		let count = counts.get(id);
 
 		if (!count) {
-			count = { error: 0, warn: 0, info: 0 };
+			count = emptyLevelCount();
 			counts.set(id, count);
 		}
 
@@ -229,7 +230,7 @@ function crossTabRows(context: Chki18nReportContext): string[] {
 		// that took part gets a row.
 		for (const locale of result.locales) {
 			if (!counts.has(locale)) {
-				counts.set(locale, { error: 0, warn: 0, info: 0 });
+				counts.set(locale, emptyLevelCount());
 			}
 		}
 	}

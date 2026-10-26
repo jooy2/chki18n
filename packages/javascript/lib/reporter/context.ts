@@ -1,4 +1,5 @@
 import { DEFAULT_REPORT_WIDTH, GROUP_BY } from '../constants.js';
+import { emptyLevelCount } from '../core/issue.js';
 import { groupIssues, type Chki18nIssueGroup } from './group.js';
 import { createPaint, type Chki18nPaint } from './paint.js';
 import type {
@@ -58,7 +59,7 @@ export function buildReportContext(
 	const issues = result.issues.filter(
 		(issue) => (issue.level !== 'warn' || options.warn) && (issue.level !== 'info' || options.info)
 	);
-	const counts: Chki18nLevelCount = { error: 0, warn: 0, info: 0 };
+	const counts = emptyLevelCount();
 
 	for (const issue of issues) {
 		counts[issue.level] += 1;

@@ -27,9 +27,11 @@ export function pathSegments(path: string): string[] {
  * these names come from mostly ignore it too.
  */
 export function matchesNamePattern(name: string, pattern: string): boolean {
-	const subject = name.toLowerCase();
-	const parts = pattern.toLowerCase().split('*');
+	return matchesPatternParts(name.toLowerCase(), pattern.toLowerCase().split('*'));
+}
 
+/** `matchesNamePattern` on a lower case name and a pattern already cut at its `*`. */
+function matchesPatternParts(subject: string, parts: string[]): boolean {
 	if (parts.length === 1) {
 		return subject === parts[0];
 	}
@@ -107,7 +109,8 @@ export function createPathExcluder(
 /** A test for the files a walk should not read, over the file's own name. */
 export function createFileExcluder(patterns: Iterable<string>): (name: string) => boolean {
 	const exact = new Set<string>();
-	const globs: string[] = [];
+	// Cut once here rather than on every file the walk meets.
+	const globs: string[][] = [];
 
 	for (const pattern of patterns) {
 		if (pattern.length < 1) {
@@ -115,7 +118,7 @@ export function createFileExcluder(patterns: Iterable<string>): (name: string) =
 		}
 
 		if (pattern.includes('*')) {
-			globs.push(pattern);
+			globs.push(pattern.toLowerCase().split('*'));
 		} else {
 			exact.add(pattern.toLowerCase());
 		}
@@ -124,6 +127,6 @@ export function createFileExcluder(patterns: Iterable<string>): (name: string) =
 	return (name) => {
 		const subject = name.toLowerCase();
 
-		return exact.has(subject) || globs.some((pattern) => matchesNamePattern(subject, pattern));
+		return exact.has(subject) || globs.some((parts) => matchesPatternParts(subject, parts));
 	};
 }

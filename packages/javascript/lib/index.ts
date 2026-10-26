@@ -10,7 +10,6 @@ import { scanTranslationDirectory } from './loader/scan.js';
 import { findUnusedKeys } from './loader/unusedKeys.js';
 import { createLogger } from './logger.js';
 import { formatResult } from './reporter/index.js';
-import { CHECK_CODE as CODES } from './constants.js';
 import type {
 	Chki18nIssue,
 	Chki18nOptions,
@@ -65,8 +64,8 @@ export async function loadTranslations(
 	 */
 	const usageOf = async (groups: TranslationGroups, files: { path: string }[]) => {
 		const wanted =
-			session.options.enabledChecks.has(CODES.UNUSED_KEY) ||
-			session.options.enabledChecks.has(CODES.UNDEFINED_KEY);
+			session.options.enabledChecks.has(CHECK_CODE.UNUSED_KEY) ||
+			session.options.enabledChecks.has(CHECK_CODE.UNDEFINED_KEY);
 
 		if (!session.options.source || !wanted) {
 			return { unusedKeys: [], undefinedKeys: [] };

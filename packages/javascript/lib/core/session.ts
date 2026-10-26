@@ -27,8 +27,9 @@ export type Chki18nSession = {
 	/** Keys of a group, target language first. */
 	keys: (group?: string) => string[];
 	/**
-	 * The flattened translations of a group, keyed by locale. The objects are
-	 * the session's own: read them freely, but write through `set` / `remove`.
+	 * The flattened translations of a group, keyed by locale. Read them freely,
+	 * but write through `set` / `remove`. With `flattened`, these are the very
+	 * objects the session was given, so a write reaches the caller's copy too.
 	 */
 	translations: (group?: string) => { [locale: string]: TranslationMap };
 	/** One value, or `undefined` when that locale does not define the key. */
