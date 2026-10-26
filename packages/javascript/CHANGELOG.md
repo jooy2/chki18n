@@ -4,7 +4,11 @@
 
 ### Breaking changes
 
-- Node.js 22 or newer is required, up from 18, because the `chalk` and `qsu` releases the package now depends on no longer support older runtimes. A project on Node.js 18 or 20 has to upgrade its runtime or stay on `1.2.0`
+- Node.js 22 or newer is required, up from 18, because `chalk` 6, which colours the command line report, no longer supports older runtimes. A project on Node.js 18 or 20 has to upgrade its runtime or stay on `1.2.0`
+
+### Changed
+
+- `qsu` is no longer a dependency. The three helpers taken from it are written out, which also takes about 20 ms off loading the package
 
 ### Fixed
 

@@ -202,7 +202,7 @@ analyzer.check_entry(Entry(key=key, values=values, locales=locales))  # 매 입�
 
 ::: lang js
 
-두 개뿐이며 둘 다 작고 Node 전용이 아닙니다. 중첩 키 평탄화를 위한 `flat`과 보간 자리 표시자 추출을 위한 `qsu`입니다. `chalk`와 `minimist`는 CLI의 것이며 여기서는 도달할 수 없습니다.
+하나뿐이며 작고 Node 전용이 아닙니다. 중첩 키 평탄화를 위한 `flat`입니다. `chalk`와 `minimist`는 CLI의 것이며 여기서는 도달할 수 없습니다.
 
 :::
 

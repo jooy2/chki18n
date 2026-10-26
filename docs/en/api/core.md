@@ -202,7 +202,7 @@ See [`createAnalyzer`](./create-analyzer) for the whole pattern, and for why pas
 
 ::: lang js
 
-Two, both of them small and neither of them Node-specific: `flat` for flattening nested keys, and `qsu` for extracting interpolation placeholders. `chalk` and `minimist` belong to the CLI and are not reachable from here.
+One, small and not Node-specific: `flat` for flattening nested keys. `chalk` and `minimist` belong to the CLI and are not reachable from here.
 
 :::
 

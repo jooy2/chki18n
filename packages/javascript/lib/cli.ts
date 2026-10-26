@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
 import minimist from 'minimist';
-import { capitalizeFirst } from 'qsu';
 import { DEFAULT_REPORTER, REPORTER } from './constants.js';
 import { checkTranslationFiles } from './index.js';
 import { argsToOptions, buildUsageText, OPTION_DEFINITIONS } from './options.js';
 
 const BIN_NAME = 'chki18n';
+
+/** `chki18n` becomes `Chki18n`, the way the banner names the package. */
+const capitalizeFirst = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
 
 // Read at runtime rather than imported, so the compiled output stays inside
 // `dist` and the package manifest is not bundled into it.

@@ -1,6 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { objToPrettyJson } from 'qsu';
 import { CHECK_CODE, MAX_MEASURED_REPORT_WIDTH } from './constants.js';
 import { collectFlatKeys } from './core/duplicate.js';
 import { createIssue } from './core/issue.js';
@@ -210,12 +209,16 @@ export async function checkTranslationFiles(
 	const logger = createLogger(session.options);
 
 	logger.debug(
-		`Options: ${objToPrettyJson({
-			...session.options,
-			enabledChecks: [...session.options.enabledChecks],
-			exclude: [...session.options.exclude],
-			excludeFiles: [...session.options.excludeFiles]
-		})}`
+		`Options: ${JSON.stringify(
+			{
+				...session.options,
+				enabledChecks: [...session.options.enabledChecks],
+				exclude: [...session.options.exclude],
+				excludeFiles: [...session.options.excludeFiles]
+			},
+			null,
+			'\t'
+		)}`
 	);
 	logger.debug(`Detected file format: ${session.fileFormat}`);
 
