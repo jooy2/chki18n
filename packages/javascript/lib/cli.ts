@@ -44,4 +44,7 @@ if (
 
 const result = await checkTranslationFiles(undefined, { ...options, verbose: true });
 
-process.exit(result.success ? 0 : 1);
+// Set rather than passed to `process.exit`, which ends the process before a
+// pipe has taken the report: a reader on the other end of `|` would get the
+// first 64 KB and nothing after it.
+process.exitCode = result.success ? 0 : 1;
