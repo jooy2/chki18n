@@ -1,4 +1,4 @@
-import { getGroupKeys } from 'qsu';
+import { getPlaceholderKeys } from 'qsu';
 
 /** Shared empty result so the fast path never allocates. */
 const NO_KEYS: readonly string[] = Object.freeze([]);
@@ -6,9 +6,9 @@ const NO_KEYS: readonly string[] = Object.freeze([]);
 /**
  * Interpolation keys used by a value, e.g. `['name']` for `Hello {name}`.
  *
- * `getGroupKeys` walks the string character by character, which is the single
- * most repeated operation of an analysis, so values that cannot possibly hold a
- * placeholder are rejected up front by one `indexOf`.
+ * `getPlaceholderKeys` walks the string character by character, which is the
+ * single most repeated operation of an analysis, so values that cannot possibly
+ * hold a placeholder are rejected up front by one `indexOf`.
  */
 export function extractInterpolationKeys(
 	value: unknown,
@@ -23,7 +23,7 @@ export function extractInterpolationKeys(
 		return NO_KEYS;
 	}
 
-	return getGroupKeys(value, prefix, suffix);
+	return getPlaceholderKeys(value, prefix, suffix);
 }
 
 /** An opening and closing delimiter pair, as `interpolationPrefix` takes them. */

@@ -24,7 +24,7 @@ The documentation site has every check, every option and every example for all t
 
 | Package                                      | Registry                                                | Requires             | Quick start                             |
 | -------------------------------------------- | ------------------------------------------------------- | -------------------- | --------------------------------------- |
-| [`packages/javascript`](packages/javascript) | [npm: `chki18n`](https://www.npmjs.com/package/chki18n) | Node.js 18 or later  | [README](packages/javascript/README.md) |
+| [`packages/javascript`](packages/javascript) | [npm: `chki18n`](https://www.npmjs.com/package/chki18n) | Node.js 22 or later  | [README](packages/javascript/README.md) |
 | [`packages/dart`](packages/dart)             | [pub.dev: `chki18n`](https://pub.dev/packages/chki18n)  | Dart 3.7 or later    | [README](packages/dart/README.md)       |
 | [`packages/python`](packages/python)         | [PyPI: `chki18n`](https://pypi.org/project/chki18n/)    | Python 3.10 or later | [README](packages/python/README.md)     |
 

@@ -12,7 +12,7 @@ chki18n은 세 언어로 배포되지만 셋은 하나의 라이브러리입니�
 
 | 언어 | 레지스트리 | 설치 | 요구 사항 |
 | --- | --- | --- | --- |
-| JavaScript | [npm](https://www.npmjs.com/package/chki18n) | `npm install chki18n` | Node.js 18 이상 |
+| JavaScript | [npm](https://www.npmjs.com/package/chki18n) | `npm install chki18n` | Node.js 22 이상 |
 | Dart | [pub.dev](https://pub.dev/packages/chki18n) | `dart pub add chki18n` | Dart 3.7 이상 |
 | Python | [PyPI](https://pypi.org/project/chki18n/) | `pip install chki18n` | Python 3.10 이상 |
 

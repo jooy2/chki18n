@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { objToPrettyStr } from 'qsu';
+import { objToPrettyJson } from 'qsu';
 import { CHECK_CODE, MAX_MEASURED_REPORT_WIDTH } from './constants.js';
 import { collectFlatKeys } from './core/duplicate.js';
 import { createIssue } from './core/issue.js';
@@ -210,7 +210,7 @@ export async function checkTranslationFiles(
 	const logger = createLogger(session.options);
 
 	logger.debug(
-		`Options: ${objToPrettyStr({
+		`Options: ${objToPrettyJson({
 			...session.options,
 			enabledChecks: [...session.options.enabledChecks],
 			exclude: [...session.options.exclude],

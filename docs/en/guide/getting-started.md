@@ -12,7 +12,7 @@ chki18n ships for three languages, and the three are one library: the same twent
 
 | Language | Registry | Install | Requires |
 | --- | --- | --- | --- |
-| JavaScript | [npm](https://www.npmjs.com/package/chki18n) | `npm install chki18n` | Node.js 18 or newer |
+| JavaScript | [npm](https://www.npmjs.com/package/chki18n) | `npm install chki18n` | Node.js 22 or newer |
 | Dart | [pub.dev](https://pub.dev/packages/chki18n) | `dart pub add chki18n` | Dart 3.7 or newer |
 | Python | [PyPI](https://pypi.org/project/chki18n/) | `pip install chki18n` | Python 3.10 or newer |
 

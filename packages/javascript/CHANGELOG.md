@@ -1,5 +1,11 @@
 # Changelog
 
+## vNext (2026--)
+
+### Breaking changes
+
+- Node.js 22 or newer is required, up from 18, because the `chalk` and `qsu` releases the package now depends on no longer support older runtimes. A project on Node.js 18 or 20 has to upgrade its runtime or stay on `1.2.0`
+
 ## 1.2.0 (2026-09-05)
 
 > A scan can be pointed at an application's root rather than at a folder of locales. It skips the configuration and lock files that root is full of, an exclude can name a path rather than a bare directory name, and it reports which interpolation delimiters the files it read appear to use.

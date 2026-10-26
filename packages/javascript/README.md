@@ -24,7 +24,7 @@ The documentation site has every check, every option and every example. This REA
 npm install chki18n
 ```
 
-Requires **Node.js 18 or newer**.
+Requires **Node.js 22 or newer**.
 
 ## From the command line
 
