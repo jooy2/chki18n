@@ -1,14 +1,45 @@
-import { getPlaceholderKeys } from 'qsu';
-
 /** Shared empty result so the fast path never allocates. */
 const NO_KEYS: readonly string[] = Object.freeze([]);
 
 /**
+ * A placeholder name is written by a developer, so it is spelled the way an
+ * identifier is. Anything else between the delimiters is prose that happens to
+ * sit between them, not a placeholder.
+ */
+const KEY_PATTERN = /^[A-Za-z0-9_$-]*$/;
+
+/** Whether the character at `at` is escaped by an odd number of backslashes. */
+function isEscaped(text: string, at: number): boolean {
+	let count = 0;
+
+	for (let index = at - 1; index >= 0 && text[index] === '\\'; index -= 1) {
+		count += 1;
+	}
+
+	return count % 2 === 1;
+}
+
+/**
+ * Whether `delimiter` starts at `at` as a delimiter rather than as text. An
+ * escaped one is text, and so is a doubled one-character delimiter: `{{name}}`
+ * holds no key as far as `{` and `}` are concerned, which is what makes
+ * `interpolationPrefix: '{{'` a real setting rather than a formality.
+ */
+function isDelimiterAt(text: string, at: number, delimiter: string, single: boolean): boolean {
+	if (!text.startsWith(delimiter, at) || isEscaped(text, at)) {
+		return false;
+	}
+
+	return !single || (text[at - 1] !== delimiter && text[at + 1] !== delimiter);
+}
+
+/**
  * Interpolation keys used by a value, e.g. `['name']` for `Hello {name}`.
  *
- * `getPlaceholderKeys` walks the string character by character, which is the
- * single most repeated operation of an analysis, so values that cannot possibly
- * hold a placeholder are rejected up front by one `indexOf`.
+ * This is the single most repeated operation of an analysis, so values that
+ * cannot possibly hold a placeholder are rejected up front by one `indexOf`,
+ * and the rest jump from one delimiter to the next rather than walking every
+ * character. The two delimiters may differ in length, as `%{` and `}` do.
  */
 export function extractInterpolationKeys(
 	value: unknown,
@@ -23,7 +54,43 @@ export function extractInterpolationKeys(
 		return NO_KEYS;
 	}
 
-	return getPlaceholderKeys(value, prefix, suffix);
+	// One string cannot tell an opening delimiter from a closing one.
+	if (!prefix || !suffix || prefix === suffix) {
+		return NO_KEYS;
+	}
+
+	const single = prefix.length === 1 && suffix.length === 1;
+	const keys: string[] = [];
+	let at = value.indexOf(prefix);
+
+	while (at !== -1) {
+		if (!isDelimiterAt(value, at, prefix, single)) {
+			at = value.indexOf(prefix, at + 1);
+			continue;
+		}
+
+		const from = at + prefix.length;
+		let close = value.indexOf(suffix, from);
+
+		while (close !== -1 && !isDelimiterAt(value, close, suffix, single)) {
+			close = value.indexOf(suffix, close + 1);
+		}
+
+		if (close === -1) {
+			at = value.indexOf(prefix, at + 1);
+			continue;
+		}
+
+		const key = value.slice(from, close);
+
+		if (key.indexOf(prefix) === -1 && key.indexOf(suffix) === -1 && KEY_PATTERN.test(key)) {
+			keys.push(key);
+		}
+
+		at = value.indexOf(prefix, close + suffix.length);
+	}
+
+	return keys;
 }
 
 /** An opening and closing delimiter pair, as `interpolationPrefix` takes them. */

@@ -2,10 +2,46 @@ import assert from 'node:assert';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import {
+	analyzeTranslations,
 	detectInterpolationDelimiters,
+	extractInterpolationKeys,
 	INTERPOLATION_DELIMITERS,
 	loadTranslations
 } from '../dist/index.js';
+
+describe('extractInterpolationKeys', () => {
+	it('reads the keys between the delimiters', () => {
+		assert.deepStrictEqual(extractInterpolationKeys('Hi {name}, {count} left', '{', '}'), [
+			'name',
+			'count'
+		]);
+	});
+
+	it('takes delimiters of different lengths', () => {
+		assert.deepStrictEqual(extractInterpolationKeys('Hi %{name}', '%{', '}'), ['name']);
+	});
+
+	it('finds nothing when both delimiters are the same string', () => {
+		assert.deepStrictEqual(extractInterpolationKeys('Hi __name__', '__', '__'), []);
+	});
+
+	it('skips an escaped delimiter and a doubled one-character delimiter', () => {
+		assert.deepStrictEqual(extractInterpolationKeys('\\{name} {{count}}', '{', '}'), []);
+	});
+
+	it('skips prose that only happens to sit between the delimiters', () => {
+		assert.deepStrictEqual(extractInterpolationKeys('{a b} {ok}', '{', '}'), ['ok']);
+	});
+
+	it('compares translations written with delimiters of different lengths', () => {
+		const result = analyzeTranslations(
+			{ locales: { en: { a: 'Hi %{name}' }, ko: { a: '안녕 %{nmae}' } } },
+			{ target: 'en', interpolationPrefix: '%{', interpolationSuffix: '}' }
+		);
+
+		assert.strictEqual(result.issuesByCode.NO_INTERPOLATION_KEY?.[0].interpolation, 'name');
+	});
+});
 
 describe('detectInterpolationDelimiters', () => {
 	it('reads each pair it knows', () => {
