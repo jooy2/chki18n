@@ -22,6 +22,7 @@
 - The Markdown report shows the markup in a value as it is written. GitHub rendered it, so `<b>` turned the rest of a row bold and the tag a `TAG_MISMATCH` was about disappeared from the table
 - Whitespace, word boundaries and letters are read the way the other two packages read them. Python's `\s` took a record separator for space and a byte order mark for not, so `SURROUNDING_WHITESPACE` disagreed about both; its `\b` took `한` for a word character, so a `t('key')` written straight after one was not read as a call; and its `\w` took `½` for a letter
 - A length ratio is rounded the way JavaScript's `toFixed` rounds it, so an exact `0.25` reads `0.3` in a `SUSPICIOUS_LENGTH` message rather than `0.2`
+- Keys are reached in the order a JavaScript object holds them, whole numbers first and in ascending order, so a JSON report lists `404` before `title` as the JavaScript package does. A key with no name at the top of a file is kept rather than dropped. Flattening and the search for keys defined twice are one walk over a file rather than two
 
 ## 1.2.0 (2026-09-05)
 

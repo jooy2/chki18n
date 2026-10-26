@@ -131,3 +131,11 @@ def test_can_be_switched_off_like_any_other_check() -> None:
 
     assert "DUPLICATE_KEY" not in result.issues_by_code
     assert result.success is True
+
+
+def test_flattens_whole_number_keys_first_as_a_javascript_object_holds_them() -> None:
+    flat = flatten_translations(
+        {"title": "T", "500": "S", "404": "N", "": "E", "n": {"b": 1, "2": 2}}
+    )
+
+    assert list(flat) == ["404", "500", "title", "", "n.2", "n.b"]

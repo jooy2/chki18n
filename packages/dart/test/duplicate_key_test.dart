@@ -59,6 +59,18 @@ void main() {
         {'a.b': 1, 'c.0': 'x', 'c.1': 'y', 'd': <String, Object?>{}},
       );
     });
+
+    test('puts whole number keys first, as a JavaScript object holds them', () {
+      final flat = flattenTranslations(const {
+        'title': 'T',
+        '500': 'S',
+        '404': 'N',
+        '': 'E',
+        'n': {'b': 1, '2': 2},
+      });
+
+      expect(flat.keys, ['404', '500', 'title', '', 'n.2', 'n.b']);
+    });
   });
 
   group('findDuplicateJsonKeys', () {

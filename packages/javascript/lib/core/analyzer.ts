@@ -1,8 +1,7 @@
-import { flatten } from 'flat';
 import { CHECK_CODE } from '../constants.js';
 import { resolveOptions } from '../options.js';
 import { extractInterpolationKeys } from './interpolation.js';
-import { findDuplicateKeys } from './duplicate.js';
+import { flattenWithDuplicates } from './duplicate.js';
 import { applyLevelOverrides, createIssue } from './issue.js';
 import { checkKeyShape } from './key.js';
 import { pluralCategoriesOf, pluralFormsNeeded, pluralPartsOf, usesPluralForm } from './plural.js';
@@ -794,23 +793,25 @@ export function prepareGroups(
 				continue;
 			}
 
-			// Before flattening, because flattening is what hides it: two
-			// definitions go in and one key comes out.
-			if (options.enabledChecks.has(CHECK_CODE.DUPLICATE_KEY)) {
-				for (const key of findDuplicateKeys(map)) {
-					issues.push(
-						createIssue(CHECK_CODE.DUPLICATE_KEY, {
-							locale,
-							group,
-							key,
-							message: `The key \`${key}\` is defined more than once, so one of its values is lost.`
-						})
-					);
-				}
-			}
-
 			try {
-				preparedLocales[locale] = flatten(map);
+				const flattened = flattenWithDuplicates(map);
+
+				preparedLocales[locale] = flattened.translations;
+
+				// Found while flattening, because flattening is what hides it: two
+				// definitions go in and one key comes out.
+				if (options.enabledChecks.has(CHECK_CODE.DUPLICATE_KEY)) {
+					for (const key of flattened.duplicates) {
+						issues.push(
+							createIssue(CHECK_CODE.DUPLICATE_KEY, {
+								locale,
+								group,
+								key,
+								message: `The key \`${key}\` is defined more than once, so one of its values is lost.`
+							})
+						);
+					}
+				}
 			} catch {
 				issues.push(
 					createIssue(CHECK_CODE.INVALID_FILE, {

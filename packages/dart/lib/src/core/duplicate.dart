@@ -1,4 +1,5 @@
-/// Keys that end up defined twice, which flattening then silently resolves.
+/// Flattening nested translations into dotted keys, and the keys that end up
+/// defined twice on the way.
 ///
 /// `{"a": {"b": 1}, "a.b": 2}` flattens to `{"a.b": 2}`: two definitions went
 /// in and one value came out, with nothing said about the one that lost. The
@@ -6,10 +7,10 @@
 /// and impossible to see afterwards, since by the time anything reads the
 /// translations there is only one key left.
 ///
-/// The walk mirrors what [flattenTranslations] does — a map or a list with
-/// anything in it is descended into, everything else (including an empty map or
-/// list) is a leaf — so the paths counted here are exactly the keys that will
-/// exist.
+/// One walk answers every question below, so the keys counted are exactly the
+/// keys the comparison sees. A map or a list with anything in it is descended
+/// into; everything else, an empty map or list included, is a leaf and keeps
+/// its value.
 library;
 
 import 'package:chki18n/src/types.dart';
@@ -17,81 +18,42 @@ import 'package:chki18n/src/types.dart';
 /// The separator between the levels of a flattened key.
 const String keySeparator = '.';
 
-bool _isBranch(Object? value) {
-  if (value is Map) {
-    return value.isNotEmpty;
-  }
+/// A key a JavaScript object keeps ahead of the others: a whole number below
+/// 2³² − 1, written without a leading zero.
+final RegExp _arrayIndexPattern = RegExp(r'^(?:0|[1-9][0-9]{0,9})$');
 
-  if (value is List) {
-    return value.isNotEmpty;
-  }
+bool _isArrayIndex(String key) => _arrayIndexPattern.hasMatch(key) && int.parse(key) < 4294967295;
 
-  return false;
-}
-
-void _walk(Object? value, String path, void Function(String path) leaf) {
-  if (value is Map) {
-    if (value.isEmpty) {
-      if (path.isNotEmpty) {
-        leaf(path);
-      }
-
-      return;
-    }
-
-    for (final entry in value.entries) {
-      final key = '${entry.key}';
-
-      _walk(entry.value, path.isEmpty ? key : '$path$keySeparator$key', leaf);
-    }
-
-    return;
-  }
-
-  if (value is List) {
-    if (value.isEmpty) {
-      if (path.isNotEmpty) {
-        leaf(path);
-      }
-
-      return;
-    }
-
-    for (var index = 0; index < value.length; index += 1) {
-      _walk(value[index], path.isEmpty ? '$index' : '$path$keySeparator$index', leaf);
-    }
-
-    return;
-  }
-
-  if (path.isNotEmpty) {
-    leaf(path);
-  }
-}
-
-/// Every flattened key an object will produce, added to [into].
-Set<String> collectFlatKeys(Object? translations, Set<String> into) {
-  _walk(translations, '', into.add);
-
-  return into;
-}
-
-/// Flattens nested translations into the dotted keys the comparison works on.
+/// The entries of [map] in the order a JavaScript object holds its keys, which
+/// is the order the reference package reaches them in.
 ///
-/// A map or a list with anything in it is descended into; everything else,
-/// including an empty map or list, is a leaf and keeps its value. Where two
-/// definitions produce one key the later one wins, exactly as it does once the
-/// file is read back — which is the loss [findDuplicateKeys] is there to report
-/// before it happens.
-TranslationMap flattenTranslations(Object? translations) {
-  final flat = <String, Object?>{};
+/// A JavaScript object lists whole-number keys first, in ascending order, and
+/// every other key after them in the order it was written. Read in the file's
+/// own order instead, `{"title": …, "404": …}` would be reported in another
+/// order than the JavaScript package reports it.
+List<MapEntry<String, Object?>> _entriesInObjectOrder(Map<Object?, Object?> map) {
+  final entries = [for (final entry in map.entries) MapEntry('${entry.key}', entry.value)];
+  final indices = entries.where((entry) => _isArrayIndex(entry.key)).toList();
 
+  if (indices.isEmpty) {
+    return entries;
+  }
+
+  indices.sort((a, b) => int.parse(a.key).compareTo(int.parse(b.key)));
+
+  return [...indices, ...entries.where((entry) => !_isArrayIndex(entry.key))];
+}
+
+bool _isBranch(Object? value) =>
+    (value is Map && value.isNotEmpty) || (value is List && value.isNotEmpty);
+
+/// Every leaf below [translations], with its flattened key, in the order the
+/// keys are reached.
+void _walkLeaves(Object? translations, void Function(String key, Object? value) visit) {
   void walk(Object? value, String path) {
     if (value is Map && value.isNotEmpty) {
-      for (final entry in value.entries) {
-        final key = '${entry.key}';
-
-        walk(entry.value, path.isEmpty ? key : '$path$keySeparator$key');
+      for (final entry in _entriesInObjectOrder(value)) {
+        walk(entry.value, path.isEmpty ? entry.key : '$path$keySeparator${entry.key}');
       }
 
       return;
@@ -105,41 +67,69 @@ TranslationMap flattenTranslations(Object? translations) {
       return;
     }
 
-    if (path.isNotEmpty) {
-      flat[path] = value;
-    }
+    visit(path, value);
   }
 
-  walk(translations, '');
+  if (!_isBranch(translations)) {
+    return;
+  }
 
-  return flat;
+  if (translations is List) {
+    for (var index = 0; index < translations.length; index += 1) {
+      walk(translations[index], '$index');
+    }
+
+    return;
+  }
+
+  for (final entry in _entriesInObjectOrder(translations! as Map)) {
+    walk(entry.value, entry.key);
+  }
+}
+
+/// The translations as the flat map the comparison works on, and the keys more
+/// than one definition produced, in the order they are first reached.
+///
+/// Where two definitions produce one key the later one wins, exactly as it does
+/// once the file is read back.
+({TranslationMap translations, List<String> duplicates}) flattenWithDuplicates(
+  Object? translations,
+) {
+  final flat = <String, Object?>{};
+  List<String>? duplicates;
+
+  _walkLeaves(translations, (key, value) {
+    if (flat.containsKey(key) && !(duplicates ??= <String>[]).contains(key)) {
+      duplicates!.add(key);
+    }
+
+    flat[key] = value;
+  });
+
+  return (translations: flat, duplicates: duplicates ?? const []);
+}
+
+/// Flattens nested translations into the dotted keys the comparison works on.
+TranslationMap flattenTranslations(Object? translations) =>
+    flattenWithDuplicates(translations).translations;
+
+/// Every flattened key an object will produce, added to [into].
+Set<String> collectFlatKeys(Object? translations, Set<String> into) {
+  _walkLeaves(translations, (key, _) => into.add(key));
+
+  return into;
 }
 
 /// Flattened keys that more than one definition produces, in the order they are
-/// first reached.
-///
-/// Returns an empty list for the overwhelmingly common case, and allocates
-/// nothing while doing so.
+/// first reached, or an empty list for the overwhelmingly common case.
 List<String> findDuplicateKeys(Object? translations) {
-  if (!_isBranch(translations)) {
-    return const [];
-  }
-
   final seen = <String>{};
   List<String>? duplicates;
 
-  _walk(translations, '', (path) {
-    if (seen.contains(path)) {
-      duplicates ??= <String>[];
-
-      if (!duplicates!.contains(path)) {
-        duplicates!.add(path);
-      }
-
-      return;
+  _walkLeaves(translations, (key, _) {
+    if (!seen.add(key) && !(duplicates ??= <String>[]).contains(key)) {
+      duplicates!.add(key);
     }
-
-    seen.add(path);
   });
 
   return duplicates ?? const [];

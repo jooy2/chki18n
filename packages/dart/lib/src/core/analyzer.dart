@@ -981,10 +981,14 @@ TranslationGroups prepareGroups(
         continue;
       }
 
-      // Before flattening, because flattening is what hides it: two definitions
-      // go in and one key comes out.
+      final flattened = flattenWithDuplicates(map);
+
+      preparedLocales[locale] = flattened.translations;
+
+      // Found while flattening, because flattening is what hides it: two
+      // definitions go in and one key comes out.
       if (options.enabledChecks.contains(Chki18nCheckCode.duplicateKey)) {
-        for (final key in findDuplicateKeys(map)) {
+        for (final key in flattened.duplicates) {
           issues.add(
             createIssue(
               Chki18nCheckCode.duplicateKey,
@@ -996,8 +1000,6 @@ TranslationGroups prepareGroups(
           );
         }
       }
-
-      preparedLocales[locale] = flattenTranslations(map);
     }
 
     prepared[group] = preparedLocales;

@@ -6,11 +6,30 @@ import {
 	CHECK_CODE,
 	checkTranslationFiles,
 	createAnalyzer,
-	findDuplicateKeys
+	findDuplicateKeys,
+	flattenTranslations
 } from '../dist/index.js';
 import { findDuplicateJsonKeys } from '../dist/loader/jsonDuplicates.js';
 
 const samplePath = (name: string) => join('test', 'samples', name);
+
+describe('flattenTranslations', () => {
+	it('writes nested keys and array positions as dotted keys', () => {
+		assert.deepStrictEqual(flattenTranslations({ a: { b: 'B' }, list: ['x', { y: 'Y' }], e: {} }), {
+			'a.b': 'B',
+			'list.0': 'x',
+			'list.1.y': 'Y',
+			e: {}
+		});
+	});
+
+	it('keeps a key with no name, and one named `__proto__`', () => {
+		const flat = flattenTranslations(JSON.parse('{"": "Empty", "__proto__": "Proto"}'));
+
+		assert.deepStrictEqual(Object.keys(flat), ['', '__proto__']);
+		assert.strictEqual(Object.getPrototypeOf(flat), Object.prototype);
+	});
+});
 
 describe('findDuplicateKeys', () => {
 	it('finds a nested key colliding with a dotted one', () => {

@@ -28,7 +28,7 @@ export {
 } from '../constants.js';
 export { analyzeTranslations, createAnalyzer } from './analyzer.js';
 export type { Chki18nAnalyzer } from './analyzer.js';
-export { collectFlatKeys, findDuplicateKeys } from './duplicate.js';
+export { collectFlatKeys, findDuplicateKeys, flattenTranslations } from './duplicate.js';
 export {
 	createFileExcluder,
 	createPathExcluder,

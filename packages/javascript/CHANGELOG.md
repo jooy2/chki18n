@@ -12,6 +12,7 @@
 - `MISSING_NUMBER` and `NUMBER_MISMATCH` read the digits of every script, and compare a number by its value. A translation that writes `٣` or `３` for `3` holds the same number, where it was reported as having dropped it. `extractNumbers` returns runs of those digits too, as they are written
 - The unused key scan reads each file once instead of once per key it is still looking for. A thousand source files and five thousand unused keys took sixteen seconds and now take a quarter of one; the keys it reports are the same
 - A scan reads only the files whose path names a locale when the layout is `single` or `folder`, which is what the path decides for every layout but `nested`. Pointed at an application's root, it used to read and parse every JSON file there, its fixtures and data files included, and a broken one among them was reported as `INVALID_FILE` and failed the run. Such a file is now listed in `skipped` without being opened
+- `flat` is no longer a dependency, so `chki18n/core` depends on nothing at all. Flattening and the search for keys defined twice are one walk over a file rather than two, and `flattenTranslations` is exported, as the other two packages export theirs
 
 ### Fixed
 
@@ -26,6 +27,7 @@
 - Column widths come from Unicode's own tables. A combining mark, such as a Thai or Hindi vowel sign or an accent written on its own, takes no column, and an emoji takes two, where the report counted one for each and pushed its columns out of line. `SUSPICIOUS_LENGTH` measures a Thai or Hindi value the way it is drawn. Measuring a value is also several times faster, which `lengthRatio` used to make the slowest check of a run
 - The Markdown report shows the markup in a value as it is written. GitHub rendered it, so `<b>` turned the rest of a row bold and the tag a `TAG_MISMATCH` was about disappeared from the table
 - A translation file holding something other than an object, such as an array or a bare string, is reported as `INVALID_FILE` with its path and left out of the comparison, as the Dart and Python packages do. An array was compared as keys named `0` and `1`
+- A key named `__proto__` is kept like any other. Flattening assigned it, which set the prototype of the result instead and lost the key
 
 ## 1.2.0 (2026-09-05)
 

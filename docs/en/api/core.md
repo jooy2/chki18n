@@ -202,7 +202,7 @@ See [`createAnalyzer`](./create-analyzer) for the whole pattern, and for why pas
 
 ::: lang js
 
-One, small and not Node-specific: `flat` for flattening nested keys. `chalk` and `minimist` belong to the CLI and are not reachable from here.
+None. Flattening, placeholder extraction and every other step are written out in the package itself. `chalk` and `minimist` belong to the CLI and are not reachable from here.
 
 :::
 

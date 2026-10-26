@@ -21,7 +21,7 @@ from chki18n._types import (
     TranslationMap,
 )
 from chki18n.constants import CheckCode
-from chki18n.core.duplicate import find_duplicate_keys, flatten_translations
+from chki18n.core.duplicate import flatten_with_duplicates
 from chki18n.core.interpolation import extract_interpolation_keys
 from chki18n.core.issue import apply_level_overrides, create_issue
 from chki18n.core.key import check_key_shape
@@ -863,10 +863,13 @@ def prepare_groups(
                 prepared_locales[locale] = values
                 continue
 
-            # Before flattening, because flattening is what hides it: two
+            flat, duplicates = flatten_with_duplicates(values)
+            prepared_locales[locale] = flat
+
+            # Found while flattening, because flattening is what hides it: two
             # definitions go in and one key comes out.
             if "DUPLICATE_KEY" in options.enabled_checks:
-                for key in find_duplicate_keys(values):
+                for key in duplicates:
                     issues.append(
                         create_issue(
                             "DUPLICATE_KEY",
@@ -879,8 +882,6 @@ def prepare_groups(
                             ),
                         )
                     )
-
-            prepared_locales[locale] = flatten_translations(values)
 
         prepared[group] = prepared_locales
 

@@ -17,6 +17,7 @@
 - Column widths come from Unicode's own tables. A combining mark, such as a Thai or Hindi vowel sign or an accent written on its own, takes no column, and an emoji takes two, where the report counted one for each and pushed its columns out of line. `SUSPICIOUS_LENGTH` measures a Thai or Hindi value the way it is drawn. Measuring a value is also several times faster, which `lengthRatio` used to make the slowest check of a run
 - The Markdown report shows the markup in a value as it is written. GitHub rendered it, so `<b>` turned the rest of a row bold and the tag a `TAG_MISMATCH` was about disappeared from the table
 - Two findings about one key, such as a missing and an extra tag, are reported in the order they were found. `List.sort` does not keep equal items in order, so in a section of more than 32 findings they could trade places and be reported differently from the other two packages
+- Keys are reached in the order a JavaScript object holds them, whole numbers first and in ascending order, so a JSON report lists `404` before `title` as the JavaScript package does. A key with no name at the top of a file is kept rather than dropped. Flattening and the search for keys defined twice are one walk over a file rather than two
 
 ## 1.2.0 (2026-09-05)
 
