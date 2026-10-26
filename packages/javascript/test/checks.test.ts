@@ -274,6 +274,26 @@ describe('INVISIBLE_CHARACTER', () => {
 	});
 });
 
+describe('NOT_TRANSLATED_VALUE', () => {
+	it('reports a value left in the target language', () => {
+		const issues = check(CHECK_CODE.NOT_TRANSLATED_VALUE, {
+			en: { a: 'Save' },
+			ko: { a: 'Save' }
+		});
+
+		assert.strictEqual(issues.length, 1);
+	});
+
+	it('says nothing about a value with no word to translate', () => {
+		const locales = {
+			en: { count: '{count}', percent: '100%', code: '12345', link: '<b>{name}</b>' },
+			ko: { count: '{count}', percent: '100%', code: '12345', link: '<b>{name}</b>' }
+		};
+
+		assert.deepStrictEqual(check(CHECK_CODE.NOT_TRANSLATED_VALUE, locales), []);
+	});
+});
+
 describe('NUMBER_MISMATCH', () => {
 	it('finds a number the translation changed', () => {
 		const issues = check(CHECK_CODE.NUMBER_MISMATCH, {

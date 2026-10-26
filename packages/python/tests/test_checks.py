@@ -630,3 +630,10 @@ def test_rounds_a_length_ratio_half_up_as_javascript_does() -> None:
     )
 
     assert issues[0].message == "The value is 0.3 times the length of the target language value."
+
+
+def test_not_translated_value_says_nothing_about_a_value_with_no_word() -> None:
+    values = {"count": "{count}", "percent": "100%", "code": "12345", "link": "<b>{name}</b>"}
+
+    assert check("NOT_TRANSLATED_VALUE", {"en": values, "ko": dict(values)}) == []
+    assert len(check("NOT_TRANSLATED_VALUE", {"en": {"a": "Save"}, "ko": {"a": "Save"}})) == 1

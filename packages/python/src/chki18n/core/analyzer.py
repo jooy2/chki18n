@@ -414,6 +414,7 @@ def _check_key_slots(
     # so `item_one` being absent from it is correct rather than missing, and
     # Russian needs `item_few` that English never writes.
     plural = plural_parts_of(key)
+    target_has_text: bool | None = None
 
     for index, locale in enumerate(locale_names):
         # The target language is walked like any other, but only the checks that
@@ -502,8 +503,18 @@ def _check_key_slots(
             # language's. The target language's own value is that reference, so
             # there is nothing for it to differ from.
             if not is_target:
+                # A value with no word in it, only a placeholder, a number or a
+                # sign, reads the same in every language, so being the same says
+                # nothing about whether anybody translated it. Asked once per key,
+                # and only when some value is identical.
                 if flags.not_translated_value and value == target_value:
-                    issues.append(create_issue("NOT_TRANSLATED_VALUE", **base, value=value))
+                    if target_has_text is None:
+                        target_has_text = has_translatable_text(
+                            value, options.interpolation_prefix, options.interpolation_suffix
+                        )
+
+                    if target_has_text:
+                        issues.append(create_issue("NOT_TRANSLATED_VALUE", **base, value=value))
 
                 if flags.missing_number and target_has_digit and not has_digit(value):
                     issues.append(create_issue("MISSING_NUMBER", **base, value=value))

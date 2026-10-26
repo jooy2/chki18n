@@ -321,6 +321,29 @@ void main() {
     });
   });
 
+  group('NOT_TRANSLATED_VALUE', () {
+    test('reports a value left in the target language', () {
+      expect(
+        check(Chki18nCheckCode.notTranslatedValue, {
+          'en': {'a': 'Save'},
+          'ko': {'a': 'Save'},
+        }).length,
+        1,
+      );
+    });
+
+    test('says nothing about a value with no word to translate', () {
+      const values = {
+        'count': '{count}',
+        'percent': '100%',
+        'code': '12345',
+        'link': '<b>{name}</b>',
+      };
+
+      expect(check(Chki18nCheckCode.notTranslatedValue, {'en': values, 'ko': values}), isEmpty);
+    });
+  });
+
   group('NUMBER_MISMATCH', () {
     test('finds a number the translation changed', () {
       final issues = check(Chki18nCheckCode.numberMismatch, const {

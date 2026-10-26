@@ -147,6 +147,8 @@ The value is byte-for-byte identical to the target language's. Either the transl
 { "desc": { "same": "Same" } }
 ```
 
+A value with no word in it is never reported: one that holds only a placeholder, a number, markup or a sign, such as `{count}`, `100%` or `12345`, reads the same in every language.
+
 If your project has many legitimately identical strings, switching it off is reasonable:
 
 ```bash

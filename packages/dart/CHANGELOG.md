@@ -11,6 +11,7 @@
 - `MISSING_NUMBER` and `NUMBER_MISMATCH` read the digits of every script, and compare a number by its value. A translation that writes `٣` or `３` for `3` holds the same number, where it was reported as having dropped it. `extractNumbers` returns runs of those digits too, as they are written
 - The unused key scan reads each file once instead of once per key it is still looking for. A thousand source files and five thousand unused keys took sixteen seconds and now take a quarter of one; the keys it reports are the same
 - A scan reads only the files whose path names a locale when the layout is `single` or `folder`, which is what the path decides for every layout but `nested`. Pointed at an application's root, it used to read and parse every JSON file there, its fixtures and data files included, and a broken one among them was reported as `INVALID_FILE` and failed the run. Such a file is now listed in `skipped` without being opened
+- `NOT_TRANSLATED_VALUE` says nothing about a value with no word in it. One that holds only a placeholder, a number, markup or a sign, such as `{count}`, `100%` or `12345`, reads the same in every language, and was reported in every locale
 
 ### Fixed
 

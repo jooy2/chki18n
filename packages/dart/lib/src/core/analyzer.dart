@@ -383,6 +383,7 @@ void _checkKeySlots(
   // so `item_one` being absent from it is correct rather than missing, and
   // Russian needs `item_few` that English never writes.
   final plural = pluralPartsOf(key);
+  bool? targetHasText;
 
   for (var index = 0; index < localeNames.length; index += 1) {
     // The target language is walked like any other, but only the checks that
@@ -521,7 +522,17 @@ void _checkKeySlots(
       // The target language's own value is that reference, so there is nothing
       // for it to differ from.
       if (!isTarget) {
-        if (flags.notTranslatedValue && value == targetValue) {
+        // A value with no word in it, only a placeholder, a number or a sign,
+        // reads the same in every language, so being the same says nothing about
+        // whether anybody translated it. Asked once per key, and only when some
+        // value is identical.
+        if (flags.notTranslatedValue &&
+            value == targetValue &&
+            (targetHasText ??= hasTranslatableText(
+              value,
+              options.interpolationPrefix,
+              options.interpolationSuffix,
+            ))) {
           issues.add(
             createIssue(
               Chki18nCheckCode.notTranslatedValue,
