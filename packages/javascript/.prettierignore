@@ -9,3 +9,6 @@
 node_modules/
 .github/
 dist/
+
+# A sample that is broken on purpose, to show it is never read
+test/samples/app-root/fixtures/broken.json
