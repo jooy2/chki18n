@@ -17,6 +17,20 @@ const cell = (text: string): string => text.replace(/\|/g, '\\|');
 const code = (text: string): string => (text ? `\`${cell(text)}\`` : '');
 
 /**
+ * A cell a reader has to see as it was written. Markup in a value would be
+ * rendered otherwise: `<b>` turns the rest bold, and the very tag
+ * `TAG_MISMATCH` is about disappears from the report. A code span already
+ * shows its text as written, so only what sits outside one is escaped.
+ */
+const prose = (text: string): string =>
+	cell(text)
+		.split(/(`[^`]*`)/)
+		.map((part, at) =>
+			at % 2 === 1 ? part : part.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+		)
+		.join('');
+
+/**
  * A table with its columns padded in the source, which is how every Markdown
  * file in this project is written and what keeps the raw text readable when
  * whatever renders it does not.
@@ -58,8 +72,8 @@ export function formatMarkdown(context: Chki18nReportContext): string {
 					issue.level,
 					code(byCode ? issue.locale : issue.code),
 					code(keyLabelOf(issue, context.showGroup)),
-					cell(referenceOf(issue, result.target)),
-					cell(detailOf(issue))
+					prose(referenceOf(issue, result.target)),
+					prose(detailOf(issue))
 				])
 			)
 		);

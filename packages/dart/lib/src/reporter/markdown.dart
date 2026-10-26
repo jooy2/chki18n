@@ -10,6 +10,18 @@ String _cell(String text) => text.replaceAll('|', r'\|');
 
 String _code(String text) => text.isEmpty ? '' : '`${_cell(text)}`';
 
+/// A cell a reader has to see as it was written.
+///
+/// Markup in a value would be rendered otherwise: `<b>` turns the rest bold, and
+/// the very tag `TAG_MISMATCH` is about disappears from the report. A code span
+/// already shows its text as written, so only what sits outside one is escaped.
+String _prose(String text) => _cell(text).splitMapJoin(
+  RegExp('`[^`]*`'),
+  onMatch: (match) => match[0]!,
+  onNonMatch:
+      (part) => part.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;'),
+);
+
 /// A table with its columns padded in the source, which is how every Markdown
 /// file in this project is written and what keeps the raw text readable when
 /// whatever renders it does not.
@@ -53,8 +65,8 @@ String formatMarkdown(Chki18nReportContext context) {
               issue.level.name,
               _code(byCode ? issue.locale : issue.code.code),
               _code(keyLabelOf(issue, context.showGroup)),
-              _cell(referenceOf(issue, result.target)),
-              _cell(detailOf(issue)),
+              _prose(referenceOf(issue, result.target)),
+              _prose(detailOf(issue)),
             ],
         ],
       ),

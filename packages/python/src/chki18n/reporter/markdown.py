@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from chki18n.reporter.context import ReportContext
 from chki18n.reporter.text import (
     counts_sentence,
@@ -22,6 +24,21 @@ def _cell(text: str) -> str:
 
 def _code(text: str) -> str:
     return f"`{_cell(text)}`" if text else ""
+
+
+def _prose(text: str) -> str:
+    """A cell a reader has to see as it was written.
+
+    Markup in a value would be rendered otherwise: `<b>` turns the rest bold, and
+    the very tag `TAG_MISMATCH` is about disappears from the report. A code span
+    already shows its text as written, so only what sits outside one is escaped.
+    """
+    parts = re.split(r"(`[^`]*`)", _cell(text))
+
+    return "".join(
+        part if at % 2 else part.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        for at, part in enumerate(parts)
+    )
 
 
 def _table(header: list[str], rows: list[list[str]]) -> list[str]:
@@ -68,8 +85,8 @@ def format_markdown(context: ReportContext) -> str:
                         issue.level,
                         _code(issue.locale if by_code else issue.code),
                         _code(key_label_of(issue, context.show_group)),
-                        _cell(reference_of(issue, result.target)),
-                        _cell(detail_of(issue)),
+                        _prose(reference_of(issue, result.target)),
+                        _prose(detail_of(issue)),
                     ]
                     for issue in section.issues
                 ],

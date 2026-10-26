@@ -17,6 +17,7 @@
 - A symbolic link to a directory is not followed, as the other two packages never followed one. A link pointing back up the tree made the scan fail with an `OSError`
 - A key written twice in an object inside an array is reported at the key flattening gives it, such as `list.0.label`. The position was left out, so the report named a key that did not exist
 - Column widths come from Unicode's own tables. A combining mark, such as a Thai or Hindi vowel sign or an accent written on its own, takes no column, and an emoji takes two, where the report counted one for each and pushed its columns out of line. `SUSPICIOUS_LENGTH` measures a Thai or Hindi value the way it is drawn. Measuring a value is also several times faster, which `lengthRatio` used to make the slowest check of a run
+- The Markdown report shows the markup in a value as it is written. GitHub rendered it, so `<b>` turned the rest of a row bold and the tag a `TAG_MISMATCH` was about disappeared from the table
 
 ## 1.2.0 (2026-09-05)
 

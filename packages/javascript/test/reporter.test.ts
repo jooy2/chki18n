@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import {
+	analyzeTranslations,
 	buildResult,
 	checkTranslationFiles,
 	DEFAULT_GROUP_BY,
@@ -151,6 +152,20 @@ describe('formatResult', () => {
 		// counting columns rather than characters.
 		assert.ok(rows.some((row) => /[가-힣]/.test(row)));
 		assert.strictEqual(widths.size, 1);
+	});
+
+	it('shows the markup in a value as written rather than rendering it', () => {
+		const result = analyzeTranslations(
+			{ locales: { en: { a: 'Press <b>Save</b>' }, ko: { a: '저장을 누르세요' } } },
+			{ target: 'en', flattened: true, checks: ['TAG_MISMATCH'] }
+		);
+		const row = render(result, { reporter: REPORTER.MARKDOWN })
+			.split('\n')
+			.find((line) => line.includes('TAG_MISMATCH'));
+
+		assert.ok(row?.includes('en: "Press &lt;b&gt;Save&lt;/b&gt;"'));
+		// A code span is shown as written already, so the note keeps its tags.
+		assert.ok(row?.includes('`<b>`'));
 	});
 
 	it('hands back the whole result as JSON, unfiltered', async () => {
