@@ -40,6 +40,62 @@ String leafOfKey(String key) {
 
 bool _isScannableName(String name) => _extensions.contains(extensionOf(name));
 
+/// The characters a key segment is nearly always spelled with. Any occurrence of
+/// a leaf spelled only with them sits inside one unbroken run of them, so the
+/// runs of a file are all that has to be read to find it.
+final RegExp _wordRunPattern = RegExp(r'[A-Za-z0-9_$-]+');
+
+final RegExp _wordOnlyPattern = RegExp(r'^[A-Za-z0-9_$-]+$');
+
+/// A search that takes out of `remaining` every leaf a text holds, as plain
+/// substrings, the way `contains` would find them.
+///
+/// Asking for each leaf in each file costs the number of leaves times the size
+/// of the tree: a thousand files and five thousand unused keys took sixteen
+/// seconds. Instead each run of word characters is cut into the pieces as long as
+/// some leaf is and looked up in a set, and a run met in an earlier file is not
+/// cut again, since identifiers repeat from file to file. A leaf with any other
+/// character in it is still searched for on its own.
+void Function(String text) _leafSearch(Set<String> remaining) {
+  final words = <String>{};
+  final others = <String>{};
+
+  for (final leaf in remaining) {
+    (_wordOnlyPattern.hasMatch(leaf) ? words : others).add(leaf);
+  }
+
+  final lengths = {for (final leaf in words) leaf.length}.toList()..sort();
+  final seenRuns = <String>{};
+
+  return (text) {
+    if (words.isNotEmpty) {
+      for (final match in _wordRunPattern.allMatches(text)) {
+        final run = match[0]!;
+
+        if (!seenRuns.add(run)) {
+          continue;
+        }
+
+        for (final length in lengths) {
+          if (length > run.length) {
+            break;
+          }
+
+          for (var at = 0; at + length <= run.length; at += 1) {
+            final piece = run.substring(at, at + length);
+
+            if (words.remove(piece)) {
+              remaining.remove(piece);
+            }
+          }
+        }
+      }
+    }
+
+    others.removeWhere((leaf) => text.contains(leaf) && remaining.remove(leaf));
+  };
+}
+
 /// What one walk of a source tree found.
 class Chki18nUsageScan {
   /// Creates the result of one usage scan.
@@ -161,10 +217,9 @@ Future<Chki18nUsageScan> findUnusedKeys(
     return const Chki18nUsageScan(unusedKeys: [], undefinedKeys: [], scannedFileCount: 0);
   }
 
-  // Shrinks as leaves turn up. Searching only what is still missing is what
-  // keeps this cheap: in a real project most keys are found in the first
-  // handful of files, and every later file costs one search per remaining leaf.
+  // Shrinks as leaves turn up, and the scan stops reading once it is empty.
   final remaining = keysByLeaf.keys.toSet();
+  final searchLeaves = _leafSearch(remaining);
   final skip = skipFiles.toSet();
   final isExcludedDirectory = createPathExcluder(options.exclude);
   final isExcludedFile = createFileExcluder(options.excludeFiles);
@@ -207,7 +262,9 @@ Future<Chki18nUsageScan> findUnusedKeys(
 
     scannedFileCount += 1;
 
-    remaining.removeWhere(content.contains);
+    if (remaining.isNotEmpty) {
+      searchLeaves(content);
+    }
 
     if (addresses == null) {
       continue;

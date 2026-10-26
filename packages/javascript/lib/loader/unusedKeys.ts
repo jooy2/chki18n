@@ -38,6 +38,71 @@ export const leafOfKey = (key: string): string => {
 
 const isScannableName = (name: string): boolean => EXTENSIONS.has(extensionOf(name));
 
+/**
+ * The characters a key segment is nearly always spelled with. Any occurrence of
+ * a leaf spelled only with them sits inside one unbroken run of them, so the
+ * runs of a file are all that has to be read to find it.
+ */
+const WORD_RUN_PATTERN = /[A-Za-z0-9_$-]+/g;
+
+const WORD_ONLY_PATTERN = /^[A-Za-z0-9_$-]+$/;
+
+/**
+ * A search that takes out of `remaining` every leaf a text holds, as plain
+ * substrings, the way `includes` would find them.
+ *
+ * Asking `includes` once per leaf per file costs the number of leaves times the
+ * size of the tree: a thousand files and five thousand unused keys took sixteen
+ * seconds. Instead each run of word characters is cut into the pieces as long
+ * as some leaf is and looked up in a set, and a run met in an earlier file is
+ * not cut again, since identifiers repeat from file to file. A leaf with any
+ * other character in it is still found with `includes`.
+ */
+function createLeafSearch(remaining: Set<string>): (text: string) => void {
+	const words = new Set<string>();
+	const others = new Set<string>();
+
+	for (const leaf of remaining) {
+		(WORD_ONLY_PATTERN.test(leaf) ? words : others).add(leaf);
+	}
+
+	const lengths = [...new Set([...words].map((leaf) => leaf.length))].sort((a, b) => a - b);
+	const seenRuns = new Set<string>();
+
+	return (text) => {
+		if (words.size > 0) {
+			for (const [run] of text.matchAll(WORD_RUN_PATTERN)) {
+				if (seenRuns.has(run)) {
+					continue;
+				}
+
+				seenRuns.add(run);
+
+				for (const length of lengths) {
+					if (length > run.length) {
+						break;
+					}
+
+					for (let at = 0; at + length <= run.length; at += 1) {
+						const piece = run.slice(at, at + length);
+
+						if (words.delete(piece)) {
+							remaining.delete(piece);
+						}
+					}
+				}
+			}
+		}
+
+		for (const leaf of others) {
+			if (text.includes(leaf)) {
+				others.delete(leaf);
+				remaining.delete(leaf);
+			}
+		}
+	};
+}
+
 export type Chki18nUsageScan = {
 	/** Keys whose leaf segment was found in no scanned file. */
 	unusedKeys: string[];
@@ -163,10 +228,9 @@ export async function findUnusedKeys(
 		return { unusedKeys: [], undefinedKeys, scannedFileCount: 0 };
 	}
 
-	// Shrinks as leaves turn up. Searching only what is still missing is what
-	// keeps this cheap: in a real project most keys are found in the first
-	// handful of files, and every later file costs one search per remaining leaf.
+	// Shrinks as leaves turn up, and the scan stops reading once it is empty.
 	const remaining = new Set(keysByLeaf.keys());
+	const searchLeaves = createLeafSearch(remaining);
 	const skip = new Set(skipFiles);
 	const isExcludedDirectory = createPathExcluder(options.exclude);
 	const isExcludedFile = createFileExcluder(options.excludeFiles);
@@ -206,10 +270,8 @@ export async function findUnusedKeys(
 
 		scannedFileCount += 1;
 
-		for (const leaf of remaining) {
-			if (content.includes(leaf)) {
-				remaining.delete(leaf);
-			}
+		if (remaining.size > 0) {
+			searchLeaves(content);
 		}
 
 		if (!addresses) {

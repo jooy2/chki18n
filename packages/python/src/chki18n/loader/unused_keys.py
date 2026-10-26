@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 import re
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import Final
 
@@ -42,6 +42,55 @@ def leaf_of_key(key: str) -> str:
     leaf = key if cut == -1 else key[cut + 1 :]
 
     return plural_base_of(leaf) or leaf
+
+
+#: The characters a key segment is nearly always spelled with. Any occurrence of
+#: a leaf spelled only with them sits inside one unbroken run of them, so the
+#: runs of a file are all that has to be read to find it.
+_WORD_RUN_PATTERN: Final = re.compile(r"[A-Za-z0-9_$-]+")
+
+
+def _leaf_search(remaining: dict[str, None]) -> Callable[[str], None]:
+    """A search that takes out of `remaining` every leaf a text holds.
+
+    It finds them as plain substrings, the way `in` would.
+
+    Asking for each leaf in each file costs the number of leaves times the size
+    of the tree: a thousand files and five thousand unused keys took sixteen
+    seconds. Instead each run of word characters is cut into the pieces as long as
+    some leaf is and looked up in a set, and a run met in an earlier file is not
+    cut again, since identifiers repeat from file to file. A leaf with any other
+    character in it is still searched for on its own.
+    """
+    words = {leaf for leaf in remaining if _WORD_RUN_PATTERN.fullmatch(leaf)}
+    others = {leaf for leaf in remaining if leaf not in words}
+    lengths = sorted({len(leaf) for leaf in words})
+    seen_runs: set[str] = set()
+
+    def search(text: str) -> None:
+        if words:
+            for run in _WORD_RUN_PATTERN.findall(text):
+                if run in seen_runs:
+                    continue
+
+                seen_runs.add(run)
+
+                for length in lengths:
+                    if length > len(run):
+                        break
+
+                    for at in range(len(run) - length + 1):
+                        piece = run[at : at + length]
+
+                        if piece in words:
+                            words.discard(piece)
+                            remaining.pop(piece, None)
+
+        for leaf in [leaf for leaf in others if leaf in text]:
+            others.discard(leaf)
+            remaining.pop(leaf, None)
+
+    return search
 
 
 def _is_scannable_name(name: str) -> bool:
@@ -163,13 +212,12 @@ def find_unused_keys(
     if not keys_by_leaf and not wants_undefined:
         return UsageScan()
 
-    # Shrinks as leaves turn up. Searching only what is still missing is what
-    # keeps this cheap: in a real project most keys are found in the first
-    # handful of files, and every later file costs one search per remaining leaf.
+    # Shrinks as leaves turn up, and the scan stops reading once it is empty.
     #
     # A dictionary rather than a set, because what is left over is the reported
     # order of the unused keys, and a set would shuffle it between runs.
     remaining: dict[str, None] = dict.fromkeys(keys_by_leaf)
+    search_leaves = _leaf_search(remaining)
     skip = set(skip_files)
     is_excluded_directory = create_path_excluder(options.exclude)
     is_excluded_file = create_file_excluder(options.exclude_files)
@@ -207,8 +255,8 @@ def find_unused_keys(
 
         scanned_file_count += 1
 
-        for leaf in [leaf for leaf in remaining if leaf in content]:
-            del remaining[leaf]
+        if remaining:
+            search_leaves(content)
 
         if addresses is None:
             continue
