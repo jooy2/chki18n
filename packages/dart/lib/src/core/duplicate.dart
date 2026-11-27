@@ -20,9 +20,44 @@ const String keySeparator = '.';
 
 /// A key a JavaScript object keeps ahead of the others: a whole number below
 /// 2³² − 1, written without a leading zero.
-final RegExp _arrayIndexPattern = RegExp(r'^(?:0|[1-9][0-9]{0,9})$');
 
-bool _isArrayIndex(String key) => _arrayIndexPattern.hasMatch(key) && int.parse(key) < 4294967295;
+bool _isArrayIndex(String key) {
+  final length = key.length;
+
+  // `0`, or up to ten digits that do not start with one.
+  if (length == 0 || length > 10) {
+    return false;
+  }
+
+  if (key.codeUnitAt(0) == 0x30) {
+    return length == 1;
+  }
+
+  var value = 0;
+
+  for (var index = 0; index < length; index += 1) {
+    final unit = key.codeUnitAt(index);
+
+    if (unit < 0x30 || unit > 0x39) {
+      return false;
+    }
+
+    value = value * 10 + unit - 0x30;
+  }
+
+  return value < 4294967295;
+}
+
+/// Whether one of the keys of [map] is one JavaScript would put first.
+bool _hasArrayIndexKey(Map<Object?, Object?> map) {
+  for (final key in map.keys) {
+    if (_isArrayIndex('$key')) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 /// The entries of [map] in the order a JavaScript object holds its keys, which
 /// is the order the reference package reaches them in.
@@ -52,6 +87,18 @@ bool _isBranch(Object? value) =>
 void _walkLeaves(Object? translations, void Function(String key, Object? value) visit) {
   void walk(Object? value, String path) {
     if (value is Map && value.isNotEmpty) {
+      // Almost no object has a key that is a whole number, and one without is
+      // walked as it is rather than copied into the order JavaScript keeps.
+      if (!_hasArrayIndexKey(value)) {
+        for (final entry in value.entries) {
+          final key = '${entry.key}';
+
+          walk(entry.value, path.isEmpty ? key : '$path$keySeparator$key');
+        }
+
+        return;
+      }
+
       for (final entry in _entriesInObjectOrder(value)) {
         walk(entry.value, path.isEmpty ? entry.key : '$path$keySeparator${entry.key}');
       }
@@ -99,11 +146,14 @@ void _walkLeaves(Object? translations, void Function(String key, Object? value) 
   List<String>? duplicates;
 
   _walkLeaves(translations, (key, value) {
-    if (flat.containsKey(key) && !(duplicates ??= <String>[]).contains(key)) {
-      duplicates!.add(key);
-    }
+    final count = flat.length;
 
     flat[key] = value;
+
+    // The map only stays the same size when the key was already in it.
+    if (flat.length == count && !(duplicates ??= <String>[]).contains(key)) {
+      duplicates!.add(key);
+    }
   });
 
   return (translations: flat, duplicates: duplicates ?? const []);
