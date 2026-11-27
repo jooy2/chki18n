@@ -29,24 +29,11 @@ class Chki18nIssueGroup {
   final Chki18nLevelCount counts;
 }
 
-final Map<Chki18nCheckCode, int> _codeOrder = {
-  for (var index = 0; index < Chki18nCheckCode.values.length; index += 1)
-    Chki18nCheckCode.values[index]: index,
-};
-
-const Map<Chki18nLevel, int> _levelOrder = {
-  Chki18nLevel.error: 0,
-  Chki18nLevel.warn: 1,
-  Chki18nLevel.info: 2,
-};
-
 /// Issues about the run itself rather than about one locale or one file.
 const String generalLabel = '(general)';
 
 /// The unnamed group a single set of translation files forms.
 const String defaultGroupLabel = '(default)';
-
-int _codeRank(Chki18nCheckCode code) => _codeOrder[code] ?? _codeOrder.length;
 
 /// Report order within a section: what fails the run first, then the checks in
 /// the order they are declared, then alphabetically.
@@ -54,13 +41,15 @@ int _codeRank(Chki18nCheckCode code) => _codeOrder[code] ?? _codeOrder.length;
 /// Two runs over unchanged files therefore print the same lines in the same
 /// places, which is what makes a saved report worth diffing.
 int compareIssues(Chki18nIssue a, Chki18nIssue b) {
-  final byLevel = _levelOrder[a.level]! - _levelOrder[b.level]!;
+  // Both enums are declared in report order, error first and `NO_KEY` before
+  // the checks that come after it, so the position of each is its rank.
+  final byLevel = a.level.index - b.level.index;
 
   if (byLevel != 0) {
     return byLevel;
   }
 
-  final byCode = _codeRank(a.code) - _codeRank(b.code);
+  final byCode = a.code.index - b.code.index;
 
   if (byCode != 0) {
     return byCode;
@@ -78,15 +67,17 @@ int compareIssues(Chki18nIssue a, Chki18nIssue b) {
 /// a missing and an extra tag, could trade places and be reported in another
 /// order than the other two packages report them, whose sorts are stable.
 void _sortStably<T>(List<T> list, int Function(T a, T b) compare) {
-  final indexed = [for (var index = 0; index < list.length; index += 1) (index, list[index])]
-    ..sort((a, b) {
-      final order = compare(a.$2, b.$2);
+  // Positions are sorted rather than pairs of position and item, so the sort
+  // moves plain integers and nothing is allocated per item.
+  final items = List<T>.of(list);
+  final order = List<int>.generate(items.length, (index) => index)..sort((a, b) {
+    final byItem = compare(items[a], items[b]);
 
-      return order != 0 ? order : a.$1 - b.$1;
-    });
+    return byItem != 0 ? byItem : a - b;
+  });
 
-  for (var index = 0; index < list.length; index += 1) {
-    list[index] = indexed[index].$2;
+  for (var index = 0; index < items.length; index += 1) {
+    list[index] = items[order[index]];
   }
 }
 
@@ -178,8 +169,9 @@ List<Chki18nIssueGroup> groupIssues(
           final left = Chki18nCheckCode.parse(a.id);
           final right = Chki18nCheckCode.parse(b.id);
 
-          return (left == null ? _codeOrder.length : _codeRank(left)) -
-              (right == null ? _codeOrder.length : _codeRank(right));
+          final last = Chki18nCheckCode.values.length;
+
+          return (left?.index ?? last) - (right?.index ?? last);
         }
 
         return a.id.compareTo(b.id);
