@@ -113,8 +113,8 @@ export const INTERPOLATION_DELIMITERS: readonly Chki18nDelimiters[] = [
 ];
 
 /** The opening characters of every pair above, as one test per character. */
-const isOpener = (character: string): boolean =>
-	character === '{' || character === '[' || character === '(' || character === '<';
+const isOpener = (code: number): boolean =>
+	code === 0x7b || code === 0x5b || code === 0x28 || code === 0x3c;
 
 /**
  * Characters an interpolation key can start with, which is how a placeholder
@@ -122,12 +122,12 @@ const isOpener = (character: string): boolean =>
  * what tells `{name}` apart from the `{"` of the JSON holding it, which is the
  * whole reason this can be pointed at a file's raw text.
  */
-const isKeyStart = (character: string): boolean =>
-	(character >= 'a' && character <= 'z') ||
-	(character >= 'A' && character <= 'Z') ||
-	(character >= '0' && character <= '9') ||
-	character === '_' ||
-	character === '$';
+const isKeyStart = (code: number): boolean =>
+	(code >= 0x61 && code <= 0x7a) ||
+	(code >= 0x41 && code <= 0x5a) ||
+	(code >= 0x30 && code <= 0x39) ||
+	code === 0x5f ||
+	code === 0x24;
 
 /**
  * Guess which delimiters a text writes its interpolation keys with, or `null`
@@ -144,7 +144,7 @@ export function detectInterpolationDelimiters(text: string): Chki18nDelimiters |
 	const seen = new Set<string>();
 
 	for (let at = 0; at < text.length; at += 1) {
-		const open = text[at];
+		const open = text.charCodeAt(at);
 
 		if (!isOpener(open)) {
 			continue;
@@ -152,7 +152,7 @@ export function detectInterpolationDelimiters(text: string): Chki18nDelimiters |
 
 		let end = at + 1;
 
-		while (text[end] === open) {
+		while (text.charCodeAt(end) === open) {
 			end += 1;
 		}
 
@@ -160,14 +160,16 @@ export function detectInterpolationDelimiters(text: string): Chki18nDelimiters |
 
 		// `{{ name }}` is as common as `{{name}}`, and the space belongs to the
 		// style rather than to the delimiter.
-		while (text[key] === ' ') {
+		while (text.charCodeAt(key) === 0x20) {
 			key += 1;
 		}
 
-		if (key < text.length && isKeyStart(text[key])) {
+		if (key < text.length && isKeyStart(text.charCodeAt(key))) {
+			const opener = text[at];
+
 			// A run of three or more is read as the doubled form, the way a run of
 			// one is read as the single one.
-			seen.add(end - at > 1 ? `${open}${open}` : open);
+			seen.add(end - at > 1 ? `${opener}${opener}` : opener);
 
 			// Nothing later in the text can outrank the first candidate, so a file
 			// written in it is answered by its first placeholder.
