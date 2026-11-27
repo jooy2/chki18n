@@ -74,21 +74,48 @@ class Result:
 
 :::
 
+::: lang rs
+
+```rust
+#[derive(Clone, Debug, PartialEq)]
+pub struct CheckResult {
+    pub success: bool,
+    pub issues: Vec<Issue>,
+    pub summary: Summary,
+    pub target: String,
+    pub locales: Vec<String>,
+    pub groups: Vec<String>,
+    pub key_count: usize,
+    pub files: Vec<SourceFile>,
+    pub file_format: Option<FileFormat>,
+    pub elapsed_ms: u128,
+}
+
+impl CheckResult {
+    pub fn issues_by_code(&self) -> IndexMap<CheckCode, Vec<&Issue>>;
+    pub fn to_json(&self) -> serde_json::Value;
+}
+```
+
+The grouping by code is a method rather than a field, worked out from `issues` each time it is called. `to_json()` gives the whole result in the shape the `json` reporter writes, with the field names in their JavaScript spelling: `keyCount`, `issuesByCode`, `elapsedMs`.
+
+:::
+
 | Field | Meaning |
 | --- | --- |
-| `success` | <Lang js="`false`" dart="`false`" py="`False`" /> when at least one issue is at `error` level. Warnings never affect it. |
+| `success` | <Lang js="`false`" dart="`false`" py="`False`" rs="`false`" /> when at least one issue is at `error` level. Warnings never affect it. |
 | `issues` | Every issue, in scan order: target language key order, locale by locale. |
-| <Lang js="issuesByCode" dart="issuesByCode" py="issues_by_code" code /> | The same issues grouped by check code, in the order the codes were first seen. |
+| <Lang js="issuesByCode" dart="issuesByCode" py="issues_by_code" rs="issues_by_code()" code /> | The same issues grouped by check code, in the order the codes were first seen. |
 | `summary` | Counts by level, code, locale and group. |
 | `target` | The language everything was compared against. |
 | `locales` | Every locale that took part. |
-| `groups` | Every group name. <Lang js="`['']`" dart="`['']`" py="`[&quot;&quot;]`" /> for a single unnamed group. |
-| <Lang js="keyCount" dart="keyCount" py="key_count" code /> | Distinct keys compared, across every group. |
+| `groups` | Every group name. <Lang js="`['']`" dart="`['']`" py="`[&quot;&quot;]`" rs="`[&quot;&quot;]`" /> for a single unnamed group. |
+| <Lang js="keyCount" dart="keyCount" py="key_count" rs="key_count" code /> | Distinct keys compared, across every group. |
 | `files` | The files that were read. Empty for in-memory input. |
-| <Lang js="fileFormat" dart="fileFormat" py="file_format" code /> | `single`, `folder`, `nested`, or <Lang js="`null`" dart="`null`" py="`None`" /> for in-memory input. |
-| <Lang js="elapsedMs" dart="elapsedMs" py="elapsed_ms" code /> | How long the call took, scan included where there was one. |
+| <Lang js="fileFormat" dart="fileFormat" py="file_format" rs="file_format" code /> | `single`, `folder`, `nested`, or <Lang js="`null`" dart="`null`" py="`None`" rs="`None`" /> for in-memory input. |
+| <Lang js="elapsedMs" dart="elapsedMs" py="elapsed_ms" rs="elapsed_ms" code /> | How long the call took, scan included where there was one. |
 
-<Lang js="`issues` and `issuesByCode`" dart="`issues` and `issuesByCode`" py="`issues` and `issues_by_code`" /> hold the same objects. Grouping by code does not copy an issue.
+<Lang js="`issues` and `issuesByCode`" dart="`issues` and `issuesByCode`" py="`issues` and `issues_by_code`" rs="`issues` and `issues_by_code()`" /> hold the same objects. Grouping by code does not copy an issue.
 
 ::: lang dart py
 
@@ -108,6 +135,22 @@ result.of(Chki18nCheckCode.noKey); // issuesByCode[noKey] ?? const []
 
 ```python
 result.of("NO_KEY")  # issues_by_code.get("NO_KEY", [])
+```
+
+:::
+
+::: lang rs
+
+Rust has no `of`. Since `issues_by_code()` walks `issues` to build its map anyway, reading one check is a filter over `issues`:
+
+```rust
+use chki18n::CheckCode;
+
+let missing: Vec<_> = result
+    .issues
+    .iter()
+    .filter(|issue| issue.code == CheckCode::NoKey)
+    .collect();
 ```
 
 :::
@@ -180,6 +223,33 @@ class Issue:
 
 :::
 
+::: lang rs
+
+```rust
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Issue {
+    pub code: CheckCode,
+    pub level: Level,
+    pub locale: String,
+    pub key: String,
+    pub group: String,
+    pub value: Option<String>,
+    pub target_value: Option<String>,
+    pub interpolation: Option<String>,
+    pub related_key: Option<String>,
+    pub file: Option<String>,
+    pub message: String,
+}
+
+impl Issue {
+    pub fn to_json(&self) -> serde_json::Value;
+}
+```
+
+`code` and `level` are the `CheckCode` and `Level` enums. `as_str()` gives the spelling the other packages and the JSON report use, such as `NO_KEY` and `error`. The fields are public, so there is no `with_level`: an issue's level is set by assigning to it.
+
+:::
+
 | Field | Meaning |
 | --- | --- |
 | `code` | Which check reported it. See [Checks](/guide/checks). |
@@ -188,9 +258,9 @@ class Issue:
 | `key` | The flattened key. Empty for file and option level issues. |
 | `group` | The group the key belongs to. Empty when there is only one. |
 | `value` | The value as found, where the check is about a value. |
-| <Lang js="targetValue" dart="targetValue" py="target_value" code /> | The target language's value, which is what it was compared against. |
+| <Lang js="targetValue" dart="targetValue" py="target_value" rs="target_value" code /> | The target language's value, which is what it was compared against. |
 | `interpolation` | The placeholder that triggered an interpolation issue. |
-| <Lang js="relatedKey" dart="relatedKey" py="related_key" code /> | The other key involved — for `DUPLICATE_VALUE`, the first key using that value. |
+| <Lang js="relatedKey" dart="relatedKey" py="related_key" rs="related_key" code /> | The other key involved — for `DUPLICATE_VALUE`, the first key using that value. |
 | `file` | Absolute path of the file the key came from, when it came from one. |
 | `message` | A sentence describing this occurrence. |
 
@@ -200,9 +270,9 @@ Optional fields are **absent** rather than `undefined`, so `JSON.stringify` and 
 
 :::
 
-::: lang dart py
+::: lang dart py rs
 
-An optional field with nothing in it is <Lang dart="`null`" py="`None`" />, and <Lang dart="`toJson`" py="`to_json`" code /> leaves it out instead of writing it as `null`. That is what keeps the `json` reporter's output identical across the three packages.
+An optional field with nothing in it is <Lang dart="`null`" py="`None`" rs="`None`" />, and <Lang dart="`toJson`" py="`to_json`" rs="`to_json`" code /> leaves it out instead of writing it as `null`. That is what keeps the `json` reporter's output identical across the four packages.
 
 :::
 
@@ -261,6 +331,25 @@ class Summary:
 
 :::
 
+::: lang rs
+
+```rust
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Summary {
+    pub error: usize,
+    pub warn: usize,
+    pub info: usize,
+    pub total: usize,
+    pub by_code: IndexMap<CheckCode, usize>,
+    pub by_locale: IndexMap<String, LevelCount>,
+    pub by_group: IndexMap<String, LevelCount>,
+}
+```
+
+`Summary` and `LevelCount` are in `chki18n::types`, and `LevelCount::of(level)` reads the count of one level. The maps are `indexmap::IndexMap`, which keeps the order the codes, locales and groups were first met in. chki18n does not re-export the crate, so naming the type in your own code needs `indexmap` among your dependencies.
+
+:::
+
 Computed in one pass over the issues:
 
 ::: lang js
@@ -301,7 +390,21 @@ result.summary
 
 :::
 
-<Lang js="byLocale" dart="byLocale" py="by_locale" code /> only counts issues that belong to a locale; an option or file level issue lands in <Lang js="byGroup" dart="byGroup" py="by_group" code /> but not in <Lang js="byLocale" dart="byLocale" py="by_locale" code />.
+::: lang rs
+
+```rust
+result.summary;
+// Summary {
+//     error: 2, warn: 7, info: 1, total: 10,
+//     by_code: {NoKey: 1, EmptyValue: 1, NotTranslatedValue: 1, …},
+//     by_locale: {"ko": LevelCount { error: 2, warn: 7, info: 0 }},
+//     by_group: {"": LevelCount { error: 2, warn: 7, info: 1 }},
+// }
+```
+
+:::
+
+<Lang js="byLocale" dart="byLocale" py="by_locale" rs="by_locale" code /> only counts issues that belong to a locale; an option or file level issue lands in <Lang js="byGroup" dart="byGroup" py="by_group" rs="by_group" code /> but not in <Lang js="byLocale" dart="byLocale" py="by_locale" rs="by_locale" code />.
 
 ## Rendering a result
 
@@ -352,6 +455,21 @@ CHECK_META["NO_KEY"]
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::CheckCode;
+
+CheckCode::NoKey.meta();
+// CheckMeta {
+//     level: Error,
+//     summary: "Some translation files did not include the following keys",
+//     description: "The key exists in the target language but is missing here.",
+// }
+```
+
+:::
+
 `summary` heads a list of occurrences and `description` describes one. An issue's own `message` is the description unless the check produced something more specific, as `NO_INTERPOLATION_KEY` does when it names the placeholder.
 
 A minimal report:
@@ -396,9 +514,23 @@ for code, issues in result.issues_by_code.items():
 
 :::
 
+::: lang rs
+
+```rust
+for (code, issues) in result.issues_by_code() {
+    println!("{} ({})", code.meta().summary, issues.len());
+
+    for issue in issues {
+        println!("  {} {} — {}", issue.locale, issue.key, issue.message);
+    }
+}
+```
+
+:::
+
 ## Regrouping a filtered subset
 
-<Lang js="`issuesByCode` and `summary`" dart="`issuesByCode` and `summary`" py="`issues_by_code` and `summary`" /> describe the whole result. Filter the issues and the two helpers rebuild both:
+<Lang js="`issuesByCode` and `summary`" dart="`issuesByCode` and `summary`" py="`issues_by_code` and `summary`" rs="`issues_by_code()` and `summary`" /> describe the whole result. Filter the issues and rebuild both from what is left:
 
 ::: lang js
 
@@ -435,6 +567,27 @@ visible = [issue for issue in result.issues if issue.locale != "ja"]
 
 group_issues_by_code(visible)
 summarize_issues(visible)
+```
+
+:::
+
+::: lang rs
+
+Rust has `summarize_issues` in `chki18n::core::issue` for the counts alone, and no function for the grouping, which is a method of a result. To rebuild both, make a result of the filtered issues with [`build_result`](#building-a-result-of-your-own) and the options the run was resolved with:
+
+```rust
+use chki18n::core::result::{build_result, ResultFacts};
+
+let visible: Vec<_> = result
+    .issues
+    .iter()
+    .filter(|issue| issue.locale != "ja")
+    .cloned()
+    .collect();
+let filtered = build_result(visible, &options, ResultFacts::default());
+
+filtered.issues_by_code();
+filtered.summary;
 ```
 
 :::
@@ -515,9 +668,45 @@ by_file = group_by(result.issues, lambda issue: issue.file or "")
 
 :::
 
+::: lang rs
+
+```rust
+use std::collections::BTreeMap;
+
+use chki18n::Issue;
+
+fn group_by<'a>(
+    issues: &'a [Issue],
+    key_of: impl Fn(&Issue) -> String,
+) -> BTreeMap<String, Vec<&'a Issue>> {
+    let mut grouped: BTreeMap<String, Vec<&Issue>> = BTreeMap::new();
+
+    for issue in issues {
+        grouped.entry(key_of(issue)).or_default().push(issue);
+    }
+
+    grouped
+}
+
+// By locale
+let by_locale = group_by(&result.issues, |issue| issue.locale.clone());
+
+// By key, to show every problem with one string at once
+let by_key = group_by(&result.issues, |issue| {
+    format!("{}/{}", issue.group, issue.key)
+});
+
+// By file, to annotate an editor
+let by_file = group_by(&result.issues, |issue| {
+    issue.file.clone().unwrap_or_default()
+});
+```
+
+:::
+
 ## Building a result of your own
 
-<Lang js="buildResult" dart="buildResult" py="build_result" code /> assembles one from a list of issues, deriving `success`, the grouping and the summary so they cannot disagree with the issues they describe:
+<Lang js="buildResult" dart="buildResult" py="build_result" rs="build_result" code /> assembles one from a list of issues, deriving `success`, the grouping and the summary so they cannot disagree with the issues they describe:
 
 ::: lang js
 
@@ -564,6 +753,38 @@ result = build_result(
     locales=["en", "ko"],
     groups=[""],
 )
+```
+
+:::
+
+::: lang rs
+
+```rust
+use chki18n::core::issue::{create_issue, IssueInit};
+use chki18n::core::result::{build_result, ResultFacts};
+use chki18n::{resolve_options, CheckCode, Options};
+
+let (options, _) = resolve_options(&Options {
+    target: Some("en".into()),
+    ..Options::default()
+});
+
+let result = build_result(
+    vec![create_issue(
+        CheckCode::NoKey,
+        IssueInit {
+            locale: Some("ko".into()),
+            key: Some("a".into()),
+            ..IssueInit::default()
+        },
+    )],
+    &options,
+    ResultFacts {
+        locales: vec!["en".into(), "ko".into()],
+        groups: vec!["".into()],
+        ..ResultFacts::default()
+    },
+);
 ```
 
 :::

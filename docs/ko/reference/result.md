@@ -74,21 +74,48 @@ class Result:
 
 :::
 
+::: lang rs
+
+```rust
+#[derive(Clone, Debug, PartialEq)]
+pub struct CheckResult {
+    pub success: bool,
+    pub issues: Vec<Issue>,
+    pub summary: Summary,
+    pub target: String,
+    pub locales: Vec<String>,
+    pub groups: Vec<String>,
+    pub key_count: usize,
+    pub files: Vec<SourceFile>,
+    pub file_format: Option<FileFormat>,
+    pub elapsed_ms: u128,
+}
+
+impl CheckResult {
+    pub fn issues_by_code(&self) -> IndexMap<CheckCode, Vec<&Issue>>;
+    pub fn to_json(&self) -> serde_json::Value;
+}
+```
+
+코드별 묶음은 필드가 아니라 메서드이며, 부를 때마다 `issues`에서 새로 만듭니다. `to_json()`은 결과 전체를 `json` 리포터가 쓰는 모양으로 돌려주고, 필드 이름은 `keyCount`, `issuesByCode`, `elapsedMs`처럼 JavaScript 표기를 따릅니다.
+
+:::
+
 | 필드 | 의미 |
 | --- | --- |
 | `success` | `error` 수준 이슈가 하나라도 있으면 거짓입니다. 경고는 영향을 주지 않습니다. |
 | `issues` | 모든 이슈를 검사 순서대로. 기준 언어의 키 순서를 따라 로케일별로 이어집니다. |
-| <Lang js="issuesByCode" dart="issuesByCode" py="issues_by_code" code /> | 같은 이슈를 검사 코드별로 묶은 것. 코드가 처음 등장한 순서입니다. |
+| <Lang js="issuesByCode" dart="issuesByCode" py="issues_by_code" rs="issues_by_code()" code /> | 같은 이슈를 검사 코드별로 묶은 것. 코드가 처음 등장한 순서입니다. |
 | `summary` | 심각도, 코드, 로케일, 그룹별 집계. |
 | `target` | 모든 비교의 기준이 된 언어. |
 | `locales` | 비교에 참여한 모든 로케일. |
-| `groups` | 모든 그룹 이름. 이름 없는 그룹 하나뿐이면 <Lang js="`['']`" dart="`['']`" py="`[&quot;&quot;]`" />입니다. |
-| <Lang js="keyCount" dart="keyCount" py="key_count" code /> | 모든 그룹에 걸쳐 비교한 고유 키 수. |
+| `groups` | 모든 그룹 이름. 이름 없는 그룹 하나뿐이면 <Lang js="`['']`" dart="`['']`" py="`[&quot;&quot;]`" rs="`[&quot;&quot;]`" />입니다. |
+| <Lang js="keyCount" dart="keyCount" py="key_count" rs="key_count" code /> | 모든 그룹에 걸쳐 비교한 고유 키 수. |
 | `files` | 읽어들인 파일. 메모리 입력이면 비어 있습니다. |
-| <Lang js="fileFormat" dart="fileFormat" py="file_format" code /> | `single`, `folder`, `nested`, 또는 메모리 입력이면 <Lang js="`null`" dart="`null`" py="`None`" />. |
-| <Lang js="elapsedMs" dart="elapsedMs" py="elapsed_ms" code /> | 호출 전체에 걸린 시간. 파일을 읽었다면 그 시간도 포함합니다. |
+| <Lang js="fileFormat" dart="fileFormat" py="file_format" rs="file_format" code /> | `single`, `folder`, `nested`, 또는 메모리 입력이면 <Lang js="`null`" dart="`null`" py="`None`" rs="`None`" />. |
+| <Lang js="elapsedMs" dart="elapsedMs" py="elapsed_ms" rs="elapsed_ms" code /> | 호출 전체에 걸린 시간. 파일을 읽었다면 그 시간도 포함합니다. |
 
-<Lang js="`issues`와 `issuesByCode`" dart="`issues`와 `issuesByCode`" py="`issues`와 `issues_by_code`" />는 같은 객체를 담고 있습니다. 코드별로 묶어도 이슈가 복사되지는 않습니다.
+<Lang js="`issues`와 `issuesByCode`" dart="`issues`와 `issuesByCode`" py="`issues`와 `issues_by_code`" rs="`issues`와 `issues_by_code()`" />는 같은 객체를 담고 있습니다. 코드별로 묶어도 이슈가 복사되지는 않습니다.
 
 ::: lang dart py
 
@@ -108,6 +135,22 @@ result.of(Chki18nCheckCode.noKey); // issuesByCode[noKey] ?? const []
 
 ```python
 result.of("NO_KEY")  # issues_by_code.get("NO_KEY", [])
+```
+
+:::
+
+::: lang rs
+
+Rust에는 `of`가 없습니다. `issues_by_code()`도 어차피 `issues`를 훑어 맵을 만드므로, 검사 하나만 꺼낼 때는 `issues`를 걸러내면 됩니다.
+
+```rust
+use chki18n::CheckCode;
+
+let missing: Vec<_> = result
+    .issues
+    .iter()
+    .filter(|issue| issue.code == CheckCode::NoKey)
+    .collect();
 ```
 
 :::
@@ -180,6 +223,33 @@ class Issue:
 
 :::
 
+::: lang rs
+
+```rust
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Issue {
+    pub code: CheckCode,
+    pub level: Level,
+    pub locale: String,
+    pub key: String,
+    pub group: String,
+    pub value: Option<String>,
+    pub target_value: Option<String>,
+    pub interpolation: Option<String>,
+    pub related_key: Option<String>,
+    pub file: Option<String>,
+    pub message: String,
+}
+
+impl Issue {
+    pub fn to_json(&self) -> serde_json::Value;
+}
+```
+
+`code`와 `level`은 `CheckCode`와 `Level` 열거형입니다. `as_str()`을 부르면 다른 패키지와 JSON 리포트가 쓰는 표기인 `NO_KEY`, `error`를 얻습니다. 필드가 공개되어 있어 `with_level`은 없고, 심각도는 필드에 직접 대입해 바꿉니다.
+
+:::
+
 | 필드 | 의미 |
 | --- | --- |
 | `code` | 어느 검사가 보고했는지. [검사 항목](/ko/guide/checks) 참고. |
@@ -188,9 +258,9 @@ class Issue:
 | `key` | 평탄화된 키. 파일이나 옵션 수준의 이슈는 비어 있습니다. |
 | `group` | 키가 속한 그룹. 그룹이 하나뿐이면 비어 있습니다. |
 | `value` | 값에 대한 검사라면, 발견된 그대로의 값. |
-| <Lang js="targetValue" dart="targetValue" py="target_value" code /> | 비교 대상이 된 기준 언어의 값. |
+| <Lang js="targetValue" dart="targetValue" py="target_value" rs="target_value" code /> | 비교 대상이 된 기준 언어의 값. |
 | `interpolation` | 보간 관련 이슈를 일으킨 자리 표시자. |
-| <Lang js="relatedKey" dart="relatedKey" py="related_key" code /> | 함께 얽힌 다른 키. `DUPLICATE_VALUE`라면 그 값을 먼저 쓴 키입니다. |
+| <Lang js="relatedKey" dart="relatedKey" py="related_key" rs="related_key" code /> | 함께 얽힌 다른 키. `DUPLICATE_VALUE`라면 그 값을 먼저 쓴 키입니다. |
 | `file` | 키가 파일에서 왔다면 그 파일의 절대 경로. |
 | `message` | 이 발생 건을 설명하는 한 문장. |
 
@@ -200,9 +270,9 @@ class Issue:
 
 :::
 
-::: lang dart py
+::: lang dart py rs
 
-값이 없는 선택적 필드는 <Lang dart="`null`" py="`None`" />이며, <Lang dart="`toJson`" py="`to_json`" code />은 이를 `null`로 쓰지 않고 생략합니다. 그래서 `json` 리포터의 출력이 세 패키지에서 똑같습니다.
+값이 없는 선택적 필드는 <Lang dart="`null`" py="`None`" rs="`None`" />이며, <Lang dart="`toJson`" py="`to_json`" rs="`to_json`" code />은 이를 `null`로 쓰지 않고 생략합니다. 그래서 `json` 리포터의 출력이 네 패키지에서 똑같습니다.
 
 :::
 
@@ -261,6 +331,25 @@ class Summary:
 
 :::
 
+::: lang rs
+
+```rust
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Summary {
+    pub error: usize,
+    pub warn: usize,
+    pub info: usize,
+    pub total: usize,
+    pub by_code: IndexMap<CheckCode, usize>,
+    pub by_locale: IndexMap<String, LevelCount>,
+    pub by_group: IndexMap<String, LevelCount>,
+}
+```
+
+`Summary`와 `LevelCount`는 `chki18n::types`에 있고, 한 심각도의 수는 `LevelCount::of(level)`로 읽습니다. 맵은 `indexmap::IndexMap`이라 코드, 로케일, 그룹이 처음 나온 순서를 지킵니다. chki18n이 이 크레이트를 다시 내보내지 않으므로, 코드에서 타입 이름을 직접 쓰려면 `indexmap`을 의존성에 추가해야 합니다.
+
+:::
+
 이슈를 한 번 훑으면서 계산합니다.
 
 ::: lang js
@@ -301,7 +390,21 @@ result.summary
 
 :::
 
-<Lang js="byLocale" dart="byLocale" py="by_locale" code />은 로케일에 속한 이슈만 셉니다. 옵션이나 파일 수준의 이슈는 <Lang js="byGroup" dart="byGroup" py="by_group" code />에는 들어가지만 <Lang js="byLocale" dart="byLocale" py="by_locale" code />에는 들어가지 않습니다.
+::: lang rs
+
+```rust
+result.summary;
+// Summary {
+//     error: 2, warn: 7, info: 1, total: 10,
+//     by_code: {NoKey: 1, EmptyValue: 1, NotTranslatedValue: 1, …},
+//     by_locale: {"ko": LevelCount { error: 2, warn: 7, info: 0 }},
+//     by_group: {"": LevelCount { error: 2, warn: 7, info: 1 }},
+// }
+```
+
+:::
+
+<Lang js="byLocale" dart="byLocale" py="by_locale" rs="by_locale" code />은 로케일에 속한 이슈만 셉니다. 옵션이나 파일 수준의 이슈는 <Lang js="byGroup" dart="byGroup" py="by_group" rs="by_group" code />에는 들어가지만 <Lang js="byLocale" dart="byLocale" py="by_locale" rs="by_locale" code />에는 들어가지 않습니다.
 
 ## 결과를 화면에 그리기
 
@@ -352,6 +455,21 @@ CHECK_META["NO_KEY"]
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::CheckCode;
+
+CheckCode::NoKey.meta();
+// CheckMeta {
+//     level: Error,
+//     summary: "Some translation files did not include the following keys",
+//     description: "The key exists in the target language but is missing here.",
+// }
+```
+
+:::
+
 `summary`는 여러 발생 건을 묶는 제목이고, `description`은 한 건을 설명합니다. 이슈의 `message`는 검사가 더 구체적인 문장을 만들지 않았다면 `description`과 같습니다. `NO_INTERPOLATION_KEY`가 자리 표시자 이름을 넣어 만드는 문장이 그런 경우입니다.
 
 가장 단순한 리포트는 이렇습니다.
@@ -396,9 +514,23 @@ for code, issues in result.issues_by_code.items():
 
 :::
 
+::: lang rs
+
+```rust
+for (code, issues) in result.issues_by_code() {
+    println!("{} ({})", code.meta().summary, issues.len());
+
+    for issue in issues {
+        println!("  {} {} — {}", issue.locale, issue.key, issue.message);
+    }
+}
+```
+
+:::
+
 ## 걸러낸 이슈 다시 묶기
 
-<Lang js="`issuesByCode`와 `summary`" dart="`issuesByCode`와 `summary`" py="`issues_by_code`와 `summary`" />는 결과 전체를 설명합니다. 이슈를 걸러낸 다음 두 헬퍼를 부르면 둘 다 다시 만들어집니다.
+<Lang js="`issuesByCode`와 `summary`" dart="`issuesByCode`와 `summary`" py="`issues_by_code`와 `summary`" rs="`issues_by_code()`와 `summary`" />는 결과 전체를 설명합니다. 이슈를 걸러낸 다음 남은 이슈로 둘 다 다시 만들 수 있습니다.
 
 ::: lang js
 
@@ -435,6 +567,27 @@ visible = [issue for issue in result.issues if issue.locale != "ja"]
 
 group_issues_by_code(visible)
 summarize_issues(visible)
+```
+
+:::
+
+::: lang rs
+
+Rust에는 집계만 다시 만드는 `summarize_issues`가 `chki18n::core::issue`에 있지만, 코드별 묶음은 결과의 메서드라 따로 만드는 함수가 없습니다. 둘 다 다시 만들려면 걸러낸 이슈와 실행에 쓴 해석된 옵션을 [`build_result`](#직접-결과-만들기)에 넘겨 결과를 새로 만듭니다.
+
+```rust
+use chki18n::core::result::{build_result, ResultFacts};
+
+let visible: Vec<_> = result
+    .issues
+    .iter()
+    .filter(|issue| issue.locale != "ja")
+    .cloned()
+    .collect();
+let filtered = build_result(visible, &options, ResultFacts::default());
+
+filtered.issues_by_code();
+filtered.summary;
 ```
 
 :::
@@ -515,9 +668,45 @@ by_file = group_by(result.issues, lambda issue: issue.file or "")
 
 :::
 
+::: lang rs
+
+```rust
+use std::collections::BTreeMap;
+
+use chki18n::Issue;
+
+fn group_by<'a>(
+    issues: &'a [Issue],
+    key_of: impl Fn(&Issue) -> String,
+) -> BTreeMap<String, Vec<&'a Issue>> {
+    let mut grouped: BTreeMap<String, Vec<&Issue>> = BTreeMap::new();
+
+    for issue in issues {
+        grouped.entry(key_of(issue)).or_default().push(issue);
+    }
+
+    grouped
+}
+
+// 로케일별
+let by_locale = group_by(&result.issues, |issue| issue.locale.clone());
+
+// 키별. 문자열 하나의 모든 문제를 한 번에 보여줄 때
+let by_key = group_by(&result.issues, |issue| {
+    format!("{}/{}", issue.group, issue.key)
+});
+
+// 파일별. 편집기에 표시를 남길 때
+let by_file = group_by(&result.issues, |issue| {
+    issue.file.clone().unwrap_or_default()
+});
+```
+
+:::
+
 ## 직접 결과 만들기
 
-<Lang js="buildResult" dart="buildResult" py="build_result" code />는 이슈 목록으로 결과 하나를 조립합니다. `success`와 코드별 묶음, 집계를 직접 계산하므로 담긴 이슈와 어긋날 수 없습니다.
+<Lang js="buildResult" dart="buildResult" py="build_result" rs="build_result" code />는 이슈 목록으로 결과 하나를 조립합니다. `success`와 코드별 묶음, 집계를 직접 계산하므로 담긴 이슈와 어긋날 수 없습니다.
 
 ::: lang js
 
@@ -564,6 +753,38 @@ result = build_result(
     locales=["en", "ko"],
     groups=[""],
 )
+```
+
+:::
+
+::: lang rs
+
+```rust
+use chki18n::core::issue::{create_issue, IssueInit};
+use chki18n::core::result::{build_result, ResultFacts};
+use chki18n::{resolve_options, CheckCode, Options};
+
+let (options, _) = resolve_options(&Options {
+    target: Some("en".into()),
+    ..Options::default()
+});
+
+let result = build_result(
+    vec![create_issue(
+        CheckCode::NoKey,
+        IssueInit {
+            locale: Some("ko".into()),
+            key: Some("a".into()),
+            ..IssueInit::default()
+        },
+    )],
+    &options,
+    ResultFacts {
+        locales: vec!["en".into(), "ko".into()],
+        groups: vec!["".into()],
+        ..ResultFacts::default()
+    },
+);
 ```
 
 :::
