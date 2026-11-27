@@ -6,7 +6,7 @@ title: Options
 
 The command line and the API take the same options. Every CLI flag is an API option with the same name, resolved from one definition, so the two cannot drift apart and what passes in CI passes in your build script.
 
-Option names are written here in their JavaScript spelling. Dart uses the same one, and Python is snake_case throughout, so `ignoreChecks` is `ignore_checks` and `maxKeyDepth` is `max_key_depth`. [Getting started](./getting-started#how-the-names-map) states that mapping once.
+Option names are written here in their JavaScript spelling. Dart uses the same one, and Python and Rust are snake_case throughout, so `ignoreChecks` is `ignore_checks` and `maxKeyDepth` is `max_key_depth`. [Getting started](./getting-started#how-the-names-map) states that mapping once.
 
 ## The full set
 
@@ -49,6 +49,44 @@ Dart takes all of them as one `Chki18nOptions` object built with named parameter
 ::: lang py
 
 Python takes all of them as one keyword-only `Options` object, and the closed value sets stay the strings they are everywhere else: `format="folder"`, `checks=["NO_KEY"]`, `levels={"EMPTY_VALUE": "error"}`. A list option also accepts the comma separated text a flag gives it.
+
+:::
+
+::: lang rs
+
+Rust takes all of them as one `Options` struct, with `..Options::default()` filling in whatever is left out. Every field is an `Option`. A choice or a number holds the text a flag would give it, as in `format: Some("folder".into())` and `max_key_depth: Some("2".into())`. A list is an `Option<Vec<String>>` whose items may themselves hold several entries separated by commas or spaces, so `vec!["NO_KEY,EMPTY_VALUE".into()]` names two checks, and `levels` takes `CODE=level` entries such as `"EMPTY_VALUE=error"`. A switch is an `Option<bool>`.
+
+```rust
+pub struct Options {
+    pub path: Option<String>,
+    pub target: Option<String>,
+    pub format: Option<String>,
+    pub checks: Option<Vec<String>>,
+    pub ignore_checks: Option<Vec<String>>,
+    pub levels: Option<Vec<String>>,
+    pub interpolation_prefix: Option<String>,
+    pub interpolation_suffix: Option<String>,
+    pub exclude: Option<Vec<String>>,
+    pub exclude_files: Option<Vec<String>>,
+    pub source: Option<String>,
+    pub translate_functions: Option<Vec<String>>,
+    pub key_case: Option<String>,
+    pub max_key_depth: Option<String>,
+    pub length_ratio: Option<String>,
+    pub flattened: Option<bool>,
+    pub reporter: Option<String>,
+    pub group_by: Option<String>,
+    pub output: Option<String>,
+    pub color: Option<bool>,
+    pub width: Option<String>,
+    pub verbose: Option<bool>,
+    pub info: Option<bool>,
+    pub warn: Option<bool>,
+    pub debug: Option<bool>,
+}
+```
+
+Because the values are text, a misspelt check code or a width of `"abc"` still compiles. It is reported when the options are resolved, as an `INVALID_OPTIONS` issue worded the same as in the other packages, and the run carries on without that value. Nothing panics.
 
 :::
 
@@ -135,6 +173,27 @@ check_translation_files(".", Options(exclude=[*DEFAULT_EXCLUDE_DIRS, "fixtures"]
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::constants::DEFAULT_EXCLUDE_DIRS;
+use chki18n::{check_translation_files, Options};
+
+let mut exclude = Vec::from(DEFAULT_EXCLUDE_DIRS.map(String::from));
+
+exclude.push("fixtures".into());
+
+check_translation_files(
+    Some("."),
+    &Options {
+        exclude: Some(exclude),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 An entry of one segment names a directory wherever it appears, so `node_modules` means every `node_modules` in the tree. An entry with a separator names a path from the scanned root, matching that directory and everything under it, so a project can drop its own `src/legacy` without dropping a `legacy` belonging to something else:
 
 ```bash
@@ -158,7 +217,7 @@ These are the configuration and lock files an application root is full of. Skipp
 chki18n . --exclude-files '*-lock.json,*.config.json,messages.json'
 ```
 
-The default list is exported as <Lang js="DEFAULT_EXCLUDE_FILES" dart="defaultExcludeFiles" py="DEFAULT_EXCLUDE_FILES" code /> if you would rather extend it than replace it:
+The default list is exported as <Lang js="DEFAULT_EXCLUDE_FILES" dart="defaultExcludeFiles" py="DEFAULT_EXCLUDE_FILES" rs="DEFAULT_EXCLUDE_FILES" code /> if you would rather extend it than replace it:
 
 ::: lang js
 
@@ -189,6 +248,27 @@ await checkTranslationFiles(
 from chki18n import DEFAULT_EXCLUDE_FILES, Options, check_translation_files
 
 check_translation_files(".", Options(exclude_files=[*DEFAULT_EXCLUDE_FILES, "messages.json"]))
+```
+
+:::
+
+::: lang rs
+
+```rust
+use chki18n::constants::DEFAULT_EXCLUDE_FILES;
+use chki18n::{check_translation_files, Options};
+
+let mut exclude_files = Vec::from(DEFAULT_EXCLUDE_FILES.map(String::from));
+
+exclude_files.push("messages.json".into());
+
+check_translation_files(
+    Some("."),
+    &Options {
+        exclude_files: Some(exclude_files),
+        ..Options::default()
+    },
+);
 ```
 
 :::
@@ -292,6 +372,20 @@ check_translation_files("./locales", Options(checks=["NO_KEY", "NO_INTERPOLATION
 
 :::
 
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        checks: Some(vec!["NO_KEY".into(), "NO_INTERPOLATION_KEY".into()]),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 ### `ignoreChecks`
 
 Run everything except these:
@@ -335,6 +429,20 @@ await checkTranslationFiles(
 
 ```python
 check_translation_files("./locales", Options(levels={"EMPTY_VALUE": "error"}))
+```
+
+:::
+
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        levels: Some(vec!["EMPTY_VALUE=error".into()]),
+        ..Options::default()
+    },
+);
 ```
 
 :::
@@ -401,6 +509,24 @@ format_result(result, options)  # the report as a string
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{format_result, resolve_options, Options, ReportInit};
+
+let (options, _) = resolve_options(&Options {
+    target: Some("en".into()),
+    reporter: Some("markdown".into()),
+    ..Options::default()
+});
+
+format_result(&result, &options, &ReportInit::default()); // the report as a string
+```
+
+The third argument holds what this one rendering sets beyond the options: another reporter, colour, a width, and the directory file paths are shown relative to.
+
+:::
+
 Anything other than `pretty` prints the report on its own, with no banner and no progress lines, so it can be piped straight into another program. An unknown name is reported as an `INVALID_OPTIONS` issue and falls back to `pretty`.
 
 ### `groupBy`
@@ -413,7 +539,7 @@ chki18n ./locales --group-by code
 
 Sections with an error come first, then those with only warnings. The order is fixed for a given set of files, so two reports of the same translations can be compared line by line.
 
-<Lang js="groupIssues" dart="groupIssues" py="group_issues" code /> is exported if you would rather do the grouping yourself:
+<Lang js="groupIssues" dart="groupIssues" py="group_issues" rs="group_issues" code /> is exported if you would rather do the grouping yourself:
 
 ::: lang js
 
@@ -441,6 +567,20 @@ groupIssues(result.issues, Chki18nGroupBy.locale); // [Chki18nIssueGroup, ...]
 from chki18n import group_issues
 
 group_issues(result.issues, "locale")  # [IssueGroup(id=…, label=…, issues=…, counts=…), …]
+```
+
+:::
+
+::: lang rs
+
+```rust
+use chki18n::reporter::group::group_issues;
+use chki18n::GroupBy;
+
+let issues: Vec<_> = result.issues.iter().collect();
+
+// The third argument is the directory file paths are shown relative to
+group_issues(&issues, GroupBy::Locale, ""); // [IssueGroup { id, label, issues, counts }, ...]
 ```
 
 :::
@@ -512,6 +652,20 @@ check_translation_files("./locales", Options(verbose=True))
 
 :::
 
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        verbose: Some(true),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 ## Data
 
 ### `flattened`
@@ -545,11 +699,29 @@ analyze_translations(Input(locales={"en": en, "ko": ko}), Options(target="en", f
 
 :::
 
+::: lang rs
+
+```rust
+analyze_translations(
+    &Input {
+        locales: Some([("en".into(), en), ("ko".into(), ko)].into_iter().collect()),
+        ..Input::default()
+    },
+    &Options {
+        target: Some("en".into()),
+        flattened: Some(true),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 Setting it when the data is actually nested does not error. It compares the top-level keys and finds very little.
 
 ## Resolving options yourself
 
-<Lang js="resolveOptions" dart="resolveOptions" py="resolve_options" code /> applies the defaults, normalises the loose forms, and reports what it could not use instead of raising:
+<Lang js="resolveOptions" dart="resolveOptions" py="resolve_options" rs="resolve_options" code /> applies the defaults, normalises the loose forms, and reports what it could not use instead of raising:
 
 ::: lang js
 
@@ -601,4 +773,27 @@ resolve_options(options_from_args({"_": [], "target": "ko", "ignore-checks": "NO
 
 :::
 
-<Lang js="OPTION_DEFINITIONS" dart="optionDefinitions" py="OPTION_DEFINITIONS" code /> is the table both sides are built from, if you are generating a UI or a help text of your own.
+::: lang rs
+
+```rust
+use chki18n::options::{options_from_args, parse_arguments};
+use chki18n::{resolve_options, Options};
+
+let (options, issues) = resolve_options(&Options {
+    target: Some("ko".into()),
+    ignore_checks: Some(vec!["NO_KEY".into()]),
+    ..Options::default()
+});
+
+options.enabled_checks; // IndexSet of the codes that will run
+issues; // anything unusable, as INVALID_OPTIONS issues
+
+// The CLI form resolves to exactly the same thing
+let args = ["--target", "ko", "--ignore-checks", "NO_KEY"].map(String::from);
+
+resolve_options(&options_from_args(&parse_arguments(&args)));
+```
+
+:::
+
+<Lang js="OPTION_DEFINITIONS" dart="optionDefinitions" py="OPTION_DEFINITIONS" rs="OPTION_DEFINITIONS" code /> is the table both sides are built from, if you are generating a UI or a help text of your own.

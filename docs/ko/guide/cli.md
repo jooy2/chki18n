@@ -6,7 +6,7 @@ title: 커맨드라인
 
 `chki18n` 명령은 번역 파일 폴더를 검사하고 잘못된 부분을 출력합니다. 오류 수준의 이슈를 찾으면 종료 코드 `1`로 끝나므로, CI 작업이나 pre-commit 훅에 그대로 연결할 수 있습니다.
 
-세 패키지가 같은 명령을 제공합니다. 플래그도 출력도 같고, 명령을 경로에 올리는 방법만 다릅니다.
+네 패키지가 같은 명령을 제공합니다. 플래그도 출력도 같고, 명령을 경로에 올리는 방법만 다릅니다.
 
 ::: lang js
 
@@ -40,6 +40,15 @@ pipx run chki18n ./locales --target en
 
 # 설치하면 명령 이름은 `chki18n`입니다.
 pip install chki18n
+```
+
+:::
+
+::: lang rs
+
+```bash
+# 한 번 설치하면 명령이 경로에 등록됩니다.
+cargo install chki18n
 ```
 
 :::
@@ -92,7 +101,7 @@ chki18n --path ./locales --target en
   --version                       Show the installed version
 ```
 
-모든 플래그는 같은 이름의 API 옵션이기도 합니다. `--ignore-checks`는 <Lang js="ignoreChecks" dart="ignoreChecks" py="ignore_checks" code />입니다. 양쪽이 하나의 정의에서 파생되기 때문이며, [옵션](./options)에서 두 방식을 한 번에 설명합니다.
+모든 플래그는 같은 이름의 API 옵션이기도 합니다. `--ignore-checks`는 <Lang js="ignoreChecks" dart="ignoreChecks" py="ignore_checks" rs="ignore_checks" code />입니다. 양쪽이 하나의 정의에서 파생되기 때문이며, [옵션](./options)에서 두 방식을 한 번에 설명합니다.
 
 ## 출력 읽기
 
@@ -260,6 +269,17 @@ GitHub Actions 스텝은 한 줄이면 됩니다. 작업 전체와 Bitbucket Pip
 - name: Check translations
   run: |
     pip install chki18n
+    chki18n ./locales --target en
+```
+
+:::
+
+::: lang rs
+
+```yaml
+- name: Check translations
+  run: |
+    cargo install chki18n
     chki18n ./locales --target en
 ```
 

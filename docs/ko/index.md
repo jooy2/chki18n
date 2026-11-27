@@ -3,12 +3,12 @@ layout: home
 
 title: chki18n
 titleTemplate: i18n 번역 파일 검사 도구
-description: i18n 번역 파일에서 누락된 키, 비어 있는 값, 어긋난 보간 키를 찾아냅니다. 커맨드라인과 CI, 직접 호출하는 코드가 모두 같은 검사 엔진을 사용하며, JavaScript와 Dart, Python으로 제공합니다.
+description: i18n 번역 파일에서 누락된 키, 비어 있는 값, 어긋난 보간 키를 찾아냅니다. 커맨드라인과 CI, 직접 호출하는 코드가 모두 같은 검사 엔진을 사용하며, JavaScript와 Dart, Python, Rust로 제공합니다.
 
 hero:
   name: chki18n
   text: 번역 파일이 서로 맞는지 검사합니다
-  tagline: 모든 i18n JSON 구조를 25가지 항목으로 검사합니다. 커맨드라인과 CI, 직접 호출하는 코드 어디에서든 JavaScript, Dart, Python으로 실행합니다.
+  tagline: 모든 i18n JSON 구조를 25가지 항목으로 검사합니다. 커맨드라인과 CI, 직접 호출하는 코드 어디에서든 JavaScript, Dart, Python, Rust로 실행합니다.
   actions:
     - theme: brand
       text: 시작하기
@@ -32,8 +32,8 @@ features:
     details: 로케일당 파일 하나, 로케일당 폴더 하나, 또는 모든 로케일을 담은 파일 하나. 같은 키를 공유하는 파일끼리 그룹으로 묶어 비교하므로 errors.json과 common.json이 뒤섞이지 않습니다.
     link: /ko/guide/file-layouts
     linkText: 파일 구조
-  - title: 세 언어, 하나의 라이브러리
-    details: JavaScript, Dart, Python 패키지가 같은 검사를 같은 순서로 수행하고 같은 리포트를 바이트 단위로 똑같이 출력합니다. 프로젝트가 이미 쓰는 언어를 고르면 됩니다.
+  - title: 네 언어, 하나의 라이브러리
+    details: JavaScript, Dart, Python, Rust 패키지가 같은 검사를 같은 순서로 수행하고 같은 리포트를 바이트 단위로 똑같이 출력합니다. 프로젝트가 이미 쓰는 언어를 고르면 됩니다.
     link: /ko/guide/getting-started
     linkText: 시작하기
   - title: CLI와 API는 같은 것
@@ -75,6 +75,15 @@ chki18n ./locales --target en
 
 ```bash
 pip install chki18n
+chki18n ./locales --target en
+```
+
+:::
+
+::: lang rs
+
+```bash
+cargo install chki18n
 chki18n ./locales --target en
 ```
 
@@ -180,6 +189,43 @@ result.issues[0]
 #     file="/project/locales/ko.json",
 #     message="The key exists in the target language but is missing here.",
 # )
+```
+
+:::
+
+::: lang rs
+
+```rust
+use chki18n::{check_translation_files, Options};
+
+let result = check_translation_files(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+
+result.success; // false
+result.summary.error; // 1
+println!("{:#?}", result.issues[0]);
+// Issue {
+//     code: NoKey,
+//     level: Error,
+//     locale: "ko",
+//     key: "attr.folder",
+//     group: "",
+//     value: None,
+//     target_value: Some(
+//         "Folder",
+//     ),
+//     interpolation: None,
+//     related_key: None,
+//     file: Some(
+//         "/project/locales/ko.json",
+//     ),
+//     message: "The key exists in the target language but is missing here.",
+// }
 ```
 
 :::

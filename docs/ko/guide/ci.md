@@ -117,6 +117,43 @@ jobs:
 
 :::
 
+::: lang rs
+
+```yaml
+name: translations
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    name: Check translations
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check translations
+        run: |
+          cargo install chki18n
+          chki18n ./locales --target en
+```
+
+GitHub의 호스팅 러너에는 Rust와 cargo가 설치되어 있고 `~/.cargo/bin`도 PATH에 들어 있으므로 따로 설정할 스텝이 없습니다. 다만 `cargo install`은 실행할 때마다 소스에서 명령을 빌드하므로 30초 이상 걸립니다. GitHub의 Rust 릴리스마다 미리 빌드한 명령이 함께 올라가 있어, 내려받아 쓰면 빌드를 건너뜁니다.
+
+```yaml
+- name: Check translations
+  run: |
+    curl -fsSL https://github.com/jooy2/chki18n/releases/download/rust-v0.1.0/chki18n-rust-0.1.0-linux-x64.tar.gz | tar -xz -C "$RUNNER_TEMP"
+    "$RUNNER_TEMP/chki18n-rust-0.1.0-linux-x64/chki18n" ./locales --target en
+```
+
+두 줄에 버전이 한 번씩 들어 있으므로, 새 릴리스로 옮길 때는 둘 다 바꾸세요.
+
+:::
+
 이게 전부입니다. 이제 키 하나가 빠지면 풀 리퀘스트가 실패합니다.
 
 ### 파일에 주석 달기
@@ -256,6 +293,30 @@ pipelines:
 
 :::
 
+::: lang rs
+
+```yaml
+image: rust:1-slim
+
+pipelines:
+  pull-requests:
+    '**':
+      - step:
+          name: Check translations
+          script:
+            - cargo install chki18n
+            - chki18n ./locales --target en
+  branches:
+    main:
+      - step:
+          name: Check translations
+          script:
+            - cargo install chki18n
+            - chki18n ./locales --target en
+```
+
+:::
+
 단계 안의 명령이 0이 아닌 코드로 끝나면 그 단계가 실패합니다. 종료 코드 하나로 연결이 끝납니다.
 
 같은 블록을 두 번 쓰지 않으려면 단계를 정의해두고 양쪽에서 가리키면 됩니다.
@@ -352,6 +413,29 @@ pipelines:
 
 :::
 
+::: lang rs
+
+```yaml
+definitions:
+  caches:
+    cargo: /usr/local/cargo
+
+pipelines:
+  pull-requests:
+    '**':
+      - step:
+          name: Check translations
+          caches:
+            - cargo
+          script:
+            - cargo install chki18n
+            - chki18n ./locales --target en
+```
+
+`/usr/local/cargo`는 `rust` 이미지에서 cargo의 홈 디렉터리이며, `cargo install`이 빌드한 명령도 여기에 남습니다. 이 디렉터리를 캐시해 두면 `cargo install`은 같은 버전이 이미 설치되어 있는 것을 확인하고 빌드를 건너뜁니다. 그래서 Rust에서는 몇 초가 아니라 단계 시간 대부분을 아낍니다. `curl`은 있고 Rust는 없는 이미지라면 위의 GitHub Actions 작업처럼 미리 빌드한 명령을 내려받아도 됩니다.
+
+:::
+
 ### 번역이 바뀔 때만 돌리기
 
 단계마다 어떤 경로에 관심이 있는지 지정할 수 있습니다.
@@ -445,6 +529,33 @@ untranslated = result.summary.by_code.get("NOT_TRANSLATED_VALUE", 0)
 if untranslated > 50:
     print(f"{untranslated} strings are still untranslated.", file=sys.stderr)
     sys.exit(1)
+```
+
+:::
+
+::: lang rs
+
+```rust
+use chki18n::{check_translation_files, CheckCode, Options};
+
+let result = check_translation_files(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+let untranslated = result
+    .summary
+    .by_code
+    .get(&CheckCode::NotTranslatedValue)
+    .copied()
+    .unwrap_or(0);
+
+if untranslated > 50 {
+    eprintln!("{untranslated} strings are still untranslated.");
+    std::process::exit(1);
+}
 ```
 
 :::

@@ -3,12 +3,12 @@ layout: home
 
 title: chki18n
 titleTemplate: Check and verify your i18n translation files
-description: Find the missing keys, the empty values and the broken interpolation in your i18n translation files. One check engine for the command line, for CI and for your own code, in JavaScript, Dart or Python.
+description: Find the missing keys, the empty values and the broken interpolation in your i18n translation files. One check engine for the command line, for CI and for your own code, in JavaScript, Dart, Python or Rust.
 
 hero:
   name: chki18n
   text: Your translation files, checked
-  tagline: Twenty-five checks over every i18n JSON layout, run from the command line, in CI, or from your own code. JavaScript, Dart and Python.
+  tagline: Twenty-five checks over every i18n JSON layout, run from the command line, in CI, or from your own code. JavaScript, Dart, Python and Rust.
   actions:
     - theme: brand
       text: Get started
@@ -32,8 +32,8 @@ features:
     details: One file per locale, one folder per locale, or a single file holding them all. Files that share keys are compared as a group, so errors.json is never confused with common.json.
     link: /guide/file-layouts
     linkText: File layouts
-  - title: Three languages, one library
-    details: JavaScript, Dart and Python packages that run the same checks in the same order and print the same report, character for character. Pick the one your project already speaks.
+  - title: Four languages, one library
+    details: JavaScript, Dart, Python and Rust packages that run the same checks in the same order and print the same report, character for character. Pick the one your project already speaks.
     link: /guide/getting-started
     linkText: Getting started
   - title: The CLI and the API are one thing
@@ -75,6 +75,15 @@ chki18n ./locales --target en
 
 ```bash
 pip install chki18n
+chki18n ./locales --target en
+```
+
+:::
+
+::: lang rs
+
+```bash
+cargo install chki18n
 chki18n ./locales --target en
 ```
 
@@ -180,6 +189,43 @@ result.issues[0]
 #     file="/project/locales/ko.json",
 #     message="The key exists in the target language but is missing here.",
 # )
+```
+
+:::
+
+::: lang rs
+
+```rust
+use chki18n::{check_translation_files, Options};
+
+let result = check_translation_files(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+
+result.success; // false
+result.summary.error; // 1
+println!("{:#?}", result.issues[0]);
+// Issue {
+//     code: NoKey,
+//     level: Error,
+//     locale: "ko",
+//     key: "attr.folder",
+//     group: "",
+//     value: None,
+//     target_value: Some(
+//         "Folder",
+//     ),
+//     interpolation: None,
+//     related_key: None,
+//     file: Some(
+//         "/project/locales/ko.json",
+//     ),
+//     message: "The key exists in the target language but is missing here.",
+// }
 ```
 
 :::

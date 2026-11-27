@@ -8,20 +8,22 @@ chki18n을 설치하고, 번역 파일이 있는 폴더를 지정한 다음, 나
 
 ## 패키지 고르기
 
-chki18n은 세 언어로 배포되지만 셋은 하나의 라이브러리입니다. 같은 25가지 검사를 같은 순서로 수행하고, 옵션 이름과 종료 코드도 같으며, 리포트는 열 위치까지 같습니다. 프로젝트가 이미 쓰는 언어를 고르면 됩니다. 사이드바 위쪽의 전환 버튼을 누르면 이 사이트의 모든 예제 코드가 그 언어로 바뀝니다.
+chki18n은 네 언어로 배포되지만 넷은 하나의 라이브러리입니다. 같은 25가지 검사를 같은 순서로 수행하고, 옵션 이름과 종료 코드도 같으며, 리포트는 열 위치까지 같습니다. 프로젝트가 이미 쓰는 언어를 고르면 됩니다. 사이드바 위쪽의 전환 버튼을 누르면 이 사이트의 모든 예제 코드가 그 언어로 바뀝니다.
 
 | 언어 | 레지스트리 | 설치 | 요구 사항 |
 | --- | --- | --- | --- |
 | JavaScript | [npm](https://www.npmjs.com/package/chki18n) | `npm install chki18n` | Node.js 22 이상 |
 | Dart | [pub.dev](https://pub.dev/packages/chki18n) | `dart pub add chki18n` | Dart 3.7 이상 |
 | Python | [PyPI](https://pypi.org/project/chki18n/) | `pip install chki18n` | Python 3.10 이상 |
+| Rust | [crates.io](https://crates.io/crates/chki18n) | `cargo add chki18n` | Rust 1.85 이상 |
 
 ### 언어별 이름 규칙
 
-모든 함수와 옵션은 **JavaScript 이름**으로 설명합니다. 제목과 앵커는 어느 독자에게나 같아야 하기 때문입니다. 나머지 둘은 각각 규칙 하나만 따르며, 그 규칙을 적는 곳은 여기뿐입니다.
+모든 함수와 옵션은 **JavaScript 이름**으로 설명합니다. 제목과 앵커는 어느 독자에게나 같아야 하기 때문입니다. 나머지 셋은 각각 규칙 하나만 따르며, 그 규칙을 적는 곳은 여기뿐입니다.
 
 - **Dart**는 JavaScript 이름을 그대로 씁니다. `checkTranslationFiles`, `interpolationPrefix`, `maxKeyDepth`. 달라지는 것은 형태입니다. 옵션은 named parameter로 만드는 `Chki18nOptions` 객체 하나로 받고, 값이 정해진 자리에는 열거형이 옵니다. `'NO_KEY'` 대신 `Chki18nCheckCode.noKey`를 쓰지만, `Chki18nCheckCode.noKey.code`는 여전히 `NO_KEY`입니다.
 - **Python**은 전부 snake_case입니다. `check_translation_files`, `interpolation_prefix`, `max_key_depth`. 검사 코드와 심각도, 옵션 선택지는 다른 언어와 똑같은 문자열 그대로입니다. `"NO_KEY"`, `"error"`, `"kebab"`.
+- **Rust**는 Python처럼 snake_case입니다. `check_translation_files`, `interpolation_prefix`, `max_key_depth`. 옵션은 모든 필드가 `Option`인 `Options` 구조체 하나로 받으므로, 필요한 필드만 적고 나머지는 `..Options::default()`로 채웁니다. 선택지나 숫자를 받는 필드에는 커맨드라인 플래그에 쓰는 텍스트를 그대로 넣습니다. `Some("kebab".into())`, `Some("2".into())`처럼 쓰고, `levels`에는 `"EMPTY_VALUE=error"` 같은 항목을 넣습니다. 돌려받는 값에는 열거형이 쓰이므로 `"NO_KEY"` 대신 `CheckCode::NoKey`가 오지만, 그 `as_str()`은 여전히 `"NO_KEY"`입니다.
 
 ## 설치
 
@@ -93,6 +95,26 @@ uv add chki18n
 
 :::
 
+::: lang rs
+
+한 번 설치하면 명령이 경로에 등록됩니다.
+
+```bash
+cargo install chki18n
+```
+
+코드에서 호출할 예정이라면 프로젝트에 추가합니다.
+
+```bash
+cargo add chki18n
+```
+
+`cargo install`은 소스에서 명령을 빌드해 `~/.cargo/bin`에 넣습니다. 이 크레이트는 `serde_json`, `indexmap`, `regex`에 의존하고, Unix에서는 터미널 너비를 재는 데 `libc`도 씁니다. 메모리에 둔 번역 데이터는 `indexmap` 맵 안에 든 `serde_json` 맵인데, 크레이트가 둘 다 다시 내보내지 않으므로 입력을 직접 만드는 프로젝트는 두 크레이트를 함께 추가합니다. `cargo add serde_json indexmap`.
+
+Rust 툴체인이 없는 머신에서는 미리 빌드한 명령을 쓸 수 있습니다. [GitHub](https://github.com/jooy2/chki18n/releases)의 Rust 릴리스마다 Linux(x64, arm64), macOS(Apple 실리콘, Intel), Windows(x64)용 압축 파일이 함께 올라갑니다. 플랫폼에 맞는 파일을 풀고 `chki18n`을 경로에 두면 됩니다. `cargo install`이 먼저 거치는 빌드를 건너뛸 수 있습니다.
+
+:::
+
 ## 첫 번째 검사
 
 프로젝트에 번역 파일이 두 개 있다고 가정하겠습니다.
@@ -128,7 +150,7 @@ npx chki18n ./locales --target en
 
 :::
 
-::: lang dart py
+::: lang dart py rs
 
 ```bash
 chki18n ./locales --target en
@@ -222,6 +244,34 @@ if not result.success:
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{check_translation_files, Options};
+
+let result = check_translation_files(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+
+if !result.success {
+    for issue in &result.issues {
+        println!(
+            "{} {} {}: {}",
+            issue.level.as_str(),
+            issue.locale,
+            issue.key,
+            issue.message
+        );
+    }
+}
+```
+
+:::
+
 요청하지 않으면 아무것도 출력하지 않고, 프로세스를 임의로 종료하지도 않습니다. 판단의 근거는 반환된 결과뿐입니다. 결과에 담긴 모든 정보는 [결과 객체](/ko/reference/result)를 참고하세요.
 
 ## 어떤 진입점을 쓸까
@@ -235,7 +285,19 @@ if not result.success:
 | 디렉터리를 한 번 읽고 반복해서 검사 | [`loadTranslations`](/ko/api/load-translations) |
 | 값은 앱이 소유하고 판정만 필요 | [`createAnalyzer().checkEntry`](/ko/api/create-analyzer) |
 
-`checkTranslationFiles`와 `loadTranslations`는 디렉터리를 읽습니다. `analyzeTranslations`와 `createAnalyzer`는 파일 시스템을 전혀 사용하지 않으며, <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />로도 따로 배포되어 읽을 디스크가 없는 곳에서도 실행됩니다. [코어 진입점](/ko/api/core)을 참고하세요.
+`checkTranslationFiles`와 `loadTranslations`는 디렉터리를 읽습니다. `analyzeTranslations`와 `createAnalyzer`는 파일 시스템을 전혀 사용하지 않습니다.
+
+::: lang js dart py
+
+두 함수는 <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />로도 따로 배포되어 읽을 디스크가 없는 곳에서도 실행됩니다. [코어 진입점](/ko/api/core)을 참고하세요.
+
+:::
+
+::: lang rs
+
+두 함수는 파일을 읽지 않는 `chki18n::core` 모듈에 있습니다. 따로 빌드되는 패키지가 아니라 같은 크레이트의 일부입니다. [코어 진입점](/ko/api/core)을 참고하세요.
+
+:::
 
 ## 다음으로
 

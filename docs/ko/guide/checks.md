@@ -300,6 +300,21 @@ check_translation_files("./locales", Options(target="en", source="./src"))
 
 :::
 
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        source: Some("./src".into()),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 검색은 키의 **마지막 세그먼트**를 기준으로 합니다. `desc.hello`는 `hello`로 찾습니다. 네임스페이스가 상위에 묶인 `t('hello')`처럼, 코드에서 중첩 키를 마지막 세그먼트만으로 참조하는 경우가 흔하기 때문입니다. 점으로 이어진 전체 키로 찾으면 멀쩡히 동작하는 코드를 미사용으로 보고하게 되고, 그쪽이 더 나쁩니다.
 
 심각도도 여기서 결정됩니다. `name`이나 `title` 같은 세그먼트는 키의 실제 사용 여부와 무관하게 거의 모든 코드베이스에 등장하므로, 확정된 발견이라기보다 힌트에 가깝습니다. `info` 수준으로 보고되어 실행을 실패로 만들지 않으며, 지우라는 지시가 아니라 확인을 시작할 지점으로 읽으면 됩니다.
@@ -333,6 +348,24 @@ analyzeTranslations(
 analyze_translations(
     Input(locales=locales, unused_keys=["desc.orphan"]), Options(target="en")
 )
+```
+
+:::
+
+::: lang rs
+
+```rust
+analyze_translations(
+    &Input {
+        locales: Some(locales),
+        unused_keys: Some(vec!["desc.orphan".into()]),
+        ..Input::default()
+    },
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
 ```
 
 :::
@@ -501,6 +534,21 @@ check_translation_files(
 
 :::
 
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        interpolation_prefix: Some("{{".into()),
+        interpolation_suffix: Some("}}".into()),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 ## 실행할 검사 고르기
 
 일부만 실행하기:
@@ -562,6 +610,23 @@ check_translation_files(
 
 :::
 
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        levels: Some(vec![
+            "EMPTY_VALUE=error".into(),
+            "DUPLICATE_VALUE=info".into(),
+        ]),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 수준은 `error`, `warn`, `info`입니다. `error`만 실행을 실패로 만들므로, `info`로 낮추면 아무것도 막지 않으면서 리포트에는 계속 남습니다. `INVALID_FILE`과 `INVALID_OPTIONS`는 변경할 수 없습니다.
 
 ## 코드에서 검사 정보 읽기
@@ -615,6 +680,24 @@ CHECK_META["NO_KEY"]
 # )
 
 ANALYZE_CHECK_CODES  # 번역을 비교하는 모든 코드, 리포트 순서대로
+```
+
+:::
+
+::: lang rs
+
+```rust
+use chki18n::constants::ANALYZE_CHECK_CODES;
+use chki18n::CheckCode;
+
+println!("{:#?}", CheckCode::NoKey.meta());
+// CheckMeta {
+//     level: Error,
+//     summary: "Some translation files did not include the following keys",
+//     description: "The key exists in the target language but is missing here.",
+// }
+
+let codes = ANALYZE_CHECK_CODES; // 번역을 비교하는 모든 코드, 리포트 순서대로
 ```
 
 :::

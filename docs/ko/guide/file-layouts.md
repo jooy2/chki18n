@@ -105,6 +105,20 @@ check_translation_files("./locales", Options(format="folder"))
 
 :::
 
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        format: Some("folder".into()),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 지정한 구조에 맞는 파일이 하나도 없으면, 아무것도 검사하지 않은 채 조용히 통과하는 대신 `INVALID_FILE` 오류로 보고됩니다.
 
 ## 그룹
@@ -161,6 +175,20 @@ await checkTranslationFiles(
 
 ```python
 check_translation_files("./locales", Options(exclude=["tmp", "vendor"]))
+```
+
+:::
+
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        exclude: Some(vec!["tmp".into(), "vendor".into()]),
+        ..Options::default()
+    },
+);
 ```
 
 :::

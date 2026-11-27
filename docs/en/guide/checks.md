@@ -300,6 +300,21 @@ check_translation_files("./locales", Options(target="en", source="./src"))
 
 :::
 
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        source: Some("./src".into()),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 The search is for a key's **leaf segment**, so `desc.hello` is looked up as `hello`. Code often resolves a nested key by its last segment alone, through a scoped `t('hello')` or a namespace bound higher up. Matching the whole dotted key would report working code as unused, and that is the worse mistake of the two.
 
 That also decides the severity. A leaf like `name` or `title` will turn up in almost any codebase whether or not the key is used, so this is a hint rather than a settled finding. It is reported at `info`, it never fails a run, and it marks a place to start looking rather than something to delete.
@@ -333,6 +348,24 @@ analyzeTranslations(
 analyze_translations(
     Input(locales=locales, unused_keys=["desc.orphan"]), Options(target="en")
 )
+```
+
+:::
+
+::: lang rs
+
+```rust
+analyze_translations(
+    &Input {
+        locales: Some(locales),
+        unused_keys: Some(vec!["desc.orphan".into()]),
+        ..Input::default()
+    },
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
 ```
 
 :::
@@ -501,6 +534,21 @@ check_translation_files(
 
 :::
 
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        interpolation_prefix: Some("{{".into()),
+        interpolation_suffix: Some("}}".into()),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 ## Choosing which checks run
 
 Run only some of them:
@@ -562,6 +610,23 @@ check_translation_files(
 
 :::
 
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        levels: Some(vec![
+            "EMPTY_VALUE=error".into(),
+            "DUPLICATE_VALUE=info".into(),
+        ]),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 Levels are `error`, `warn` and `info`. Only `error` fails a run, so demoting a check to `info` keeps it in the report without blocking anything. `INVALID_FILE` and `INVALID_OPTIONS` cannot be re-graded.
 
 ## Reading the codes from code
@@ -615,6 +680,24 @@ CHECK_META["NO_KEY"]
 # )
 
 ANALYZE_CHECK_CODES  # every code that compares translations, in report order
+```
+
+:::
+
+::: lang rs
+
+```rust
+use chki18n::constants::ANALYZE_CHECK_CODES;
+use chki18n::CheckCode;
+
+println!("{:#?}", CheckCode::NoKey.meta());
+// CheckMeta {
+//     level: Error,
+//     summary: "Some translation files did not include the following keys",
+//     description: "The key exists in the target language but is missing here.",
+// }
+
+let codes = ANALYZE_CHECK_CODES; // every code that compares translations, in report order
 ```
 
 :::

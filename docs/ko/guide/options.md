@@ -6,7 +6,7 @@ title: 옵션
 
 커맨드라인과 API는 같은 옵션을 받습니다. 모든 CLI 플래그는 같은 이름의 API 옵션이며, 하나의 정의에서 해석됩니다. 그래서 플래그와 옵션이 서로 어긋날 수 없고, CI에서 통과하는 것은 빌드 스크립트에서도 통과합니다.
 
-옵션 이름은 JavaScript 표기로 적습니다. Dart도 같은 표기를 쓰고, Python은 전부 snake_case이므로 `ignoreChecks`는 `ignore_checks`, `maxKeyDepth`는 `max_key_depth`입니다. 이 대응은 [시작하기](./getting-started#언어별-이름-규칙)에 한 번 정리해 두었습니다.
+옵션 이름은 JavaScript 표기로 적습니다. Dart도 같은 표기를 쓰고, Python과 Rust는 전부 snake_case이므로 `ignoreChecks`는 `ignore_checks`, `maxKeyDepth`는 `max_key_depth`입니다. 이 대응은 [시작하기](./getting-started#언어별-이름-규칙)에 한 번 정리해 두었습니다.
 
 ## 전체 목록
 
@@ -49,6 +49,44 @@ Dart는 이 전부를 named parameter로 만드는 `Chki18nOptions` 객체 하�
 ::: lang py
 
 Python은 이 전부를 keyword-only `Options` 객체 하나로 받으며, 값이 정해진 자리도 다른 언어와 똑같은 문자열 그대로입니다. `format="folder"`, `checks=["NO_KEY"]`, `levels={"EMPTY_VALUE": "error"}`처럼 씁니다. 목록 옵션은 플래그가 주는 쉼표 구분 문자열도 받습니다.
+
+:::
+
+::: lang rs
+
+Rust는 이 전부를 `Options` 구조체 하나로 받으며, 빠진 필드는 `..Options::default()`로 채웁니다. 모든 필드가 `Option`입니다. 값이 정해진 옵션과 숫자 옵션에는 플래그가 받는 문자열을 그대로 담습니다. `format: Some("folder".into())`, `max_key_depth: Some("2".into())`처럼 씁니다. 목록 옵션은 `Option<Vec<String>>`이며, 항목 하나에 쉼표나 공백으로 구분한 여러 값을 넣어도 됩니다. 그래서 `vec!["NO_KEY,EMPTY_VALUE".into()]`는 검사 두 개를 가리킵니다. `levels`는 `"EMPTY_VALUE=error"` 같은 `CODE=level` 항목을 받고, 켜고 끄는 옵션은 `Option<bool>`입니다.
+
+```rust
+pub struct Options {
+    pub path: Option<String>,
+    pub target: Option<String>,
+    pub format: Option<String>,
+    pub checks: Option<Vec<String>>,
+    pub ignore_checks: Option<Vec<String>>,
+    pub levels: Option<Vec<String>>,
+    pub interpolation_prefix: Option<String>,
+    pub interpolation_suffix: Option<String>,
+    pub exclude: Option<Vec<String>>,
+    pub exclude_files: Option<Vec<String>>,
+    pub source: Option<String>,
+    pub translate_functions: Option<Vec<String>>,
+    pub key_case: Option<String>,
+    pub max_key_depth: Option<String>,
+    pub length_ratio: Option<String>,
+    pub flattened: Option<bool>,
+    pub reporter: Option<String>,
+    pub group_by: Option<String>,
+    pub output: Option<String>,
+    pub color: Option<bool>,
+    pub width: Option<String>,
+    pub verbose: Option<bool>,
+    pub info: Option<bool>,
+    pub warn: Option<bool>,
+    pub debug: Option<bool>,
+}
+```
+
+값이 문자열이므로 검사 코드를 잘못 적거나 너비에 `"abc"`를 줘도 컴파일은 됩니다. 이런 값은 옵션을 해석할 때 다른 패키지와 같은 문구의 `INVALID_OPTIONS` 이슈로 보고되고, 실행은 그 값 없이 이어집니다. 패닉은 일어나지 않습니다.
 
 :::
 
@@ -135,6 +173,27 @@ check_translation_files(".", Options(exclude=[*DEFAULT_EXCLUDE_DIRS, "fixtures"]
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::constants::DEFAULT_EXCLUDE_DIRS;
+use chki18n::{check_translation_files, Options};
+
+let mut exclude = Vec::from(DEFAULT_EXCLUDE_DIRS.map(String::from));
+
+exclude.push("fixtures".into());
+
+check_translation_files(
+    Some("."),
+    &Options {
+        exclude: Some(exclude),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 한 조각짜리 항목은 어느 깊이에 있든 그 이름의 디렉터리를 가리킵니다. `node_modules`가 트리 안의 모든 `node_modules`를 뜻하는 이유입니다. 구분자가 들어간 항목은 검사 루트에서 시작하는 경로를 가리키며, 그 디렉터리와 그 아래 전부가 대상입니다. 다른 곳의 `legacy`는 남겨둔 채 프로젝트 자신의 `src/legacy`만 뺄 수 있습니다.
 
 ```bash
@@ -158,7 +217,7 @@ package.json  tsconfig.json  tsconfig.*.json  eslintrc.json
 chki18n . --exclude-files '*-lock.json,*.config.json,messages.json'
 ```
 
-대체가 아니라 확장하고 싶다면 기본 목록이 <Lang js="DEFAULT_EXCLUDE_FILES" dart="defaultExcludeFiles" py="DEFAULT_EXCLUDE_FILES" code />로 공개되어 있습니다.
+대체가 아니라 확장하고 싶다면 기본 목록이 <Lang js="DEFAULT_EXCLUDE_FILES" dart="defaultExcludeFiles" py="DEFAULT_EXCLUDE_FILES" rs="DEFAULT_EXCLUDE_FILES" code />로 공개되어 있습니다.
 
 ::: lang js
 
@@ -189,6 +248,27 @@ await checkTranslationFiles(
 from chki18n import DEFAULT_EXCLUDE_FILES, Options, check_translation_files
 
 check_translation_files(".", Options(exclude_files=[*DEFAULT_EXCLUDE_FILES, "messages.json"]))
+```
+
+:::
+
+::: lang rs
+
+```rust
+use chki18n::constants::DEFAULT_EXCLUDE_FILES;
+use chki18n::{check_translation_files, Options};
+
+let mut exclude_files = Vec::from(DEFAULT_EXCLUDE_FILES.map(String::from));
+
+exclude_files.push("messages.json".into());
+
+check_translation_files(
+    Some("."),
+    &Options {
+        exclude_files: Some(exclude_files),
+        ..Options::default()
+    },
+);
 ```
 
 :::
@@ -292,6 +372,20 @@ check_translation_files("./locales", Options(checks=["NO_KEY", "NO_INTERPOLATION
 
 :::
 
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        checks: Some(vec!["NO_KEY".into(), "NO_INTERPOLATION_KEY".into()]),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 ### `ignoreChecks`
 
 지정한 검사만 빼고 실행합니다.
@@ -335,6 +429,20 @@ await checkTranslationFiles(
 
 ```python
 check_translation_files("./locales", Options(levels={"EMPTY_VALUE": "error"}))
+```
+
+:::
+
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        levels: Some(vec!["EMPTY_VALUE=error".into()]),
+        ..Options::default()
+    },
+);
 ```
 
 :::
@@ -401,6 +509,24 @@ format_result(result, options)  # 리포트 문자열
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{format_result, resolve_options, Options, ReportInit};
+
+let (options, _) = resolve_options(&Options {
+    target: Some("en".into()),
+    reporter: Some("markdown".into()),
+    ..Options::default()
+});
+
+format_result(&result, &options, &ReportInit::default()); // 리포트 문자열
+```
+
+세 번째 인자에는 옵션과 별개로 이번 출력에만 적용할 값을 담습니다. 다른 리포터, 색상, 너비, 그리고 파일 경로를 상대 경로로 보여줄 때 기준이 되는 디렉터리입니다.
+
+:::
+
 `pretty`가 아닌 형식은 배너도 진행 상황 줄도 없이 리포트만 출력하므로 다른 프로그램으로 그대로 넘길 수 있습니다. 모르는 이름을 주면 `INVALID_OPTIONS` 이슈로 알리고 `pretty`로 돌아갑니다.
 
 ### `groupBy`
@@ -413,7 +539,7 @@ chki18n ./locales --group-by code
 
 오류가 있는 구획이 먼저 오고 그다음이 경고만 있는 구획입니다. 파일이 같으면 순서도 같으므로, 같은 번역을 두 번 검사한 리포트를 줄 단위로 비교할 수 있습니다.
 
-직접 묶고 싶다면 <Lang js="groupIssues" dart="groupIssues" py="group_issues" code />가 공개되어 있습니다.
+직접 묶고 싶다면 <Lang js="groupIssues" dart="groupIssues" py="group_issues" rs="group_issues" code />가 공개되어 있습니다.
 
 ::: lang js
 
@@ -441,6 +567,20 @@ groupIssues(result.issues, Chki18nGroupBy.locale); // [Chki18nIssueGroup, ...]
 from chki18n import group_issues
 
 group_issues(result.issues, "locale")  # [IssueGroup(id=…, label=…, issues=…, counts=…), …]
+```
+
+:::
+
+::: lang rs
+
+```rust
+use chki18n::reporter::group::group_issues;
+use chki18n::GroupBy;
+
+let issues: Vec<_> = result.issues.iter().collect();
+
+// 세 번째 인자는 파일 경로를 상대 경로로 보여줄 때 기준이 되는 디렉터리입니다
+group_issues(&issues, GroupBy::Locale, ""); // [IssueGroup { id, label, issues, counts }, ...]
 ```
 
 :::
@@ -512,6 +652,20 @@ check_translation_files("./locales", Options(verbose=True))
 
 :::
 
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        verbose: Some(true),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 ## 데이터
 
 ### `flattened`
@@ -545,11 +699,29 @@ analyze_translations(Input(locales={"en": en, "ko": ko}), Options(target="en", f
 
 :::
 
+::: lang rs
+
+```rust
+analyze_translations(
+    &Input {
+        locales: Some([("en".into(), en), ("ko".into(), ko)].into_iter().collect()),
+        ..Input::default()
+    },
+    &Options {
+        target: Some("en".into()),
+        flattened: Some(true),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 데이터가 실제로는 중첩되어 있는데 이 옵션을 켜도 오류는 나지 않습니다. 다만 최상위 키만 비교하게 되어 거의 아무것도 찾지 못합니다.
 
 ## 옵션 직접 해석하기
 
-<Lang js="resolveOptions" dart="resolveOptions" py="resolve_options" code />는 기본값을 채우고 느슨한 형태를 정규화하며, 사용할 수 없는 값은 예외를 던지는 대신 보고합니다.
+<Lang js="resolveOptions" dart="resolveOptions" py="resolve_options" rs="resolve_options" code />는 기본값을 채우고 느슨한 형태를 정규화하며, 사용할 수 없는 값은 예외를 던지는 대신 보고합니다.
 
 ::: lang js
 
@@ -601,4 +773,27 @@ resolve_options(options_from_args({"_": [], "target": "ko", "ignore-checks": "NO
 
 :::
 
-직접 UI나 도움말을 만든다면, 양쪽이 파생되는 원본 테이블이 <Lang js="OPTION_DEFINITIONS" dart="optionDefinitions" py="OPTION_DEFINITIONS" code />로 공개되어 있습니다.
+::: lang rs
+
+```rust
+use chki18n::options::{options_from_args, parse_arguments};
+use chki18n::{resolve_options, Options};
+
+let (options, issues) = resolve_options(&Options {
+    target: Some("ko".into()),
+    ignore_checks: Some(vec!["NO_KEY".into()]),
+    ..Options::default()
+});
+
+options.enabled_checks; // 실행될 코드의 IndexSet
+issues; // 사용할 수 없었던 값들, INVALID_OPTIONS 이슈로
+
+// CLI 형태도 정확히 같은 결과로 해석됩니다
+let args = ["--target", "ko", "--ignore-checks", "NO_KEY"].map(String::from);
+
+resolve_options(&options_from_args(&parse_arguments(&args)));
+```
+
+:::
+
+직접 UI나 도움말을 만든다면, 양쪽이 파생되는 원본 테이블이 <Lang js="OPTION_DEFINITIONS" dart="optionDefinitions" py="OPTION_DEFINITIONS" rs="OPTION_DEFINITIONS" code />로 공개되어 있습니다.

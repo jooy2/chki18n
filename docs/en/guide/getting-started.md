@@ -8,20 +8,22 @@ Install chki18n, point it at the folder your translation files live in, and name
 
 ## Pick a package
 
-chki18n ships for three languages, and the three are one library: the same twenty-five checks in the same order, the same option names, the same report to the column, and the same exit code. Pick the one your project already speaks. The switch at the top of the sidebar rewrites every code sample on this site to match.
+chki18n ships for four languages, and the four are one library: the same twenty-five checks in the same order, the same option names, the same report to the column, and the same exit code. Pick the one your project already speaks. The switch at the top of the sidebar rewrites every code sample on this site to match.
 
 | Language | Registry | Install | Requires |
 | --- | --- | --- | --- |
 | JavaScript | [npm](https://www.npmjs.com/package/chki18n) | `npm install chki18n` | Node.js 22 or newer |
 | Dart | [pub.dev](https://pub.dev/packages/chki18n) | `dart pub add chki18n` | Dart 3.7 or newer |
 | Python | [PyPI](https://pypi.org/project/chki18n/) | `pip install chki18n` | Python 3.10 or newer |
+| Rust | [crates.io](https://crates.io/crates/chki18n) | `cargo add chki18n` | Rust 1.85 or newer |
 
 ### How the names map
 
-Every function and every option is documented under its **JavaScript spelling**, because a heading and an anchor have to read the same for every reader. The other two follow one rule each, and this is the only place it is stated:
+Every function and every option is documented under its **JavaScript spelling**, because a heading and an anchor have to read the same for every reader. The other three follow one rule each, and this is the only place it is stated:
 
 - **Dart** keeps the JavaScript spelling: `checkTranslationFiles`, `interpolationPrefix`, `maxKeyDepth`. What differs is the shape. Options are one `Chki18nOptions` object built with named parameters, and the closed value sets are enums, so `Chki18nCheckCode.noKey` stands in for `'NO_KEY'`. Its `code` is still `NO_KEY`.
 - **Python** is snake_case throughout. `check_translation_files`, `interpolation_prefix`, `max_key_depth`. The check codes, the severities and the option choices stay the strings they are everywhere else: `"NO_KEY"`, `"error"`, `"kebab"`.
+- **Rust** is snake_case like Python: `check_translation_files`, `interpolation_prefix`, `max_key_depth`. Options are one `Options` struct whose fields are all `Option`s, so you set the ones you need and fill the rest with `..Options::default()`. A field that takes a choice or a number holds the text a command-line flag would, such as `Some("kebab".into())` or `Some("2".into())`, and `levels` holds `"EMPTY_VALUE=error"` entries. What comes back uses enums, so `CheckCode::NoKey` stands in for `"NO_KEY"`. Its `as_str()` is still `"NO_KEY"`.
 
 ## Install
 
@@ -93,6 +95,26 @@ The package is fully typed, ships `py.typed`, and has no dependencies.
 
 :::
 
+::: lang rs
+
+Install the command once and it is on your path:
+
+```bash
+cargo install chki18n
+```
+
+Or add it to the project when you are going to call it from code:
+
+```bash
+cargo add chki18n
+```
+
+`cargo install` builds the command from source and puts it in `~/.cargo/bin`. The crate depends on `serde_json`, `indexmap` and `regex`, and on `libc` on Unix to measure the terminal. Translations held in memory are `serde_json` maps inside `indexmap` maps, and the crate re-exports neither, so a project that builds its own input adds both: `cargo add serde_json indexmap`.
+
+A machine without a Rust toolchain can run the command built ahead of time. Every Rust release on [GitHub](https://github.com/jooy2/chki18n/releases) carries an archive for Linux on x64 and arm64, macOS on Apple silicon and Intel, and Windows on x64; unpack the one for your platform and put `chki18n` on your path. It saves the build that `cargo install` runs first.
+
+:::
+
 ## Your first check
 
 Say your project holds two translation files:
@@ -128,7 +150,7 @@ npx chki18n ./locales --target en
 
 :::
 
-::: lang dart py
+::: lang dart py rs
 
 ```bash
 chki18n ./locales --target en
@@ -222,6 +244,34 @@ if not result.success:
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{check_translation_files, Options};
+
+let result = check_translation_files(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+
+if !result.success {
+    for issue in &result.issues {
+        println!(
+            "{} {} {}: {}",
+            issue.level.as_str(),
+            issue.locale,
+            issue.key,
+            issue.message
+        );
+    }
+}
+```
+
+:::
+
 Nothing is printed unless you ask for it, and the process is never exited for you. The returned result is the only thing to act on. See [The result object](/reference/result) for everything it carries.
 
 ## Which entry point
@@ -235,7 +285,19 @@ Four functions, depending on who owns the translations and how often you check t
 | Read a directory once, then check it repeatedly | [`loadTranslations`](/api/load-translations) |
 | Your own application owns the values and needs only a verdict | [`createAnalyzer().checkEntry`](/api/create-analyzer) |
 
-`checkTranslationFiles` and `loadTranslations` read a directory. `analyzeTranslations` and `createAnalyzer` do no file system work at all, and are also published on their own as <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />, which runs where there is no disk to read. See [The core entry point](/api/core).
+`checkTranslationFiles` and `loadTranslations` read a directory. `analyzeTranslations` and `createAnalyzer` do no file system work at all.
+
+::: lang js dart py
+
+They are also published on their own as <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />, which runs where there is no disk to read. See [The core entry point](/api/core).
+
+:::
+
+::: lang rs
+
+Both live in the `chki18n::core` module, which reads no files. It is part of the same crate rather than a separate build. See [The core entry point](/api/core).
+
+:::
 
 ## Next
 

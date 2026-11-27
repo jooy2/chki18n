@@ -105,6 +105,20 @@ check_translation_files("./locales", Options(format="folder"))
 
 :::
 
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        format: Some("folder".into()),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 If a forced layout matches no file, that is reported as an `INVALID_FILE` error rather than passing quietly with nothing checked.
 
 ## Groups
@@ -161,6 +175,20 @@ await checkTranslationFiles(
 
 ```python
 check_translation_files("./locales", Options(exclude=["tmp", "vendor"]))
+```
+
+:::
+
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        exclude: Some(vec!["tmp".into(), "vendor".into()]),
+        ..Options::default()
+    },
+);
 ```
 
 :::

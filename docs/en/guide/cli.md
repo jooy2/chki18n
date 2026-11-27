@@ -44,6 +44,15 @@ pip install chki18n
 
 :::
 
+::: lang rs
+
+```bash
+# Install the command once and it is on your path.
+cargo install chki18n
+```
+
+:::
+
 The rest of this page writes the command as `chki18n`.
 
 ## Usage
@@ -92,7 +101,7 @@ chki18n --path ./locales --target en
   --version                       Show the installed version
 ```
 
-Every flag is also an API option with the same name, so `--ignore-checks` is <Lang js="ignoreChecks" dart="ignoreChecks" py="ignore_checks" code />. Both are resolved from one definition, and [Options](./options) documents them once for both sides.
+Every flag is also an API option with the same name, so `--ignore-checks` is <Lang js="ignoreChecks" dart="ignoreChecks" py="ignore_checks" rs="ignore_checks" code />. Both are resolved from one definition, and [Options](./options) documents them once for both sides.
 
 ## Reading the output
 
@@ -260,6 +269,17 @@ A GitHub Actions step is one line. [Continuous integration](./ci) has the whole 
 - name: Check translations
   run: |
     pip install chki18n
+    chki18n ./locales --target en
+```
+
+:::
+
+::: lang rs
+
+```yaml
+- name: Check translations
+  run: |
+    cargo install chki18n
     chki18n ./locales --target en
 ```
 

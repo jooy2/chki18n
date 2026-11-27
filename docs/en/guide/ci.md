@@ -6,7 +6,7 @@ title: Continuous integration
 
 A translation file that no longer lines up does not break a build. Nothing crashes and no test fails, so the missing key ships and is only noticed when someone opens the app in that language. Running chki18n on every pull request catches it before then.
 
-There is nothing to configure: give it a path and a target language, and the exit code does the rest. This page has jobs you can paste for GitHub Actions and Bitbucket Pipelines, in all three languages.
+There is nothing to configure: give it a path and a target language, and the exit code does the rest. This page has jobs you can paste for GitHub Actions and Bitbucket Pipelines, in all four languages.
 
 ## What CI reads
 
@@ -114,6 +114,43 @@ jobs:
           pip install chki18n
           chki18n ./locales --target en
 ```
+
+:::
+
+::: lang rs
+
+```yaml
+name: translations
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    name: Check translations
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check translations
+        run: |
+          cargo install chki18n
+          chki18n ./locales --target en
+```
+
+GitHub's hosted runners come with Rust and cargo, and `~/.cargo/bin` is on their path, so the job needs no setup step. `cargo install` builds the command from source on every run, though, which takes half a minute or more. Every Rust release on GitHub also carries the command already built, and downloading it skips the build:
+
+```yaml
+- name: Check translations
+  run: |
+    curl -fsSL https://github.com/jooy2/chki18n/releases/download/rust-v0.1.0/chki18n-rust-0.1.0-linux-x64.tar.gz | tar -xz -C "$RUNNER_TEMP"
+    "$RUNNER_TEMP/chki18n-rust-0.1.0-linux-x64/chki18n" ./locales --target en
+```
+
+The version appears twice in those two lines, so change both when you move to a newer release.
 
 :::
 
@@ -256,6 +293,30 @@ pipelines:
 
 :::
 
+::: lang rs
+
+```yaml
+image: rust:1-slim
+
+pipelines:
+  pull-requests:
+    '**':
+      - step:
+          name: Check translations
+          script:
+            - cargo install chki18n
+            - chki18n ./locales --target en
+  branches:
+    main:
+      - step:
+          name: Check translations
+          script:
+            - cargo install chki18n
+            - chki18n ./locales --target en
+```
+
+:::
+
 A step fails when a command in it exits non-zero, so the exit code is all the wiring there is.
 
 To write the two blocks once rather than twice, define the step and point both at it:
@@ -352,6 +413,29 @@ pipelines:
 
 :::
 
+::: lang rs
+
+```yaml
+definitions:
+  caches:
+    cargo: /usr/local/cargo
+
+pipelines:
+  pull-requests:
+    '**':
+      - step:
+          name: Check translations
+          caches:
+            - cargo
+          script:
+            - cargo install chki18n
+            - chki18n ./locales --target en
+```
+
+`/usr/local/cargo` is cargo's home in the `rust` image, and the command `cargo install` built is kept there. Once it is cached, `cargo install` finds that version already installed and skips the build, which is most of the step's time rather than a second of it. An image that has `curl` and no Rust can download the prebuilt command instead, as in the GitHub Actions job above.
+
+:::
+
 ### Only when translations change
 
 A step can be told which paths it cares about:
@@ -445,6 +529,33 @@ untranslated = result.summary.by_code.get("NOT_TRANSLATED_VALUE", 0)
 if untranslated > 50:
     print(f"{untranslated} strings are still untranslated.", file=sys.stderr)
     sys.exit(1)
+```
+
+:::
+
+::: lang rs
+
+```rust
+use chki18n::{check_translation_files, CheckCode, Options};
+
+let result = check_translation_files(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+let untranslated = result
+    .summary
+    .by_code
+    .get(&CheckCode::NotTranslatedValue)
+    .copied()
+    .unwrap_or(0);
+
+if untranslated > 50 {
+    eprintln!("{untranslated} strings are still untranslated.");
+    std::process::exit(1);
+}
 ```
 
 :::
