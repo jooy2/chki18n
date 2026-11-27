@@ -203,7 +203,9 @@ Future<Object> _readTranslationFile(Chki18nWalkedFile file, Chki18nResolvedOptio
     );
   }
 
-  if (content.trim().isEmpty) {
+  // Only leading space is trimmed, which leaves a file that starts with its
+  // first brace uncopied; a file of nothing but space is empty either way.
+  if (content.trimLeft().isEmpty) {
     return createIssue(
       Chki18nCheckCode.invalidFile,
       file: file.path,

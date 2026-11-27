@@ -54,132 +54,130 @@ class _Frame {
 /// A dotted path one segment longer.
 String _join(String path, String segment) => path.isEmpty ? segment : '$path.$segment';
 
-/// A JSON string read off the text, and where it ended.
+/// A JSON string read off the text, where it ended, and how many line breaks
+/// it held.
 class _ReadString {
-  const _ReadString(this.value, this.end);
+  const _ReadString(this.value, this.end, this.lines);
 
   final String value;
   final int end;
+  final int lines;
 }
 
 /// Reads a JSON string starting at the opening quote.
+///
+/// Escapes are kept as they are written: an unescaped comparison is enough to
+/// tell two keys apart, and decoding would mean re-implementing JSON's escapes
+/// for no gain. That makes the value the text between the quotes, cut out in
+/// one piece.
 _ReadString _readString(String text, int start) {
-  final value = StringBuffer();
+  final length = text.length;
   var index = start + 1;
+  var lines = 0;
 
-  while (index < text.length) {
-    final char = text[index];
+  while (index < length) {
+    final unit = text.codeUnitAt(index);
 
-    if (char == r'\') {
-      // Whatever it escapes, it is not a closing quote. Kept verbatim: an
-      // unescaped comparison is enough to tell two keys apart, and decoding
-      // would mean re-implementing JSON's escapes for no gain.
-      value.write(text.substring(index, index + 2 > text.length ? text.length : index + 2));
+    if (unit == 0x5c) {
+      // Whatever it escapes, it is not a closing quote.
+      if (index + 1 < length && text.codeUnitAt(index + 1) == 0x0a) {
+        lines += 1;
+      }
+
       index += 2;
       continue;
     }
 
-    if (char == '"') {
-      return _ReadString(value.toString(), index + 1);
+    if (unit == 0x22) {
+      return _ReadString(text.substring(start + 1, index), index + 1, lines);
     }
 
-    value.write(char);
+    if (unit == 0x0a) {
+      lines += 1;
+    }
+
     index += 1;
   }
 
-  return _ReadString(value.toString(), index);
+  return _ReadString(text.substring(start + 1, length), length, lines);
 }
 
 /// Every key written twice in one JSON document, in the order they are reached.
 List<Chki18nJsonDuplicateKey> findDuplicateJsonKeys(String text) {
   final duplicates = <Chki18nJsonDuplicateKey>[];
   final stack = <_Frame>[];
+  final length = text.length;
   var index = 0;
   var line = 1;
   // Whether the next string is a key: true just inside an object, and again
   // after every comma in one.
   var expectKey = false;
 
-  while (index < text.length) {
-    final char = text[index];
+  while (index < length) {
+    switch (text.codeUnitAt(index)) {
+      case 0x0a:
+        line += 1;
+        index += 1;
 
-    if (char == '\n') {
-      line += 1;
-      index += 1;
-      continue;
-    }
+      case 0x22:
+        final read = _readString(text, index);
+        final frame = stack.isEmpty ? null : stack.last;
+        final keys = frame?.keys;
 
-    if (char == '"') {
-      final read = _readString(text, index);
-      final frame = stack.isEmpty ? null : stack.last;
-      final keys = frame?.keys;
+        if (frame != null && keys != null && expectKey) {
+          if (!keys.add(read.value)) {
+            duplicates.add(Chki18nJsonDuplicateKey(_join(frame.path, read.value), line));
+          }
 
-      if (keys != null && expectKey) {
-        if (keys.contains(read.value)) {
-          duplicates.add(Chki18nJsonDuplicateKey(_join(frame!.path, read.value), line));
-        } else {
-          keys.add(read.value);
+          frame.pendingKey = read.value;
+          expectKey = false;
         }
 
-        frame!.pendingKey = read.value;
+        // Count the newlines a multi-line string swallowed.
+        line += read.lines;
+        index = read.end;
+
+      case 0x7b || 0x5b:
+        final isObject = text.codeUnitAt(index) == 0x7b;
+        final parent = stack.isEmpty ? null : stack.last;
+        // An element of an array is addressed by its position, the way
+        // flattening writes it: `list.0.label`.
+        final segment =
+            parent == null
+                ? null
+                : parent.keys == null
+                ? '${parent.index}'
+                : parent.pendingKey;
+        final path =
+            parent == null
+                ? ''
+                : segment == null
+                ? parent.path
+                : _join(parent.path, segment);
+
+        stack.add(_Frame(keys: isObject ? <String>{} : null, path: path));
+        expectKey = isObject;
+        index += 1;
+
+      case 0x7d || 0x5d:
+        if (stack.isNotEmpty) {
+          stack.removeLast();
+        }
+
         expectKey = false;
-      }
+        index += 1;
 
-      // Count the newlines a multi-line string swallowed.
-      for (var at = index; at < read.end; at += 1) {
-        if (text[at] == '\n') {
-          line += 1;
+      case 0x2c:
+        if (stack.isNotEmpty && stack.last.keys == null) {
+          stack.last.index += 1;
         }
-      }
 
-      index = read.end;
-      continue;
+        expectKey = stack.isNotEmpty && stack.last.keys != null;
+        index += 1;
+
+      default:
+        index += 1;
     }
-
-    if (char == '{' || char == '[') {
-      final parent = stack.isEmpty ? null : stack.last;
-      // An element of an array is addressed by its position, the way
-      // flattening writes it: `list.0.label`.
-      final segment =
-          parent == null
-              ? null
-              : parent.keys == null
-              ? '${parent.index}'
-              : parent.pendingKey;
-      final path =
-          parent == null
-              ? ''
-              : segment == null
-              ? parent.path
-              : _join(parent.path, segment);
-
-      stack.add(_Frame(keys: char == '{' ? <String>{} : null, path: path));
-      expectKey = char == '{';
-      index += 1;
-      continue;
-    }
-
-    if (char == '}' || char == ']') {
-      if (stack.isNotEmpty) {
-        stack.removeLast();
-      }
-
-      expectKey = false;
-      index += 1;
-      continue;
-    }
-
-    if (char == ',') {
-      if (stack.isNotEmpty && stack.last.keys == null) {
-        stack.last.index += 1;
-      }
-
-      expectKey = stack.isNotEmpty && stack.last.keys != null;
-      index += 1;
-      continue;
-    }
-
-    index += 1;
   }
 
   return duplicates;

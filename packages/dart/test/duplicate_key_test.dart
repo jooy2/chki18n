@@ -107,6 +107,27 @@ void main() {
       expect(findDuplicateJsonKeys(r'{"a\"b": 1, "c": 2}'), isEmpty);
       expect(findDuplicateJsonKeys(r'{"a\"b": 1, "a\"b": 2}').length, 1);
     });
+
+    test('keeps an escape in the key as it is written', () {
+      expect(findDuplicateJsonKeys(r'{"a\nb": 1, "a\nb": 2}'), [
+        const Chki18nJsonDuplicateKey(r'a\nb', 1),
+      ]);
+      expect(findDuplicateJsonKeys(r'{"a\\": 1, "a\\": 2}'), [
+        const Chki18nJsonDuplicateKey(r'a\\', 1),
+      ]);
+    });
+
+    test('counts the line breaks a value swallows towards the next key', () {
+      // Not valid JSON, but the scanner runs on what it is given and must not
+      // lose count of where it is.
+      expect(findDuplicateJsonKeys('{"a": "one\ntwo",\n"a": 2}').first.line, 3);
+      expect(findDuplicateJsonKeys('{"a": "one\\\ntwo",\n"a": 2}').first.line, 3);
+    });
+
+    test('stops at the end of a string that never closes', () {
+      expect(findDuplicateJsonKeys('{"a": 1, "a'), [const Chki18nJsonDuplicateKey('a', 1)]);
+      expect(findDuplicateJsonKeys('{"a": "b\\'), isEmpty);
+    });
   });
 
   group('DUPLICATE_KEY', () {
