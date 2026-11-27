@@ -10,7 +10,7 @@
  *   a built site the inline script in `<head>` sets it before the first paint,
  *   so nothing flashes and there is nothing for hydration to disagree about.
  * - The `ref` here is for the parts that are components rather than content:
- *   the switch itself, which has to know which of its three options is chosen.
+ *   the switch itself, which has to know which of its options is chosen.
  *
  * `setCodeLanguage` writes all three — attribute, ref, storage — so nothing else
  * has to remember the order.

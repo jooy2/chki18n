@@ -20,8 +20,8 @@ import { localeOf, t } from '../../data/i18n';
  * row that names the choice — which is also the only part of the control that
  * was ever load-bearing.
  *
- * **The button's face is not rendered from the ref.** All three labels are in
- * the button and CSS displays the chosen one, exactly the way a `::: lang` block
+ * **The button's face is not rendered from the ref.** Every label is in the
+ * button and CSS displays the chosen one, exactly the way a `::: lang` block
  * works, because `html[data-lang]` is set by the inline head script before the
  * first paint and a `v-if` cannot run before hydration. Render it from the ref
  * and a pre-rendered page announces "JavaScript" to a reader who chose Python,

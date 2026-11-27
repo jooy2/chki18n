@@ -14,8 +14,8 @@
  *   page, so a reader looking up `EMPTY_VALUE` finds the page whichever
  *   package they had selected.
  *
- * `data-lang` on a block holds a space-separated list, because a block two of
- * the packages want and the third does not is a real case — hence `~=` rather
+ * `data-lang` on a block holds a space-separated list, because a block some of
+ * the packages want and the others do not is a real case — hence `~=` rather
  * than `=`.
  */
 
@@ -30,7 +30,8 @@
  */
 html[data-lang='js'] .chki18n-lang[data-lang]:not([data-lang~='js']),
 html[data-lang='dart'] .chki18n-lang[data-lang]:not([data-lang~='dart']),
-html[data-lang='py'] .chki18n-lang[data-lang]:not([data-lang~='py']) {
+html[data-lang='py'] .chki18n-lang[data-lang]:not([data-lang~='py']),
+html[data-lang='rs'] .chki18n-lang[data-lang]:not([data-lang~='rs']) {
 	display: none;
 }
 
@@ -252,7 +253,7 @@ html[data-lang='py'] .chki18n-lang[data-lang]:not([data-lang~='py']) {
 	text-align: left;
 }
 
-/* Reserved rather than conditional, so the three rows line up whichever one is
+/* Reserved rather than conditional, so the rows line up whichever one is
    currently answering. */
 .chki18n-lang-check {
 	flex: none;

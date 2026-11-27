@@ -5,7 +5,7 @@
  * A page says the same thing about `checkTranslationFiles` whichever package a
  * reader installs — the same checks, the same options, the same reasons — and
  * only the code, the parameter shape and the install line differ. So they are
- * not three sites and not three folders: they are one page with the parts that
+ * not a site each and not a folder each: they are one page with the parts that
  * differ marked up, and this file is what marks them.
  *
  * Adding a language is an entry here plus the `::: lang <id>` blocks on whatever
@@ -24,7 +24,9 @@ export interface CodeLanguage {
 	 * The brand's own colour, for the mark beside the label. The one place this
 	 * site paints something that is not its own — because a logo in the wrong
 	 * colour is a worse logo, and the mark identifies the choice here rather than
-	 * decorating it.
+	 * decorating it. A mark drawn in black, as Rust's is, takes `currentColor`
+	 * instead: the text colour is black on the light theme and keeps the mark
+	 * visible on the dark one.
 	 */
 	tint: string;
 }
@@ -32,7 +34,8 @@ export interface CodeLanguage {
 export const CODE_LANGUAGES: CodeLanguage[] = [
 	{ id: 'js', label: 'JavaScript', pkg: 'chki18n', fence: 'javascript', tint: '#F7DF1E' },
 	{ id: 'dart', label: 'Dart', pkg: 'chki18n', fence: 'dart', tint: '#0175C2' },
-	{ id: 'py', label: 'Python', pkg: 'chki18n', fence: 'python', tint: '#3776AB' }
+	{ id: 'py', label: 'Python', pkg: 'chki18n', fence: 'python', tint: '#3776AB' },
+	{ id: 'rs', label: 'Rust', pkg: 'chki18n', fence: 'rust', tint: 'currentColor' }
 ];
 
 export const CODE_LANGUAGE_IDS: string[] = CODE_LANGUAGES.map((language) => language.id);
@@ -53,8 +56,8 @@ export const CODE_LANGUAGE_STORAGE_KEY = 'chki18n-lang';
  *
  * This runs as a blocking inline script in `<head>` rather than from the app,
  * for the reason every no-flash theme switch does: the choice decides which
- * third of a page is displayed, and a reader who picked Dart would otherwise
- * watch the JavaScript third render and disappear. Written as a string because
+ * part of a page is displayed, and a reader who picked Dart would otherwise
+ * watch the JavaScript part render and disappear. Written as a string because
  * it has to be inlined into the document rather than imported.
  */
 export const CODE_LANGUAGE_HEAD_SCRIPT = `(function(){var i=${JSON.stringify(

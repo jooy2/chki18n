@@ -28,8 +28,8 @@ export function localeOf(lang: string | undefined): Locale {
 
 const strings = {
 	/*
-	 * "Languages" rather than "Packages". The control offers JavaScript, Dart and
-	 * Python — the languages chki18n ships for — and the registry each one is
+	 * "Languages" rather than "Packages". The control offers JavaScript, Dart,
+	 * Python and Rust — the languages chki18n ships for — and the registry each one is
 	 * published to is a different question, answered by the navbar's Packages
 	 * menu.
 	 */

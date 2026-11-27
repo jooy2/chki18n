@@ -24,13 +24,14 @@ const LOCALES = ['en', 'ko'];
  *
  * Each one is wrapped in the `::: lang` block for the language it is written
  * in, so a reader sees the changelog of the package they picked rather than
- * three of them stacked. `lang` is the id `docs/.vitepress/data/languages.ts`
+ * all of them stacked. `lang` is the id `docs/.vitepress/data/languages.ts`
  * gives that language.
  */
 const PACKAGES = [
 	{ dir: 'packages/javascript', lang: 'js', registry: 'npm', name: 'chki18n' },
 	{ dir: 'packages/dart', lang: 'dart', registry: 'pub.dev', name: 'chki18n' },
-	{ dir: 'packages/python', lang: 'py', registry: 'PyPI', name: 'chki18n' }
+	{ dir: 'packages/python', lang: 'py', registry: 'PyPI', name: 'chki18n' },
+	{ dir: 'packages/rust', lang: 'rs', registry: 'crates.io', name: 'chki18n' }
 ];
 
 const STRINGS = {

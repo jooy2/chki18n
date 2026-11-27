@@ -1,7 +1,7 @@
 /**
  * Checks that every `::: lang` container on the site is one a reader can see.
  *
- * The container decides which third of a page is displayed, so a malformed one
+ * The container decides which part of a page is displayed, so a malformed one
  * does not fail anything: it renders for nobody and the page quietly loses a
  * paragraph. The two ways that happens are both mechanical, so they are checked
  * rather than watched for.

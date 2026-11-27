@@ -36,7 +36,7 @@ const npmPackage = JSON.parse(
 	readFileSync(resolve(rootDir, 'packages/javascript/package.json'), 'utf8')
 ) as { name: string; version: string; homepage: string; repository: { url: string } };
 
-/** The other two names, read off their own manifests for the same reason. */
+/** The other names, read off their own manifests for the same reason. */
 const pubName =
 	readFileSync(resolve(rootDir, 'packages/dart/pubspec.yaml'), 'utf8').match(
 		/^name:\s*(\S+)/m
@@ -47,20 +47,26 @@ const pypiName =
 		/^name\s*=\s*"([^"]+)"/m
 	)?.[1] ?? npmPackage.name;
 
+const crateName =
+	readFileSync(resolve(rootDir, 'packages/rust/Cargo.toml'), 'utf8').match(
+		/^name\s*=\s*"([^"]+)"/m
+	)?.[1] ?? npmPackage.name;
+
 const siteUrl = npmPackage.homepage.replace(/\/+$/, '');
 const repoUrl = npmPackage.repository.url.replace(/\.git$/, '');
 const npmUrl = `https://www.npmjs.com/package/${npmPackage.name}`;
 const pubUrl = `https://pub.dev/packages/${pubName}`;
 const pypiUrl = `https://pypi.org/project/${pypiName}/`;
+const cratesUrl = `https://crates.io/crates/${crateName}`;
 const editLinkPattern = `${repoUrl}/edit/main/docs/:path`;
 const socialImage = `${siteUrl}/512x512.png`;
 
 /**
  * Where each package is published, in the order the language switch lists them.
  *
- * The navbar renders these as one **Packages** dropdown rather than as three
- * social-link icons beside GitHub: a registry is one destination, and four icons
- * in a row read as a toolbar rather than as the places this site actually sends
+ * The navbar renders these as one **Packages** dropdown rather than as
+ * social-link icons beside GitHub: a registry is one destination, and a row of
+ * icons reads as a toolbar rather than as the places this site actually sends
  * a reader. `mark` is the logo the row is labelled with — the registry's own,
  * not the language's, because npm is not JavaScript — and `id` is the code
  * language it publishes. See `PackageLinks.vue`.
@@ -68,7 +74,8 @@ const socialImage = `${siteUrl}/512x512.png`;
 const packageLinks = [
 	{ id: 'js', registry: 'npm', mark: 'npm', url: npmUrl },
 	{ id: 'dart', registry: 'pub.dev', mark: 'pubdev', url: pubUrl },
-	{ id: 'py', registry: 'PyPI', mark: 'pypi', url: pypiUrl }
+	{ id: 'py', registry: 'PyPI', mark: 'pypi', url: pypiUrl },
+	{ id: 'rs', registry: 'crates.io', mark: 'cratesio', url: cratesUrl }
 ];
 
 /** `/` for the default locale, `/{lang}/` for every other one. */
@@ -172,10 +179,10 @@ const navFor = (lang: string, labels: { guide: string; reference: string; packag
 
 /** The site's own sentence. Read twice: once by a crawler, once by `llms.txt`. */
 const siteDescription =
-	'Find the missing keys, the empty values and the broken interpolation in your i18n translation files. One check engine for the command line, for CI and for your own code, in JavaScript, Dart or Python.';
+	'Find the missing keys, the empty values and the broken interpolation in your i18n translation files. One check engine for the command line, for CI and for your own code, in JavaScript, Dart, Python or Rust.';
 
 const siteDescriptionKo =
-	'i18n 번역 파일에서 누락된 키, 비어 있는 값, 어긋난 보간 키를 찾아냅니다. 커맨드라인과 CI, 직접 호출하는 코드가 모두 같은 검사 엔진을 사용하며, JavaScript와 Dart, Python으로 제공합니다.';
+	'i18n 번역 파일에서 누락된 키, 비어 있는 값, 어긋난 보간 키를 찾아냅니다. 커맨드라인과 CI, 직접 호출하는 코드가 모두 같은 검사 엔진을 사용하며, JavaScript와 Dart, Python, Rust로 제공합니다.';
 
 const vitePressI18nConfig: VitePressI18nOptions = {
 	locales: supportLocales,
@@ -420,7 +427,7 @@ const vitePressConfig: UserConfig = {
 		// wide card would letterbox it into a strip of background.
 		['meta', { name: 'twitter:card', content: 'summary' }],
 		['meta', { name: 'twitter:image', content: socialImage }],
-		// Which package's third of every page is displayed, applied to `<html>`
+		// Which package's part of every page is displayed, applied to `<html>`
 		// before the first paint. See `data/languages.ts`.
 		['script', {}, CODE_LANGUAGE_HEAD_SCRIPT]
 	],
@@ -469,8 +476,8 @@ const vitePressConfig: UserConfig = {
 	 * `::: lang js` … `:::` — the block that only one package sees.
 	 *
 	 * Every package's block is in the document and CSS displays one of them,
-	 * which is what makes the switch instant and what keeps the three halves from
-	 * being three pages that drift apart. It also means the search index carries
+	 * which is what makes the switch instant and what keeps the packages' parts
+	 * from being separate pages that drift apart. It also means the search index carries
 	 * all of them, so a reader looking up `check_translation_files` finds the page
 	 * whichever package they had selected.
 	 */
@@ -485,8 +492,8 @@ const vitePressConfig: UserConfig = {
 						return '</div>\n';
 					}
 
-					// `::: lang dart`, and `::: lang js dart` for a block two of them
-					// want but the third would not.
+					// `::: lang dart`, and `::: lang js dart` for a block some of them
+					// want and the others would not.
 					const wanted = token.info
 						.trim()
 						.split(/\s+/)
@@ -516,8 +523,8 @@ const vitePressConfig: UserConfig = {
 			pattern: editLinkPattern
 		},
 		/*
-		 * The source, and only the source. npm used to sit here too, and with three
-		 * registries to name it would have been three more icons in a corner that
+		 * The source, and only the source. npm used to sit here too, and with four
+		 * registries to name it would have been four more icons in a corner that
 		 * already holds the locale switch and the appearance toggle — they are in
 		 * the navbar's Packages menu now, where each one gets a name instead of
 		 * being a logo the reader has to recognise.
