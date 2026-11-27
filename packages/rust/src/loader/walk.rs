@@ -109,6 +109,16 @@ fn walk(
 	}
 }
 
+/// A file's bytes as text, decoded the way Node decodes a file as UTF-8: a byte
+/// that is not part of a character becomes U+FFFD rather than an error. Valid
+/// text, which is nearly every file, is checked once and kept as it is.
+pub fn text_of(bytes: Vec<u8>) -> String {
+	match String::from_utf8(bytes) {
+		Ok(text) => text,
+		Err(error) => String::from_utf8_lossy(error.as_bytes()).into_owned(),
+	}
+}
+
 /// The extension of a file name in lower case, or `""`. `.gitignore` is a name
 /// that begins with a dot, not a file of that type.
 pub fn extension_of(name: &str) -> String {

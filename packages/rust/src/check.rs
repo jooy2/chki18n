@@ -9,7 +9,7 @@ use indexmap::IndexSet;
 use serde_json::{json, Map, Value};
 
 use crate::constants::{CheckCode, Level, MAX_MEASURED_REPORT_WIDTH};
-use crate::core::duplicate::collect_flat_keys;
+use crate::core::duplicate::collect_flat_keys_of_map;
 use crate::core::interpolation::Delimiters;
 use crate::core::issue::{create_issue, IssueInit};
 use crate::core::js::stringify_pretty;
@@ -87,7 +87,7 @@ impl FileSession {
 
 		for locales in groups.values() {
 			for translations in locales.values() {
-				collect_flat_keys(&Value::Object(translations.clone()), &mut keys);
+				collect_flat_keys_of_map(translations, &mut keys);
 			}
 		}
 

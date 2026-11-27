@@ -16,7 +16,7 @@ use crate::core::issue::{create_issue, IssueInit};
 use crate::core::js::object_keys;
 use crate::core::locale::is_locale_code;
 use crate::loader::json_duplicates::{find_duplicate_json_keys, JsonDuplicateKey};
-use crate::loader::walk::{extension_of, walk_files, WalkItem, WalkedFile};
+use crate::loader::walk::{extension_of, text_of, walk_files, WalkItem, WalkedFile};
 use crate::options::ResolvedOptions;
 use crate::types::{Issue, SourceFile, TranslationGroups};
 
@@ -134,7 +134,7 @@ fn read_translation_file(
 	})?;
 	// Decoded the way Node decodes a file as UTF-8: a byte that is not part of a
 	// character becomes U+FFFD rather than an error.
-	let decoded = String::from_utf8_lossy(&bytes);
+	let decoded = text_of(bytes);
 	let content = decoded.strip_prefix('\u{feff}').unwrap_or(&decoded);
 
 	if content.trim_matches(is_space).is_empty() {
@@ -206,8 +206,8 @@ fn read_slots(
 
 /// What the groups are built from: a file that was read, or one left unread
 /// because its path names no locale.
-enum Entry<'a> {
-	Read(&'a ScannedFile),
+enum Entry {
+	Read(ScannedFile),
 	Unread(String),
 }
 
@@ -217,12 +217,14 @@ struct Built {
 	skipped: Vec<String>,
 }
 
-fn build_groups(entries: &[Entry<'_>], file_format: FileFormat, issues: &mut Vec<Issue>) -> Built {
+/// Sorts the files into comparable groups. The files are consumed: each one's
+/// translations move into its group rather than being copied there.
+fn build_groups(entries: Vec<Entry>, file_format: FileFormat, issues: &mut Vec<Issue>) -> Built {
 	let mut groups = TranslationGroups::new();
 	let mut sources = Vec::new();
 	let mut skipped = Vec::new();
 
-	let mut add = |group: String, locale: String, translations: &Value, file: &ScannedFile| {
+	let mut add = |group: String, locale: String, translations: Value, file: &ScannedFile| {
 		// A translation file is an object of keys. Anything else has no keys to
 		// compare and is reported rather than read.
 		let Value::Object(map) = translations else {
@@ -245,7 +247,7 @@ fn build_groups(entries: &[Entry<'_>], file_format: FileFormat, issues: &mut Vec
 		groups
 			.entry(group.clone())
 			.or_default()
-			.insert(locale.clone(), map.clone());
+			.insert(locale.clone(), map);
 		sources.push(SourceFile {
 			path: file.path.clone(),
 			relative_path: file.relative_path.clone(),
@@ -284,33 +286,36 @@ fn build_groups(entries: &[Entry<'_>], file_format: FileFormat, issues: &mut Vec
 	};
 
 	for entry in entries {
-		let file = match entry {
+		let mut file = match entry {
 			// Left unread because its path names no locale, so it belongs to none.
 			Entry::Unread(relative_path) => {
-				skipped.push(relative_path.clone());
+				skipped.push(relative_path);
 				continue;
 			}
-			Entry::Read(file) => *file,
+			Entry::Read(file) => file,
 		};
-		let segments = &file.segments;
+		let json = file.json.take();
+		let segments = file.segments.clone();
 		let file_name = segments.last().cloned().unwrap_or_default();
 
 		match file_format {
 			FileFormat::Nested => {
-				let locales = nested_locale_keys(&file.json);
+				let locales = nested_locale_keys(&json);
 
 				if locales.is_empty() {
 					skipped.push(file.relative_path.clone());
 					continue;
 				}
 
+				let mut json = json;
+
 				for locale in locales {
-					add(
-						file.relative_path.clone(),
-						locale.clone(),
-						&file.json[locale.as_str()],
-						file,
-					);
+					let translations = json
+						.get_mut(locale.as_str())
+						.map(Value::take)
+						.unwrap_or_default();
+
+					add(file.relative_path.clone(), locale, translations, &file);
 				}
 			}
 			FileFormat::Folder => {
@@ -332,7 +337,7 @@ fn build_groups(entries: &[Entry<'_>], file_format: FileFormat, issues: &mut Vec
 					format!("{directory}/{file_name}")
 				};
 
-				add(group, locale, &file.json, file);
+				add(group, locale, json, &file);
 			}
 			_ => {
 				let locale = stem_of(&file_name).to_string();
@@ -345,8 +350,8 @@ fn build_groups(entries: &[Entry<'_>], file_format: FileFormat, issues: &mut Vec
 				add(
 					segments[..segments.len() - 1].join("/"),
 					locale,
-					&file.json,
-					file,
+					json,
+					&file,
 				);
 			}
 		}
@@ -359,12 +364,15 @@ fn build_groups(entries: &[Entry<'_>], file_format: FileFormat, issues: &mut Vec
 	}
 }
 
-fn detected_interpolation_of(files: &[&ScannedFile], skipped: &[String]) -> Option<Delimiters> {
+fn detected_interpolation_of(
+	files: &[(String, Option<Delimiters>)],
+	skipped: &[String],
+) -> Option<Delimiters> {
 	let ignored: IndexSet<&String> = skipped.iter().collect();
 	let seen: IndexSet<&str> = files
 		.iter()
-		.filter(|file| !ignored.contains(&file.relative_path))
-		.filter_map(|file| file.interpolation.map(|delimiters| delimiters.prefix))
+		.filter(|(relative_path, _)| !ignored.contains(relative_path))
+		.filter_map(|(_, delimiters)| delimiters.map(|delimiters| delimiters.prefix))
 		.collect();
 
 	INTERPOLATION_DELIMITERS
@@ -425,11 +433,11 @@ pub fn scan_translation_directory(path: &Path, options: &ResolvedOptions) -> Sca
 
 	let file_format = file_format.unwrap_or(FileFormat::Single);
 	// The issues go out in walk order.
-	let mut entries: Vec<Entry<'_>> = Vec::new();
+	let mut entries: Vec<Entry> = Vec::new();
 
-	for slot in &slots {
+	for slot in slots {
 		match slot {
-			Slot::Unreadable(issue) => issues.push(issue.clone()),
+			Slot::Unreadable(issue) => issues.push(issue),
 			Slot::File { file, read: None } => entries.push(Entry::Unread(file.segments.join("/"))),
 			Slot::File {
 				read: Some(Ok(scanned)),
@@ -438,11 +446,21 @@ pub fn scan_translation_directory(path: &Path, options: &ResolvedOptions) -> Sca
 			Slot::File {
 				read: Some(Err(issue)),
 				..
-			} => issues.push((**issue).clone()),
+			} => issues.push(*issue),
 		}
 	}
 
-	let built = build_groups(&entries, file_format, &mut issues);
+	// What the delimiter guess needs is noted before the files move into their
+	// groups.
+	let interpolations: Vec<(String, Option<Delimiters>)> = entries
+		.iter()
+		.filter_map(|entry| match entry {
+			Entry::Read(file) => Some((file.relative_path.clone(), file.interpolation)),
+			Entry::Unread(_) => None,
+		})
+		.collect();
+	let had_entries = !entries.is_empty();
+	let built = build_groups(entries, file_format, &mut issues);
 	let display_path = path.to_string_lossy();
 
 	if built.files.is_empty() {
@@ -450,7 +468,7 @@ pub fn scan_translation_directory(path: &Path, options: &ResolvedOptions) -> Sca
 			CheckCode::InvalidFile,
 			IssueInit {
 				file: Some(display_path.to_string()),
-				message: Some(if entries.is_empty() {
+				message: Some(if !had_entries {
 					format!("No translation file was found in '{display_path}'.")
 				} else {
 					format!(
@@ -463,14 +481,7 @@ pub fn scan_translation_directory(path: &Path, options: &ResolvedOptions) -> Sca
 		));
 	}
 
-	let read: Vec<&ScannedFile> = entries
-		.iter()
-		.filter_map(|entry| match entry {
-			Entry::Read(file) => Some(*file),
-			Entry::Unread(_) => None,
-		})
-		.collect();
-	let detected_interpolation = detected_interpolation_of(&read, &built.skipped);
+	let detected_interpolation = detected_interpolation_of(&interpolations, &built.skipped);
 
 	ScanResult {
 		file_format,

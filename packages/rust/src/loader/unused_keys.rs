@@ -1,11 +1,12 @@
 //! Searching a source tree for the keys it uses, and for the keys it asks for
 //! that nothing defines.
 
-use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
 use indexmap::{IndexMap, IndexSet};
+
+use crate::core::hash::{FastBuild, FastMap, FastSet};
 
 use crate::constants::{CheckCode, SOURCE_EXTENSIONS, SOURCE_MAX_FILE_BYTES};
 use crate::core::chars::{is_space, is_word_byte};
@@ -52,16 +53,16 @@ fn head_of(text: &[u8], at: usize) -> u16 {
 /// characters start no leaf is passed over without being cut out at all. A leaf
 /// with any other character in it is searched for on its own.
 struct LeafSearch {
-	words: HashSet<String>,
+	words: FastSet<String>,
 	others: IndexSet<String>,
 	lengths: Vec<usize>,
-	heads: HashSet<u16>,
-	seen_runs: HashSet<String>,
+	heads: FastSet<u16>,
+	seen_runs: FastSet<String>,
 }
 
 impl LeafSearch {
-	fn new(remaining: &IndexSet<String>) -> LeafSearch {
-		let mut words = HashSet::new();
+	fn new(remaining: &FastSet<String>) -> LeafSearch {
+		let mut words = FastSet::default();
 		let mut others = IndexSet::new();
 
 		for leaf in remaining {
@@ -75,7 +76,7 @@ impl LeafSearch {
 		let mut lengths: Vec<usize> = words
 			.iter()
 			.map(String::len)
-			.collect::<HashSet<_>>()
+			.collect::<FastSet<_>>()
 			.into_iter()
 			.collect();
 
@@ -92,11 +93,11 @@ impl LeafSearch {
 			others,
 			lengths,
 			heads,
-			seen_runs: HashSet::new(),
+			seen_runs: FastSet::default(),
 		}
 	}
 
-	fn search_run(&mut self, run: &str, remaining: &mut IndexSet<String>) {
+	fn search_run(&mut self, run: &str, remaining: &mut FastSet<String>) {
 		let bytes = run.as_bytes();
 
 		for &length in &self.lengths {
@@ -112,13 +113,13 @@ impl LeafSearch {
 				let piece = &run[at..at + length];
 
 				if self.words.remove(piece) {
-					remaining.shift_remove(piece);
+					remaining.remove(piece);
 				}
 			}
 		}
 	}
 
-	fn search(&mut self, text: &str, remaining: &mut IndexSet<String>) {
+	fn search(&mut self, text: &str, remaining: &mut FastSet<String>) {
 		let bytes = text.as_bytes();
 		let mut index = 0;
 
@@ -144,7 +145,7 @@ impl LeafSearch {
 
 		self.others.retain(|leaf| {
 			if text.contains(leaf.as_str()) {
-				remaining.shift_remove(leaf);
+				remaining.remove(leaf);
 				false
 			} else {
 				true
@@ -248,8 +249,8 @@ type Finder<'n> = dyn Fn(&str, usize) -> Option<(&str, usize)> + 'n;
 /// `i18nKey` attribute after, the way the two patterns of the JavaScript
 /// package find them. A key built at run time is left alone, and a namespace
 /// written in front of a key is cut off.
-fn calls_in(content: &str, names: &[String]) -> IndexSet<String> {
-	let mut keys = IndexSet::new();
+fn calls_in(content: &str, names: &[String]) -> IndexSet<String, FastBuild> {
+	let mut keys = IndexSet::default();
 	let finders: [&Finder<'_>; 2] = [&|text, at| call_at(text, at, names), &|text, at| {
 		attribute_at(text, at)
 	}];
@@ -292,12 +293,12 @@ fn last_segment_of(key: &str) -> &str {
 /// any run of segments that ends either. Every such address ends with the last
 /// segment of the key it addresses, so the keys are filed under that segment.
 struct Addresses {
-	keys_by_last: HashMap<String, Vec<String>>,
+	keys_by_last: FastMap<String, Vec<String>>,
 }
 
 impl Addresses {
 	fn new(keys: &[String]) -> Addresses {
-		let mut keys_by_last: HashMap<String, Vec<String>> = HashMap::new();
+		let mut keys_by_last: FastMap<String, Vec<String>> = FastMap::default();
 		let mut file = |key: &str| {
 			keys_by_last
 				.entry(last_segment_of(key).to_string())
@@ -342,7 +343,37 @@ fn read_source(path: &str) -> Option<String> {
 
 	let bytes = fs::read(path).ok()?;
 
-	Some(String::from_utf8_lossy(&bytes).into_owned())
+	Some(crate::loader::walk::text_of(bytes))
+}
+
+/// How many source files are read before the ones read are searched.
+const READ_BATCH: usize = 256;
+
+/// The text of each file of [batch], read on as many threads as the machine
+/// offers, in the order of [batch].
+fn read_sources(batch: &[WalkedFile]) -> Vec<Option<String>> {
+	let threads = std::thread::available_parallelism()
+		.map_or(1, usize::from)
+		.clamp(1, 8);
+	let share = batch.len().div_ceil(threads).max(1);
+
+	std::thread::scope(|scope| {
+		let workers: Vec<_> = batch
+			.chunks(share)
+			.map(|part| {
+				scope.spawn(move || {
+					part.iter()
+						.map(|file| read_source(&file.path))
+						.collect::<Vec<_>>()
+				})
+			})
+			.collect();
+
+		workers
+			.into_iter()
+			.flat_map(|worker| worker.join().unwrap_or_default())
+			.collect()
+	})
 }
 
 /// Searches [source_path] for each key, and reports the ones never found and
@@ -376,16 +407,18 @@ pub fn find_unused_keys(
 	let wants_undefined = options.enabled_checks.contains(&CheckCode::UndefinedKey);
 	let addresses = wants_undefined.then(|| Addresses::new(keys));
 	let mut undefined_keys = Vec::new();
-	let mut reported: HashSet<String> = HashSet::new();
+	let mut reported: FastSet<String> = FastSet::default();
 
 	if keys_by_leaf.is_empty() && !wants_undefined {
 		return UsageScan::default();
 	}
 
-	// Shrinks as leaves turn up, and the scan stops reading once it is empty.
-	let mut remaining: IndexSet<String> = keys_by_leaf.keys().cloned().collect();
+	// Shrinks as leaves turn up, and the scan stops reading once it is empty. A
+	// hash set, since a leaf is taken out of it every time one turns up; the order
+	// the unused keys are reported in comes from `keys_by_leaf` instead.
+	let mut remaining: FastSet<String> = keys_by_leaf.keys().cloned().collect();
 	let mut search = LeafSearch::new(&remaining);
-	let skip: HashSet<&String> = skip_files.iter().collect();
+	let skip: FastSet<&String> = skip_files.iter().collect();
 	let is_excluded_directory = create_path_excluder(&options.exclude);
 	let is_excluded_file = create_file_excluder(&options.exclude_files);
 	let mut scanned_file_count = 0;
@@ -405,45 +438,62 @@ pub fn find_unused_keys(
 	// an undefined key names the file it came from in full.
 	let root = resolve_path(&source_path.to_string_lossy());
 
-	for item in walk_files(&root, &is_excluded_directory, &is_wanted) {
-		let WalkItem::File(file) = item else {
-			continue;
-		};
+	let files: Vec<WalkedFile> = walk_files(&root, &is_excluded_directory, &is_wanted)
+		.into_iter()
+		.filter_map(|item| match item {
+			WalkItem::File(file) => Some(file),
+			WalkItem::Unreadable(_) => None,
+		})
+		.collect();
 
+	// Read a batch at a time on several threads, then searched one file after
+	// another in the order of the walk, which is what decides the file an
+	// undefined key is reported against. A read spends most of its time waiting
+	// on the file system, and waiting for one file at a time adds those waits up.
+	'batches: for batch in files.chunks(READ_BATCH) {
 		if remaining.is_empty() && !wants_undefined {
 			break;
 		}
 
-		let Some(content) = read_source(&file.path) else {
-			continue;
-		};
-
-		scanned_file_count += 1;
-
-		if !remaining.is_empty() {
-			search.search(&content, &mut remaining);
-		}
-
-		let Some(addresses) = &addresses else {
-			continue;
-		};
-
-		for key in calls_in(&content, &options.translate_functions) {
-			if addresses.contains(&key) || reported.contains(&key) {
-				continue;
+		for (file, content) in batch.iter().zip(read_sources(batch)) {
+			if remaining.is_empty() && !wants_undefined {
+				break 'batches;
 			}
 
-			reported.insert(key.clone());
-			undefined_keys.push(KeyUsage {
-				key,
-				file: Some(file.path.clone()),
-			});
+			let Some(content) = content else {
+				continue;
+			};
+
+			scanned_file_count += 1;
+
+			if !remaining.is_empty() {
+				search.search(&content, &mut remaining);
+			}
+
+			let Some(addresses) = &addresses else {
+				continue;
+			};
+
+			for key in calls_in(&content, &options.translate_functions) {
+				if addresses.contains(&key) || reported.contains(&key) {
+					continue;
+				}
+
+				reported.insert(key.clone());
+				undefined_keys.push(KeyUsage {
+					key,
+					file: Some(file.path.clone()),
+				});
+			}
 		}
 	}
 
-	let unused_keys = remaining
-		.iter()
-		.flat_map(|leaf| keys_by_leaf.get(leaf).cloned().unwrap_or_default())
+	// In the order the leaves were first met, which is the order a JavaScript
+	// `Set` keeps its remaining entries in.
+	let unused_keys = keys_by_leaf
+		.into_iter()
+		.filter(|(leaf, _)| remaining.contains(leaf))
+		.flat_map(|(_, keys)| keys)
 		.collect();
 
 	UsageScan {
