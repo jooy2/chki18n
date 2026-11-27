@@ -67,6 +67,8 @@ dart pub add chki18n
 
 Flutter 프로젝트에서는 `flutter pub add chki18n`입니다. 이미 의존성으로 추가한 프로젝트 안에서는 전역 설치 없이 `dart run chki18n`으로 실행할 수 있습니다. 이 패키지는 의존성이 없습니다.
 
+Dart SDK가 없는 머신에서는 미리 컴파일한 명령을 쓸 수 있습니다. [GitHub](https://github.com/jooy2/chki18n/releases)의 Dart 릴리스마다 Linux(x64, arm64), Apple 실리콘 macOS, Windows(x64)용 압축 파일이 함께 올라갑니다. 플랫폼에 맞는 파일을 풀고 `chki18n`을 경로에 두면 됩니다. `dart pub global activate`는 Dart VM을 띄우고 명령을 컴파일한 뒤에 실행하지만, 이 실행 파일은 몇 밀리초 만에 시작합니다.
+
 :::
 
 ::: lang py

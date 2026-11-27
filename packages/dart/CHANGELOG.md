@@ -2,6 +2,10 @@
 
 ## vNext (2026--)
 
+### Added
+
+- Every GitHub release of the Dart package carries the command line compiled ahead of time, for Linux on x64 and arm64, macOS on Apple silicon and Windows on x64. A machine or a CI job without the Dart SDK can unpack it and run it, and it starts in a few milliseconds where `dart pub global activate` starts the Dart VM and compiles the command first
+
 ## 1.3.0 (2026-10-26)
 
 > Reports now agree with the JavaScript and Python packages in every case they used to differ on, the unused key scan takes a second where it took two minutes, and numbers, ordinal plurals and Thai or Hindi text are read the way their languages write them.

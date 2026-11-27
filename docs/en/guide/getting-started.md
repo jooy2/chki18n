@@ -67,6 +67,8 @@ dart pub add chki18n
 
 In a Flutter project that is `flutter pub add chki18n`. Inside a project that already depends on it, `dart run chki18n` runs the command without installing it globally. The package has no dependencies.
 
+A machine without the Dart SDK can run the command compiled ahead of time. Every Dart release on [GitHub](https://github.com/jooy2/chki18n/releases) carries an archive for Linux on x64 and arm64, macOS on Apple silicon and Windows on x64; unpack the one for your platform and put `chki18n` on your path. It starts in a few milliseconds, where `dart pub global activate` starts the Dart VM and compiles the command first.
+
 :::
 
 ::: lang py

@@ -100,7 +100,7 @@ This part is for maintainers. Each package is released on its own, under a tag s
    | `python`     | `pyproject.toml`, `src/chki18n/_version.py` |
 
 1. Push that commit to `main`.
-1. Run the `release` workflow from the Actions tab, or with `gh workflow run release.yml -f package=javascript`. It checks the version files and the changelog, tags the commit, runs the tests, publishes the package and creates the GitHub release with the changelog section, the build and the package's source.
+1. Run the `release` workflow from the Actions tab, or with `gh workflow run release.yml -f package=javascript`. It checks the version files and the changelog, tags the commit, runs the tests, publishes the package and creates the GitHub release with the changelog section, the build and the package's source. A Dart release also carries its command line compiled ahead of time for Linux, macOS and Windows.
 
 A failed release is run again by choosing its tag under "Use workflow from". A step that already succeeded, such as the upload to the registry, is skipped.
 

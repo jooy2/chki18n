@@ -26,6 +26,8 @@ dart pub add chki18n
 
 Requires **Dart 3.7 or newer**. In a Flutter project use `flutter pub add chki18n`.
 
+For a machine without the Dart SDK, each [release](https://github.com/jooy2/chki18n/releases) also carries the command line compiled ahead of time for Linux (x64, arm64), macOS (Apple silicon) and Windows (x64). It starts in a few milliseconds.
+
 ## From the command line
 
 ```bash

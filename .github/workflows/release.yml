@@ -18,9 +18,10 @@ name: release
 # pub.dev and PyPI each trust this workflow file of this repository in the
 # `release` environment, and trade the job's OIDC token for one that lasts
 # minutes. pub.dev only takes a run whose ref is a tag, which the second run
-# is. `github-release` runs last, so a release page only appears for a version
-# its registry already serves, and it carries the build and the package's
-# source as they were at the tag.
+# is. A Dart release also compiles its command line on each platform.
+# `github-release` runs last, so a release page only appears for a version its
+# registry already serves, and it carries the build and the package's source as
+# they were at the tag, and for Dart the compiled executables.
 on:
   workflow_dispatch:
     inputs:
@@ -182,6 +183,66 @@ jobs:
           path: ${{ runner.temp }}/release
           if-no-files-found: error
 
+  # The Dart command line compiled ahead of time, one archive per platform, for
+  # a machine or a CI job that has no Dart SDK. It starts in a few milliseconds
+  # where `dart pub global activate` starts the VM and compiles on the spot.
+  # `dart compile exe` builds for the machine it runs on, so each platform gets
+  # a runner of its own. An Intel Mac has no runner here and is left to pub.
+  build-dart-executables:
+    name: Compile the Dart command for ${{ matrix.target }}
+    needs: build
+    if: needs.build.outputs.package == 'dart'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        include:
+          - target: linux-x64
+            runner: ubuntu-latest
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+          - target: macos-arm64
+            runner: macos-latest
+          - target: windows-x64
+            runner: windows-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dart-lang/setup-dart@v1
+
+      # Run once before it is archived, so an executable that cannot start is
+      # never attached to a release.
+      - name: Compile, try and archive the executable
+        shell: bash
+        working-directory: packages/dart
+        env:
+          TARGET: ${{ matrix.target }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          name="chki18n-dart-$VERSION-$TARGET"
+          exe="chki18n"
+          if [ "$RUNNER_OS" = "Windows" ]; then exe="chki18n.exe"; fi
+          staging="$RUNNER_TEMP/staging"
+          out="$RUNNER_TEMP/executables"
+          mkdir -p "$staging/$name" "$out"
+          dart pub get
+          dart compile exe bin/chki18n.dart -o "$staging/$name/$exe"
+          cp LICENSE README.md "$staging/$name/"
+          "$staging/$name/$exe" --version
+          cd "$staging"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            7z a -bso0 "$out/$name.zip" "$name"
+          else
+            tar -czf "$out/$name.tar.gz" "$name"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dart-executable-${{ matrix.target }}
+          path: ${{ runner.temp }}/executables
+          if-no-files-found: error
+
   # Each publish job is skipped when its version is already on the registry,
   # so a re-run, or a version published by hand, does not fail on it.
   publish-npm:
@@ -277,7 +338,7 @@ jobs:
 
   github-release:
     name: GitHub release
-    needs: [build, publish-npm, publish-pub, publish-pypi]
+    needs: [build, build-dart-executables, publish-npm, publish-pub, publish-pypi]
     # Two of the three publish jobs are skipped on every run, which would skip
     # this one as well; it runs unless one of them failed.
     if: ${{ !failure() && !cancelled() && needs.build.result == 'success' }}
@@ -291,6 +352,14 @@ jobs:
         with:
           name: release
           path: release
+
+      # Only a Dart release has them, and they join the other assets.
+      - uses: actions/download-artifact@v8
+        if: needs.build.outputs.package == 'dart'
+        with:
+          pattern: dart-executable-*
+          path: release/assets
+          merge-multiple: true
 
       # Created, or brought up to date when the workflow runs again after the
       # release exists, so a re-run never fails on its own earlier success. A
