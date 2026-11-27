@@ -35,32 +35,44 @@ type Frame = {
 /** A dotted path one segment longer. */
 const join = (path: string, segment: string): string => (path ? `${path}.${segment}` : segment);
 
-/** Read a JSON string starting at the opening quote. Returns its value and end. */
-function readString(text: string, start: number): { value: string; end: number } {
-	let value = '';
+/**
+ * Read a JSON string starting at the opening quote: its value, where it ends,
+ * and how many line breaks it holds.
+ *
+ * Escapes are kept as they are written: an unescaped comparison is enough to
+ * tell two keys apart, and decoding would mean re-implementing JSON's escapes
+ * for no gain. That makes the value the text between the quotes, cut out in one
+ * piece rather than built up a character at a time.
+ */
+function readString(text: string, start: number): { value: string; end: number; lines: number } {
 	let index = start + 1;
+	let lines = 0;
 
 	while (index < text.length) {
-		const char = text[index];
+		const code = text.charCodeAt(index);
 
-		if (char === '\\') {
-			// Whatever it escapes, it is not a closing quote. Kept verbatim: an
-			// unescaped comparison is enough to tell two keys apart, and decoding
-			// would mean re-implementing JSON's escapes for no gain.
-			value += text.slice(index, index + 2);
+		if (code === 0x5c) {
+			// Whatever it escapes, it is not a closing quote.
+			if (text.charCodeAt(index + 1) === 0x0a) {
+				lines += 1;
+			}
+
 			index += 2;
 			continue;
 		}
 
-		if (char === '"') {
-			return { value, end: index + 1 };
+		if (code === 0x22) {
+			return { value: text.slice(start + 1, index), end: index + 1, lines };
 		}
 
-		value += char;
+		if (code === 0x0a) {
+			lines += 1;
+		}
+
 		index += 1;
 	}
 
-	return { value, end: index };
+	return { value: text.slice(start + 1), end: index, lines };
 }
 
 export function findDuplicateJsonKeys(text: string): JsonDuplicateKey[] {
@@ -73,16 +85,16 @@ export function findDuplicateJsonKeys(text: string): JsonDuplicateKey[] {
 	let expectKey = false;
 
 	while (index < text.length) {
-		const char = text[index];
+		const code = text.charCodeAt(index);
 
-		if (char === '\n') {
+		if (code === 0x0a) {
 			line += 1;
 			index += 1;
 			continue;
 		}
 
-		if (char === '"') {
-			const { value, end } = readString(text, index);
+		if (code === 0x22) {
+			const { value, end, lines } = readString(text, index);
 			const frame = stack[stack.length - 1];
 
 			if (frame?.keys && expectKey) {
@@ -97,37 +109,32 @@ export function findDuplicateJsonKeys(text: string): JsonDuplicateKey[] {
 			}
 
 			// Count the newlines a multi-line string swallowed.
-			for (let at = index; at < end; at += 1) {
-				if (text[at] === '\n') {
-					line += 1;
-				}
-			}
-
+			line += lines;
 			index = end;
 			continue;
 		}
 
-		if (char === '{' || char === '[') {
+		if (code === 0x7b || code === 0x5b) {
 			const parent = stack[stack.length - 1];
 			// An element of an array is addressed by its position, the way
 			// flattening writes it: `list.0.label`.
 			const segment = !parent ? null : parent.keys ? parent.pendingKey : String(parent.index);
 			const path = !parent || segment === null ? (parent?.path ?? '') : join(parent.path, segment);
 
-			stack.push({ keys: char === '{' ? new Set() : null, path, pendingKey: null, index: 0 });
-			expectKey = char === '{';
+			stack.push({ keys: code === 0x7b ? new Set() : null, path, pendingKey: null, index: 0 });
+			expectKey = code === 0x7b;
 			index += 1;
 			continue;
 		}
 
-		if (char === '}' || char === ']') {
+		if (code === 0x7d || code === 0x5d) {
 			stack.pop();
 			expectKey = false;
 			index += 1;
 			continue;
 		}
 
-		if (char === ',') {
+		if (code === 0x2c) {
 			const frame = stack[stack.length - 1];
 
 			if (frame && !frame.keys) {

@@ -86,6 +86,27 @@ describe('findDuplicateJsonKeys', () => {
 		assert.deepStrictEqual(findDuplicateJsonKeys('{"a\\"b": 1, "c": 2}'), []);
 		assert.deepStrictEqual(findDuplicateJsonKeys('{"a\\"b": 1, "a\\"b": 2}').length, 1);
 	});
+
+	it('keeps an escape in the key as it is written', () => {
+		assert.deepStrictEqual(findDuplicateJsonKeys('{"a\\nb": 1, "a\\nb": 2}'), [
+			{ path: 'a\\nb', line: 1 }
+		]);
+		assert.deepStrictEqual(findDuplicateJsonKeys('{"a\\\\": 1, "a\\\\": 2}'), [
+			{ path: 'a\\\\', line: 1 }
+		]);
+	});
+
+	it('counts the line breaks a value swallows towards the next key', () => {
+		// Not valid JSON, but the scanner runs on what it is given and must not
+		// lose count of where it is.
+		assert.strictEqual(findDuplicateJsonKeys('{"a": "one\ntwo",\n"a": 2}')[0].line, 3);
+		assert.strictEqual(findDuplicateJsonKeys('{"a": "one\\\ntwo",\n"a": 2}')[0].line, 3);
+	});
+
+	it('stops at the end of a string that never closes', () => {
+		assert.deepStrictEqual(findDuplicateJsonKeys('{"a": 1, "a'), [{ path: 'a', line: 1 }]);
+		assert.deepStrictEqual(findDuplicateJsonKeys('{"a": "b\\'), []);
+	});
 });
 
 describe('DUPLICATE_KEY', () => {
