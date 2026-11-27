@@ -40,55 +40,102 @@ String leafOfKey(String key) {
 
 bool _isScannableName(String name) => _extensions.contains(extensionOf(name));
 
-/// The characters a key segment is nearly always spelled with. Any occurrence of
+/// Whether [unit] is one of the characters a key segment is nearly always
+/// spelled with: ASCII letters and digits, `_`, `$` and `-`. Any occurrence of
 /// a leaf spelled only with them sits inside one unbroken run of them, so the
 /// runs of a file are all that has to be read to find it.
-final RegExp _wordRunPattern = RegExp(r'[A-Za-z0-9_$-]+');
+bool _isWordUnit(int unit) =>
+    (unit >= 0x61 && unit <= 0x7a) ||
+    (unit >= 0x41 && unit <= 0x5a) ||
+    (unit >= 0x30 && unit <= 0x39) ||
+    unit == 0x5f ||
+    unit == 0x24 ||
+    unit == 0x2d;
 
-final RegExp _wordOnlyPattern = RegExp(r'^[A-Za-z0-9_$-]+$');
+/// Whether [leaf] is spelled with those characters alone.
+bool _isWordOnly(String leaf) {
+  if (leaf.isEmpty) {
+    return false;
+  }
+
+  for (var index = 0; index < leaf.length; index += 1) {
+    if (!_isWordUnit(leaf.codeUnitAt(index))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/// The first two code units of a string, as one number a set can hold.
+int _headOf(String text, int at) => (text.codeUnitAt(at) << 16) | text.codeUnitAt(at + 1);
 
 /// A search that takes out of `remaining` every leaf a text holds, as plain
 /// substrings, the way `contains` would find them.
 ///
 /// Asking for each leaf in each file costs the number of leaves times the size
-/// of the tree: a thousand files and five thousand unused keys took sixteen
-/// seconds. Instead each run of word characters is cut into the pieces as long as
+/// of the tree: a thousand files and five thousand unused keys took two
+/// minutes. Instead each run of word characters is cut into the pieces as long as
 /// some leaf is and looked up in a set, and a run met in an earlier file is not
-/// cut again, since identifiers repeat from file to file. A leaf with any other
-/// character in it is still searched for on its own.
+/// cut again, since identifiers repeat from file to file. A piece whose first
+/// two characters start no leaf is passed over without being cut out at all. A
+/// leaf with any other character in it is still searched for on its own.
 void Function(String text) _leafSearch(Set<String> remaining) {
   final words = <String>{};
   final others = <String>{};
 
   for (final leaf in remaining) {
-    (_wordOnlyPattern.hasMatch(leaf) ? words : others).add(leaf);
+    (_isWordOnly(leaf) ? words : others).add(leaf);
   }
 
   final lengths = {for (final leaf in words) leaf.length}.toList()..sort();
+  final heads = {
+    for (final leaf in words)
+      if (leaf.length > 1) _headOf(leaf, 0),
+  };
   final seenRuns = <String>{};
 
-  return (text) {
-    if (words.isNotEmpty) {
-      for (final match in _wordRunPattern.allMatches(text)) {
-        final run = match[0]!;
+  void searchRun(String run) {
+    for (final length in lengths) {
+      if (length > run.length) {
+        break;
+      }
 
-        if (!seenRuns.add(run)) {
+      for (var at = 0; at + length <= run.length; at += 1) {
+        if (length > 1 && !heads.contains(_headOf(run, at))) {
           continue;
         }
 
-        for (final length in lengths) {
-          if (length > run.length) {
-            break;
-          }
+        final piece = run.substring(at, at + length);
 
-          for (var at = 0; at + length <= run.length; at += 1) {
-            final piece = run.substring(at, at + length);
-
-            if (words.remove(piece)) {
-              remaining.remove(piece);
-            }
-          }
+        if (words.remove(piece)) {
+          remaining.remove(piece);
         }
+      }
+    }
+  }
+
+  return (text) {
+    final length = text.length;
+    var index = 0;
+
+    // Once every such leaf has turned up, no run can take out another.
+    while (index < length && words.isNotEmpty) {
+      if (!_isWordUnit(text.codeUnitAt(index))) {
+        index += 1;
+        continue;
+      }
+
+      final start = index;
+
+      while (index < length && _isWordUnit(text.codeUnitAt(index))) {
+        index += 1;
+      }
+
+      final run = text.substring(start, index);
+
+      if (seenRuns.add(run)) {
+        searchRun(run);
       }
     }
 
