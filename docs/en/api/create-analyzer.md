@@ -55,6 +55,26 @@ class Analyzer:
 
 :::
 
+::: lang rs
+
+```rust
+pub fn create_analyzer(options: &Options) -> Analyzer;
+
+pub struct Analyzer {
+    pub options: ResolvedOptions,
+    pub option_issues: Vec<Issue>,
+    /* private fields */
+}
+
+impl Analyzer {
+    pub fn new(options: &Options) -> Analyzer;
+    pub fn analyze(&self, input: &Input) -> CheckResult;
+    pub fn check_entry(&self, entry: &Entry) -> Vec<Issue>;
+}
+```
+
+:::
+
 ## What reusing an analyzer saves
 
 Options, the enabled check set and the interpolation delimiters are resolved once, when the analyzer is built. Calling [`analyzeTranslations`](./analyze-translations) in a loop re-resolves all of it on every call. For one check that makes no difference. For a check that runs on every keystroke, resolving the options is most of the cost.
@@ -154,6 +174,55 @@ analyzer.check_entry(
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{create_analyzer, Entry, Options};
+use indexmap::IndexMap;
+use serde_json::json;
+
+let analyzer = create_analyzer(&Options {
+    target: Some("en".into()),
+    ..Options::default()
+});
+
+analyzer.check_entry(&Entry {
+    key: "desc.hello".into(),
+    values: IndexMap::from([
+        ("en".into(), json!("Hello {name}")),
+        ("ko".into(), json!("안녕하세요")),
+    ]),
+    ..Entry::default()
+});
+// [
+//     Issue {
+//         code: NoInterpolationKey,
+//         level: Error,
+//         locale: "ko",
+//         key: "desc.hello",
+//         group: "",
+//         value: Some("안녕하세요"),
+//         target_value: Some("Hello {name}"),
+//         interpolation: Some("name"),
+//         related_key: None,
+//         file: None,
+//         message: "The interpolation key `{name}` of the target language is missing from this value.",
+//     },
+// ]
+
+analyzer.check_entry(&Entry {
+    key: "desc.hello".into(),
+    values: IndexMap::from([
+        ("en".into(), json!("Hello {name}")),
+        ("ko".into(), json!("{name}님 안녕하세요")),
+    ]),
+    ..Entry::default()
+});
+// []
+```
+
+:::
+
 `values` is `locale -> value`. The target language's value is read from the same object, so it has to be in there for a comparison to happen.
 
 ### Entry
@@ -199,6 +268,22 @@ class Entry:
 
 :::
 
+::: lang rs
+
+```rust
+#[derive(Clone, Debug, Default)]
+pub struct Entry {
+    pub key: String,
+    pub values: IndexMap<String, Value>,
+    pub group: Option<String>,
+    pub locales: Option<Vec<String>>,
+}
+```
+
+`IndexMap` is `indexmap::IndexMap` and `Value` is `serde_json::Value`. The crate re-exports neither, so add `indexmap` and `serde_json` to your own `Cargo.toml`. A field you leave out can come from `..Entry::default()`.
+
+:::
+
 `group` is carried onto every issue, so a project with several translation files can tell them apart.
 
 ### Reporting a locale that has no value at all
@@ -230,6 +315,20 @@ analyzer.checkEntry(
 ```python
 analyzer.check_entry(Entry(key="a", values={"en": "Hello"}, locales=["en", "ko"]))
 # [Issue(code='NO_KEY', locale='ko', …)]
+```
+
+:::
+
+::: lang rs
+
+```rust
+analyzer.check_entry(&Entry {
+    key: "a".into(),
+    values: IndexMap::from([("en".into(), json!("Hello"))]),
+    locales: Some(vec!["en".into(), "ko".into()]),
+    ..Entry::default()
+});
+// [Issue { code: NoKey, locale: "ko", … }]
 ```
 
 :::
@@ -327,6 +426,37 @@ def lint_row(row):
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{create_analyzer, Entry, Options};
+use serde_json::Value;
+
+// Once, when the project opens.
+let analyzer = create_analyzer(&Options {
+    target: Some(project.primary_locale.clone()),
+    interpolation_prefix: Some(project.interpolation_prefix.clone()),
+    interpolation_suffix: Some(project.interpolation_suffix.clone()),
+    ..Options::default()
+});
+
+// On every edit, for the one row that changed.
+let lint_row = |row: &Row| {
+    analyzer.check_entry(&Entry {
+        key: row.key.clone(),
+        values: row
+            .cells
+            .iter()
+            .map(|cell| (cell.locale.clone(), Value::String(cell.value.clone())))
+            .collect(),
+        locales: Some(project.locales.clone()),
+        group: Some(row.group.clone()),
+    })
+};
+```
+
+:::
+
 No copy of the data lives inside chki18n, so there is nothing to keep in step. That is the reason to prefer this over a [session](./load-translations) when your application already owns the values.
 
 ## `analyze`
@@ -368,6 +498,28 @@ analyzer.check_entry(Entry(key=key, values=values))  # one key, on every keystro
 
 :::
 
+::: lang rs
+
+```rust
+let analyzer = create_analyzer(&Options {
+    target: Some("en".into()),
+    flattened: Some(true),
+    ..Options::default()
+});
+
+analyzer.analyze(&Input {
+    groups: Some(everything),
+    ..Input::default()
+}); // full pass, when the whole set changed
+analyzer.check_entry(&Entry {
+    key,
+    values,
+    ..Entry::default()
+}); // one key, on every keystroke
+```
+
+:::
+
 The usual arrangement is a full analysis when the project opens and `checkEntry` on each edit.
 
 ## `options` and `optionIssues`
@@ -399,7 +551,18 @@ analyzer.option_issues  # anything unusable in what you passed, as INVALID_OPTIO
 
 :::
 
-<Lang js="optionIssues" dart="optionIssues" py="option_issues" code /> is replayed into every result `analyze` produces, so a typo in an option is reported once per result instead of being dropped.
+::: lang rs
+
+In Rust both are public fields:
+
+```rust
+&analyzer.options; // the resolved options — target, enabled_checks, delimiters, …
+&analyzer.option_issues; // anything unusable in what you passed, as CheckCode::InvalidOptions
+```
+
+:::
+
+<Lang js="optionIssues" dart="optionIssues" py="option_issues" rs="option_issues" code /> is replayed into every result `analyze` produces, so a typo in an option is reported once per result instead of being dropped.
 
 ## Performance
 
@@ -417,7 +580,7 @@ Measured on 5,000 keys across 5 locales:
 
 :::
 
-::: lang dart py
+::: lang dart py rs
 
 A single key is compared in microseconds, which is what makes checking on every keystroke practical. A full `analyze` is proportional to the number of keys times the number of locales, and is fast enough to run on a file watcher.
 

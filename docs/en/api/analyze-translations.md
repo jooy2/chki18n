@@ -36,6 +36,16 @@ def analyze_translations(data: Input, options: Options | None = None) -> Result:
 
 :::
 
+::: lang rs
+
+```rust
+pub fn analyze_translations(input: &Input, options: &Options) -> CheckResult
+```
+
+It only borrows the input and the options, so both stay yours to pass to another call.
+
+:::
+
 ## Usage
 
 Pass one set of locales:
@@ -110,6 +120,42 @@ result.of("NO_INTERPOLATION_KEY")[0].interpolation  # 'name'
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{analyze_translations, CheckCode, Input, Options, TranslationMap};
+use indexmap::IndexMap;
+use serde_json::json;
+
+let en = TranslationMap::from_iter([(
+    "desc".into(),
+    json!({ "hello": "Hello {name}", "bye": "Goodbye" }),
+)]);
+let ko = TranslationMap::from_iter([("desc".into(), json!({ "hello": "안녕하세요" }))]);
+
+let result = analyze_translations(
+    &Input {
+        locales: Some(IndexMap::from([("en".into(), en), ("ko".into(), ko)])),
+        ..Input::default()
+    },
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+let by_code = result.issues_by_code();
+
+result.key_count; // 2
+by_code[&CheckCode::NoKey][0].key.as_str(); // "desc.bye"
+by_code[&CheckCode::NoInterpolationKey][0]
+    .interpolation
+    .as_deref(); // Some("name")
+```
+
+`Input` is built from `indexmap` and `serde_json` types, and chki18n re-exports neither crate, so add both to your own project with `cargo add indexmap serde_json`. Keep to the major versions chki18n depends on, `indexmap` 2 and `serde_json` 1, so that the types are the same ones.
+
+:::
+
 Nested objects are flattened before comparison, so `desc.hello` is what every issue reports.
 
 ## Several translation files
@@ -173,6 +219,44 @@ analyze_translations(
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{analyze_translations, Input, Options, TranslationMap};
+use indexmap::IndexMap;
+
+let strings = |key: &str, value: &str| TranslationMap::from_iter([(key.into(), value.into())]);
+
+analyze_translations(
+    &Input {
+        groups: Some(IndexMap::from([
+            (
+                "common.json".into(),
+                IndexMap::from([
+                    ("en".into(), strings("ok", "OK")),
+                    ("ko".into(), strings("ok", "확인")),
+                ]),
+            ),
+            (
+                "errors.json".into(),
+                IndexMap::from([
+                    ("en".into(), strings("failed", "Failed")),
+                    ("ko".into(), TranslationMap::new()),
+                ]),
+            ),
+        ])),
+        ..Input::default()
+    },
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+// the one NO_KEY issue carries group: "errors.json"
+```
+
+:::
+
 `locales` is shorthand for a single group named `''`. See [File layouts](/guide/file-layouts#groups) for how a directory scan arrives at the same shape.
 
 ## Skipping the flatten pass
@@ -218,6 +302,29 @@ analyze_translations(Input(locales={"en": en, "ko": ko}), Options(target="en", f
 ```
 
 This is the fast path: the dictionaries you pass are the ones the comparison reads.
+
+:::
+
+::: lang rs
+
+```rust
+let en = TranslationMap::from_iter([("desc.hello".into(), "Hello {name}".into())]);
+let ko = TranslationMap::from_iter([("desc.hello".into(), "안녕하세요".into())]);
+
+analyze_translations(
+    &Input {
+        locales: Some(IndexMap::from([("en".into(), en), ("ko".into(), ko)])),
+        ..Input::default()
+    },
+    &Options {
+        target: Some("en".into()),
+        flattened: Some(true),
+        ..Options::default()
+    },
+);
+```
+
+This is the fast path: the comparison borrows the maps you pass and copies none of them.
 
 :::
 
@@ -273,7 +380,26 @@ class Input:
 
 :::
 
-`files` maps a group and locale onto the file it came from, so issues can carry a `file` path. `issues` lets whatever produced the input add its own problems to the same result, which is how a directory scan's unreadable-file errors end up in the same list as the comparison's findings. <Lang js="fileFormat" dart="fileFormat" py="file_format" code /> is carried through to the result untouched, and the last two answer [`UNUSED_KEY`](/guide/checks#unused-key) and [`UNDEFINED_KEY`](/guide/checks#undefined-key) for an application that has already worked them out.
+::: lang rs
+
+```rust
+#[derive(Clone, Debug, Default)]
+pub struct Input {
+    pub groups: Option<TranslationGroups>,
+    pub locales: Option<IndexMap<String, TranslationMap>>,
+    pub files: Option<Vec<SourceFile>>,
+    pub issues: Option<Vec<Issue>>,
+    pub file_format: Option<FileFormat>,
+    pub unused_keys: Option<Vec<String>>,
+    pub undefined_keys: Option<Vec<KeyUsage>>,
+}
+```
+
+Every field is an `Option`, so `..Input::default()` leaves out the ones you do not set. `TranslationMap` is `serde_json::Map<String, Value>`, and `TranslationGroups`, in `chki18n::types`, is `IndexMap<String, IndexMap<String, TranslationMap>>`. chki18n turns on the `preserve_order` feature of `serde_json`, so a `serde_json::Map` you build keeps its keys in the order they were inserted.
+
+:::
+
+`files` maps a group and locale onto the file it came from, so issues can carry a `file` path. `issues` lets whatever produced the input add its own problems to the same result, which is how a directory scan's unreadable-file errors end up in the same list as the comparison's findings. <Lang js="fileFormat" dart="fileFormat" py="file_format" rs="file_format" code /> is carried through to the result untouched, and the last two answer [`UNUSED_KEY`](/guide/checks#unused-key) and [`UNDEFINED_KEY`](/guide/checks#undefined-key) for an application that has already worked them out.
 
 ## What the result says
 
@@ -313,6 +439,18 @@ result.key_count  # distinct keys compared
 
 :::
 
+::: lang rs
+
+```rust
+result.files; // [] — nothing was read from disk
+result.file_format; // None — unless you passed one in
+result.locales; // every locale seen, across all groups
+result.groups; // every group name, in input order
+result.key_count; // distinct keys compared
+```
+
+:::
+
 Everything else is the same shape [`checkTranslationFiles`](./check-translation-files) returns. See [The result object](/reference/result).
 
 ## A locale that is not an object
@@ -340,6 +478,12 @@ Dart's type system settles this one before it runs. `Chki18nInput.locales` is a 
 analyze_translations(Input(locales={"en": {"a": "A"}, "ko": None}), Options(target="en"))
 # result.of("INVALID_FILE") — "The translations of `ko` are not an object."
 ```
+
+:::
+
+::: lang rs
+
+Rust's type system settles this one before it runs. The `locales` and `groups` of an `Input` hold `TranslationMap` values, which are `serde_json::Map`s, so there is nothing to pass that is not a map of keys. A file on disk that holds something else is still reported as `INVALID_FILE` by the scanner.
 
 :::
 

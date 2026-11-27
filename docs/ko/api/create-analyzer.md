@@ -55,6 +55,26 @@ class Analyzer:
 
 :::
 
+::: lang rs
+
+```rust
+pub fn create_analyzer(options: &Options) -> Analyzer;
+
+pub struct Analyzer {
+    pub options: ResolvedOptions,
+    pub option_issues: Vec<Issue>,
+    /* private fields */
+}
+
+impl Analyzer {
+    pub fn new(options: &Options) -> Analyzer;
+    pub fn analyze(&self, input: &Input) -> CheckResult;
+    pub fn check_entry(&self, entry: &Entry) -> Vec<Issue>;
+}
+```
+
+:::
+
 ## 분석기를 재사용하는 이점
 
 옵션과 활성화된 검사 집합, 보간 구분자는 분석기를 만들 때 한 번만 해석됩니다. [`analyzeTranslations`](./analyze-translations)를 반복 호출하면 매번 전부 다시 해석합니다. 한 번 검사할 때는 차이가 없지만, 매 입력마다 도는 검사에서는 이 해석 비용이 대부분을 차지합니다.
@@ -154,6 +174,55 @@ analyzer.check_entry(
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{create_analyzer, Entry, Options};
+use indexmap::IndexMap;
+use serde_json::json;
+
+let analyzer = create_analyzer(&Options {
+    target: Some("en".into()),
+    ..Options::default()
+});
+
+analyzer.check_entry(&Entry {
+    key: "desc.hello".into(),
+    values: IndexMap::from([
+        ("en".into(), json!("Hello {name}")),
+        ("ko".into(), json!("안녕하세요")),
+    ]),
+    ..Entry::default()
+});
+// [
+//     Issue {
+//         code: NoInterpolationKey,
+//         level: Error,
+//         locale: "ko",
+//         key: "desc.hello",
+//         group: "",
+//         value: Some("안녕하세요"),
+//         target_value: Some("Hello {name}"),
+//         interpolation: Some("name"),
+//         related_key: None,
+//         file: None,
+//         message: "The interpolation key `{name}` of the target language is missing from this value.",
+//     },
+// ]
+
+analyzer.check_entry(&Entry {
+    key: "desc.hello".into(),
+    values: IndexMap::from([
+        ("en".into(), json!("Hello {name}")),
+        ("ko".into(), json!("{name}님 안녕하세요")),
+    ]),
+    ..Entry::default()
+});
+// []
+```
+
+:::
+
 `values`는 `로케일 -> 값` 형태입니다. 기준 언어의 값도 같은 객체에서 읽으므로, 비교하려면 그 안에 함께 넣어야 합니다.
 
 ### 엔트리
@@ -199,6 +268,22 @@ class Entry:
 
 :::
 
+::: lang rs
+
+```rust
+#[derive(Clone, Debug, Default)]
+pub struct Entry {
+    pub key: String,
+    pub values: IndexMap<String, Value>,
+    pub group: Option<String>,
+    pub locales: Option<Vec<String>>,
+}
+```
+
+`IndexMap`은 `indexmap::IndexMap`이고 `Value`는 `serde_json::Value`입니다. 이 크레이트는 둘 다 다시 내보내지 않으므로, `indexmap`과 `serde_json`을 프로젝트의 `Cargo.toml`에 추가해야 합니다. 생략한 필드는 `..Entry::default()`로 채울 수 있습니다.
+
+:::
+
 `group`은 모든 이슈에 그대로 실리므로, 번역 파일이 여러 개인 프로젝트에서 구분할 수 있습니다.
 
 ### 값이 아예 없는 로케일 보고하기
@@ -230,6 +315,20 @@ analyzer.checkEntry(
 ```python
 analyzer.check_entry(Entry(key="a", values={"en": "Hello"}, locales=["en", "ko"]))
 # [Issue(code='NO_KEY', locale='ko', …)]
+```
+
+:::
+
+::: lang rs
+
+```rust
+analyzer.check_entry(&Entry {
+    key: "a".into(),
+    values: IndexMap::from([("en".into(), json!("Hello"))]),
+    locales: Some(vec!["en".into(), "ko".into()]),
+    ..Entry::default()
+});
+// [Issue { code: NoKey, locale: "ko", … }]
 ```
 
 :::
@@ -327,6 +426,37 @@ def lint_row(row):
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{create_analyzer, Entry, Options};
+use serde_json::Value;
+
+// 프로젝트를 열 때 한 번.
+let analyzer = create_analyzer(&Options {
+    target: Some(project.primary_locale.clone()),
+    interpolation_prefix: Some(project.interpolation_prefix.clone()),
+    interpolation_suffix: Some(project.interpolation_suffix.clone()),
+    ..Options::default()
+});
+
+// 수정할 때마다, 바뀐 행 하나에 대해서만.
+let lint_row = |row: &Row| {
+    analyzer.check_entry(&Entry {
+        key: row.key.clone(),
+        values: row
+            .cells
+            .iter()
+            .map(|cell| (cell.locale.clone(), Value::String(cell.value.clone())))
+            .collect(),
+        locales: Some(project.locales.clone()),
+        group: Some(row.group.clone()),
+    })
+};
+```
+
+:::
+
 chki18n 안에 데이터 사본이 남지 않으므로 양쪽을 맞출 일도 없습니다. 애플리케이션이 이미 값을 소유하고 있다면 [세션](./load-translations)보다 이쪽이 낫습니다.
 
 ## `analyze`
@@ -368,6 +498,28 @@ analyzer.check_entry(Entry(key=key, values=values))  # 매 입력마다 키 하�
 
 :::
 
+::: lang rs
+
+```rust
+let analyzer = create_analyzer(&Options {
+    target: Some("en".into()),
+    flattened: Some(true),
+    ..Options::default()
+});
+
+analyzer.analyze(&Input {
+    groups: Some(everything),
+    ..Input::default()
+}); // 전체가 바뀌었을 때 전체 검사
+analyzer.check_entry(&Entry {
+    key,
+    values,
+    ..Entry::default()
+}); // 매 입력마다 키 하나
+```
+
+:::
+
 프로젝트를 열 때 전체를 분석하고, 수정할 때마다 `checkEntry`를 부르는 방식이 일반적입니다.
 
 ## `options`와 `optionIssues`
@@ -399,7 +551,18 @@ analyzer.option_issues  # 전달한 값 중 사용할 수 없었던 것, INVALID
 
 :::
 
-<Lang js="optionIssues" dart="optionIssues" py="option_issues" code />는 `analyze`가 만드는 모든 결과에 다시 실립니다. 옵션에 오타가 있으면 결과마다 한 번씩 보고되므로 놓치지 않습니다.
+::: lang rs
+
+Rust에서는 둘 다 공개 필드입니다.
+
+```rust
+&analyzer.options; // 해석된 옵션 — target, enabled_checks, 구분자 등
+&analyzer.option_issues; // 전달한 값 중 사용할 수 없었던 것, CheckCode::InvalidOptions로
+```
+
+:::
+
+<Lang js="optionIssues" dart="optionIssues" py="option_issues" rs="option_issues" code />는 `analyze`가 만드는 모든 결과에 다시 실립니다. 옵션에 오타가 있으면 결과마다 한 번씩 보고되므로 놓치지 않습니다.
 
 ## 성능
 
@@ -417,7 +580,7 @@ analyzer.option_issues  # 전달한 값 중 사용할 수 없었던 것, INVALID
 
 :::
 
-::: lang dart py
+::: lang dart py rs
 
 키 하나를 비교하는 데 마이크로초 단위가 듭니다. 매 입력마다 호출하라고 만든 함수입니다. 전체 `analyze`는 키 수와 로케일 수의 곱에 비례하며, 파일 감시자에서 실행해도 될 만큼 빠릅니다.
 

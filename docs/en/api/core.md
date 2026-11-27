@@ -13,10 +13,17 @@ Each package publishes it under its own name:
 | JavaScript | `import { … } from 'chki18n/core'`   |
 | Dart       | `import 'package:chki18n/core.dart'` |
 | Python     | `from chki18n.core import …`         |
+| Rust       | `use chki18n::core::…`               |
 
 ## How it differs from the package root
 
-The package root reads directories, so it imports the file system modules: <Lang js="`node:fs`, `node:path` and `node:os`" dart="`dart:io`" py="`os` and `shutil`" />. A build that cannot supply them either fails or pulls in a stack of polyfills for code that will never run.
+The package root reads directories, so it imports the file system modules: <Lang js="`node:fs`, `node:path` and `node:os`" dart="`dart:io`" py="`os` and `shutil`" rs="`std::fs` and `std::path`" />.
+
+::: lang js dart py
+
+A build that cannot supply them either fails or pulls in a stack of polyfills for code that will never run.
+
+:::
 
 The comparison itself uses none of them. The core entry point is the same engine with the file reading left out:
 
@@ -47,6 +54,19 @@ from chki18n.core import CHECK_META, analyze_translations, create_analyzer
 ```
 
 A test walks the module's import graph on every run and fails if `os`, `pathlib` or `shutil` appears in it.
+
+:::
+
+::: lang rs
+
+```rust
+use chki18n::core::analyzer::{analyze_translations, create_analyzer};
+use chki18n::core::session::create_session;
+```
+
+Rust ships one crate, with no feature flag that leaves the scanner out, so `chki18n::core` is a module rather than a separate build. Nothing in it calls `std::fs` or `std::path`, and the same holds for `types`, `options` and `constants`, which it builds on. Using only `core` still compiles the whole crate, scanner included.
+
+`analyze` reads the clock through `std::time::Instant` to fill `elapsed_ms`. `check_entry` does not.
 
 :::
 
@@ -102,6 +122,23 @@ The root re-exports all of it, so `import { createAnalyzer } from 'chki18n'` wor
 
 :::
 
+::: lang rs
+
+| Reads no files | Reads files or the environment |
+| --- | --- |
+| `core::analyzer`: [`analyze_translations`](./analyze-translations), [`create_analyzer`](./create-analyzer), `Analyzer` | `check`: `check_translation_files` |
+| `core::session`: `create_session`, `Session` (for translations you pass in) | `check`: `load_translations`, `FileSession` |
+| `constants`: `CheckCode`, `check_meta`, `ANALYZE_CHECK_CODES`, `CROSS_KEY_CHECK_CODES`, `FileFormat` | `loader::scan`: `scan_translation_directory` |
+| `core::issue` and `core::result`: `summarize_issues`, `create_issue`, `build_result` | `loader::unused_keys`: `find_unused_keys` |
+| `options`: `resolve_options`, `options_from_args`, `build_usage_text`, `OPTION_DEFINITIONS` | `reporter`: `format_result`, which checks the environment and the terminal before it colours |
+| `core::locale` and `core::interpolation`: `is_locale_code`, `extract_interpolation_keys`, `detect_interpolation_delimiters` |  |
+| `core::exclude`: `create_path_excluder`, `create_file_excluder` |  |
+| `types`: every type, and `CheckResult::issues_by_code` to group a result by code |  |
+
+Every path above is under `chki18n::`. The crate root re-exports the ones used most, so `use chki18n::{create_analyzer, Entry, Options};` needs no module path. The rest are reached through their module, such as `chki18n::core::locale::is_locale_code`.
+
+:::
+
 ## Using it
 
 Read the files with whatever the environment already uses, then hand the parsed objects over:
@@ -153,6 +190,30 @@ result = analyze_translations(Input(locales={"en": en, "ko": ko}), Options(targe
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{analyze_translations, Input, Options, TranslationMap};
+use indexmap::IndexMap;
+
+// Compiled into the binary, so nothing is read at run time.
+let en: TranslationMap = serde_json::from_str(include_str!("../locales/en.json"))?;
+let ko: TranslationMap = serde_json::from_str(include_str!("../locales/ko.json"))?;
+
+let result = analyze_translations(
+    &Input {
+        locales: Some(IndexMap::from([("en".into(), en), ("ko".into(), ko)])),
+        ..Input::default()
+    },
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
 ## In an editor
 
 Run a full pass when a project opens, then check one key on every edit:
@@ -196,6 +257,30 @@ analyzer.check_entry(Entry(key=key, values=values, locales=locales))  # on each 
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{create_analyzer, Entry, Input, Options};
+
+let analyzer = create_analyzer(&Options {
+    target: Some("en".into()),
+    ..Options::default()
+});
+
+analyzer.analyze(&Input {
+    groups: Some(everything),
+    ..Input::default()
+}); // on open
+analyzer.check_entry(&Entry {
+    key,
+    values,
+    locales: Some(locales),
+    group: None,
+}); // on each keystroke
+```
+
+:::
+
 See [`createAnalyzer`](./create-analyzer) for the whole pattern, and for why passing the values in works better than letting chki18n hold a second copy of them.
 
 ## Dependencies
@@ -209,5 +294,11 @@ None. Flattening, placeholder extraction and every other step are written out in
 ::: lang dart py
 
 None. The one thing the core entry point reaches outside itself is <Lang dart="`dart:convert`, for the `json` reporter" py="`json`, `re` and `dataclasses`, all of them standard library" />.
+
+:::
+
+::: lang rs
+
+Three crates. `indexmap` and `serde_json` hold the translations, and `regex`, built without its default features, tells whether a value holds a letter of any script. Outside `core`, the crate also uses `libc` on Unix, to measure the terminal for the console report.
 
 :::

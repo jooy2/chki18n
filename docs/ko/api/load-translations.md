@@ -35,6 +35,18 @@ def load_translations(
 
 :::
 
+::: lang rs
+
+```rust
+pub fn load_translations(path: Option<&str>, options: &Options) -> FileSession;
+```
+
+동기 호출입니다. `options`에 `path`가 있으면 인수보다 그쪽이 우선합니다.
+
+`FileSession`은 번역 데이터를 `Session`에 담아 두고 빌려줍니다. 읽고 검사할 때는 `session()`을, 수정할 때는 `session_mut()`을 씁니다. `analyze()`, `reload()`, 그리고 디렉터리를 설명하는 속성은 `FileSession`에 바로 있습니다. 아래에 나오는 `group?`은 모두 마지막 인수인 `Option<&str>`이며, `None`을 넘기면 세션이 그룹을 찾습니다.
+
+:::
+
 ## 사용법
 
 ::: lang js
@@ -115,6 +127,40 @@ session.reload()  # 수정 사항을 버리고 디렉터리를 다시 읽기
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{load_translations, Options};
+
+let mut loaded = load_translations(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+let session = loaded.session();
+
+session.locales(); // ["en", "ko"]
+session.groups(); // [""]
+session.file_format(); // Some(FileFormat::Single)
+session.keys(None); // ["desc.hello", "desc.bye", …] — 기준 언어 순서
+
+loaded.analyze(); // 파일을 다시 읽지 않고 전체 결과
+
+session.get("ko", "desc.hello", None); // Some(String("안녕하세요"))
+session.check_key("desc.hello", None); // [Issue { code: NoInterpolationKey, … }]
+
+let session = loaded.session_mut();
+
+session.set("ko", "desc.hello", "{name}님 안녕하세요", None); // [] — 이제 문제없음
+loaded.analyze(); // 오류 하나 감소
+
+loaded.reload(); // 수정 사항을 버리고 디렉터리를 다시 읽기
+```
+
+:::
+
 ## 읽기
 
 ### `analyze()`
@@ -127,7 +173,7 @@ session.reload()  # 수정 사항을 버리고 디렉터리를 다시 읽기
 
 ### `get(locale, key, group?)`
 
-값 하나를 반환하며, 해당 로케일이 그 키를 정의하지 않았다면 <Lang js="undefined" dart="null" py="None" code />입니다. 키는 평탄한 형태입니다. `['desc', 'hello']`가 아니라 `'desc.hello'`입니다.
+값 하나를 반환하며, 해당 로케일이 그 키를 정의하지 않았다면 <Lang js="undefined" dart="null" py="None" rs="None" code />입니다. 키는 평탄한 형태입니다. `['desc', 'hello']`가 아니라 `'desc.hello'`입니다.
 
 ### `translations(group?)`
 
@@ -154,6 +200,16 @@ session.translations(); // {'en': {'desc.hello': 'Hello {name}'}, 'ko': {…}}
 ```python
 session.translations()  # {'en': {'desc.hello': 'Hello {name}'}, 'ko': {…}}
 ```
+
+:::
+
+::: lang rs
+
+```rust
+session.translations(None); // Some({"en": {"desc.hello": String("Hello {name}"), …}, "ko": {…}})
+```
+
+반환 타입은 `Option<&IndexMap<String, TranslationMap>>`이며, 그런 그룹이 없으면 `None`입니다. 공유 참조로 빌려주므로 어차피 쓰기는 `set`이나 `remove`로만 할 수 있습니다.
 
 :::
 
@@ -204,7 +260,26 @@ session.detected_interpolation  # Delimiters('{{', '}}') — 파일이 쓰는 �
 
 :::
 
-<Lang js="detectedInterpolation" dart="detectedInterpolation" py="detected_interpolation" code />는 프로젝트를 처음 설정하는 사람을 위한 추측값으로, 스캔이 받아들인 파일의 원문에서 읽어냅니다. 어느 파일에도 자리 표시자로 보이는 것이 없으면 <Lang js="null" dart="null" py="None" code />입니다. 실제 비교에 쓰인 구분자는 바꾸지 않습니다. 검사는 파일이 어떻게 생겼든 `interpolationPrefix`를 그대로 씁니다.
+::: lang rs
+
+Rust에서는 모두 메서드입니다. 디렉터리에 관한 것은 `FileSession`에, 나머지는 그 안의 `Session`에 있습니다.
+
+```rust
+let session = loaded.session();
+
+loaded.options(); // 모든 검사가 사용하는 해석된 옵션
+session.locales(); // 들고 있는 모든 로케일
+session.groups(); // 들고 있는 모든 그룹, 검사 순서대로
+session.files(); // 읽어들인 파일들
+session.file_format(); // Some(FileFormat::Single), Folder, Nested
+loaded.path(); // 검사한 절대 경로
+loaded.skipped(); // 로케일에 속하지 않은 파일
+loaded.detected_interpolation(); // Some(Delimiters { prefix: "{{", suffix: "}}" }) — 파일이 쓰는 것으로 보이는 구분자
+```
+
+:::
+
+<Lang js="detectedInterpolation" dart="detectedInterpolation" py="detected_interpolation" rs="detected_interpolation()" code />는 프로젝트를 처음 설정하는 사람을 위한 추측값으로, 스캔이 받아들인 파일의 원문에서 읽어냅니다. 어느 파일에도 자리 표시자로 보이는 것이 없으면 <Lang js="null" dart="null" py="None" rs="None" code />입니다. 실제 비교에 쓰인 구분자는 바꾸지 않습니다. 검사는 파일이 어떻게 생겼든 `interpolationPrefix`를 그대로 씁니다.
 
 ## 쓰기
 
@@ -248,6 +323,22 @@ session.set("ko", "desc.hello", "{name}님 안녕하세요")
 
 :::
 
+::: lang rs
+
+```rust
+let session = loaded.session_mut();
+
+session.set("ko", "desc.hello", "안녕하세요", None);
+// [Issue { code: NoInterpolationKey, level: Error, … }] — {name}이 없습니다
+
+session.set("ko", "desc.hello", "{name}님 안녕하세요", None);
+// [] — 문제없음
+```
+
+값은 `&str`로 받아 JSON 문자열로 저장합니다.
+
+:::
+
 없던 로케일은 새로 추가됩니다. 새 언어를 시작하는 방법이기도 합니다.
 
 ### `remove(key, { locale, group })`
@@ -278,6 +369,17 @@ session.remove('attr.folder'); // 전부 삭제 -> []
 session.remove("attr.folder", locale="ko")  # [Issue(code='NO_KEY', …)]
 session.remove("attr.folder")  # 전부 삭제 -> []
 ```
+
+:::
+
+::: lang rs
+
+```rust
+session.remove("attr.folder", Some("ko"), None); // [Issue { code: NoKey, … }]
+session.remove("attr.folder", None, None); // 전부 삭제 -> []
+```
+
+`locale`과 `group`은 두 번째와 세 번째 인수이며, 둘 다 `Option<&str>`입니다.
 
 :::
 
@@ -338,11 +440,26 @@ session.set("ko", "failed", "실패", "errors.json")  # 명시적으로 지정
 
 :::
 
+::: lang rs
+
+```rust
+let session = loaded.session_mut();
+
+session.groups(); // ["common.json", "errors.json"]
+
+session.get("en", "failed", None); // errors.json에서 찾음
+&session.check_key("failed", None)[0].group; // "errors.json"
+
+session.set("ko", "failed", "실패", Some("errors.json")); // 명시적으로 지정
+```
+
+:::
+
 그룹을 반드시 지정해야 하는 경우는 아직 존재하지 않는 키를 추가할 때뿐입니다. 찾아볼 곳이 없기 때문입니다.
 
 ## 이미 가지고 있는 번역 데이터
 
-<Lang js="createSession" dart="createSession" py="create_session" code />은 디렉터리 없이 같은 일을 하며, [코어 진입점](./core)에서도 가져올 수 있습니다.
+<Lang js="createSession" dart="createSession" py="create_session" rs="create_session" code />은 디렉터리 없이 같은 일을 하며, [코어 진입점](./core)에서도 가져올 수 있습니다.
 
 ::: lang js
 
@@ -385,7 +502,43 @@ session.reset(Input(groups=next_groups))  # 데이터만 교체, 옵션은 유�
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{create_session, Input, Options};
+use indexmap::IndexMap;
+
+let mut session = create_session(
+    Input {
+        groups: Some(IndexMap::from([(
+            "common.json".into(),
+            IndexMap::from([("en".into(), en), ("ko".into(), ko)]),
+        )])),
+        ..Input::default()
+    },
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+
+session.reset(Input {
+    groups: Some(next_groups),
+    ..Input::default()
+}); // 데이터만 교체, 옵션은 유지
+```
+
+`en`과 `ko`는 파일을 파싱해 얻은 `serde_json` 객체인 `TranslationMap`입니다. 이 크레이트는 `serde_json`과 `indexmap`을 다시 내보내지 않으므로, 둘 다 프로젝트의 `Cargo.toml`에 추가해야 합니다.
+
+:::
+
 디렉터리에만 의미가 있는 `path`, `skipped`, `reload`를 제외하면 위의 모든 기능이 동일합니다.
+
+::: lang rs
+
+Rust에서는 `FileSession`이 빌려주는 것과 같은 `Session`이므로 메서드를 바로 호출합니다. `path()`, `skipped()`, `detected_interpolation()`, `reload()`는 `FileSession`에만 있습니다.
+
+:::
 
 ## 세션이 들고 있는 사본
 
@@ -427,5 +580,19 @@ session = load_translations("./does-not-exist")
 session.analyze().success  # False
 session.analyze().of("INVALID_FILE")  # 이유
 ```
+
+:::
+
+::: lang rs
+
+```rust
+let loaded = load_translations(Some("./does-not-exist"), &Options::default());
+let result = loaded.analyze();
+
+result.success; // false
+result.issues_by_code().get(&CheckCode::InvalidFile); // 이유
+```
+
+반환 타입은 `Result`가 아니라 `FileSession`입니다. 읽지 못한 디렉터리는 이슈 가운데 하나로 남습니다.
 
 :::

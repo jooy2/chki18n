@@ -37,6 +37,16 @@ JavaScript 패키지와 달리 동기 함수입니다. Python의 파일 입출�
 
 :::
 
+::: lang rs
+
+```rust
+pub fn check_translation_files(path: Option<&str>, options: &Options) -> CheckResult
+```
+
+JavaScript, Dart 패키지와 달리 동기 함수입니다. 파일은 블로킹 방식인 표준 라이브러리로 읽으며, 크레이트는 비동기 런타임에 의존하지 않습니다. `source`를 지정하면 소스 파일을 여러 스레드에서 동시에 읽지만 그 일도 호출 안에서 끝나며, 호출은 파일을 모두 읽은 뒤에 반환됩니다. Rust에는 기본 인자가 없으므로 경로가 없으면 `None`을, 옵션이 없으면 `&Options::default()`를 넘기세요.
+
+:::
+
 ## 사용법
 
 ::: lang js
@@ -116,6 +126,45 @@ result.of("NO_KEY")[0]
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{check_translation_files, CheckCode, Options};
+
+let result = check_translation_files(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+
+result.success; // false
+result.summary.error; // 1
+result.issues_by_code()[&CheckCode::NoKey][0];
+// Issue {
+//     code: NoKey,
+//     level: Error,
+//     locale: "ko",
+//     key: "attr.folder",
+//     group: "",
+//     value: None,
+//     target_value: Some(
+//         "Folder",
+//     ),
+//     interpolation: None,
+//     related_key: None,
+//     file: Some(
+//         "/project/locales/ko.json",
+//     ),
+//     message: "The key exists in the target language but is missing here.",
+// }
+```
+
+`Options`의 필드는 모두 `Option`이므로, 지정하지 않은 필드는 `..Options::default()`로 채웁니다. `issues_by_code()`는 이슈를 검사별로 묶어 주고, `result.issues`는 원하는 대로 걸러 쓸 수 있는 평범한 `Vec<Issue>`입니다.
+
+:::
+
 경로는 옵션으로도 전달할 수 있으며, CLI가 위치 인자를 처리하는 방식이기도 합니다.
 
 ::: lang js
@@ -144,6 +193,23 @@ check_translation_files(options=Options(path="./locales", target="en"))
 
 :::
 
+::: lang rs
+
+```rust
+check_translation_files(
+    None,
+    &Options {
+        path: Some("./locales".into()),
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+```
+
+둘 다 전달하면 옵션의 `path`가 인자보다 우선합니다.
+
+:::
+
 모든 옵션은 [옵션](/ko/guide/options)에, 결과는 [결과 객체](/ko/reference/result)에 정리되어 있습니다.
 
 ## 출력과 프로세스 종료
@@ -151,7 +217,7 @@ check_translation_files(options=Options(path="./locales", target="en"))
 이 함수가 일부러 하지 않는 두 가지가 있습니다.
 
 - **`verbose`를 켜지 않으면 아무것도 출력하지 않습니다.** 모듈을 가져오는 것만으로 호스트 애플리케이션의 출력이 오염되지 않습니다.
-- **프로세스를 종료하지 않습니다.** 검사가 실패하면 <Lang js="result.success === false" dart="result.success == false" py="result.success is False" code />로 알릴 뿐입니다. 종료는 CLI의 몫이며, 이 함수가 반환된 뒤에 이루어집니다.
+- **프로세스를 종료하지 않습니다.** 검사가 실패하면 <Lang js="result.success === false" dart="result.success == false" py="result.success is False" rs="result.success == false" code />로 알릴 뿐입니다. 종료는 CLI의 몫이며, 이 함수가 반환된 뒤에 이루어집니다.
 
 직접 만든 스크립트에서 CLI와 같은 리포트를 보고 싶다면 출력을 켜세요.
 
@@ -178,6 +244,21 @@ await checkTranslationFiles(
 
 ```python
 check_translation_files("./locales", Options(target="en", verbose=True))
+```
+
+:::
+
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        verbose: Some(true),
+        ..Options::default()
+    },
+);
 ```
 
 :::
@@ -211,7 +292,22 @@ check_translation_files("./locales", Options(target="en", output="report.md"))
 
 :::
 
-출력도 저장도 하지 않고 문자열만 얻고 싶다면 <Lang js="formatResult" dart="formatResult" py="format_result" code />를 직접 부르세요.
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        output: Some("report.md".into()),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
+출력도 저장도 하지 않고 문자열만 얻고 싶다면 <Lang js="formatResult" dart="formatResult" py="format_result" rs="format_result" code />를 직접 부르세요.
 
 ::: lang js
 
@@ -245,6 +341,24 @@ from chki18n import Options, format_result, resolve_options
 
 format_result(result, resolve_options(Options(target="en", reporter="markdown"))[0])
 ```
+
+:::
+
+::: lang rs
+
+```rust
+use chki18n::{format_result, resolve_options, Options, ReportInit};
+
+let (options, _issues) = resolve_options(&Options {
+    target: Some("en".into()),
+    reporter: Some("markdown".into()),
+    ..Options::default()
+});
+
+format_result(&result, &options, &ReportInit::default());
+```
+
+`resolve_options`는 정리된 옵션과 함께, 그 과정에서 생긴 `INVALID_OPTIONS` 이슈를 돌려줍니다. `format_result`의 세 번째 인자는 옵션 외에 렌더링마다 따로 정할 수 있는 값으로, 리포터와 색상, 너비, 경로를 상대 경로로 보여 줄 기준 디렉터리가 여기에 해당합니다. `ReportInit::default()`를 넘기면 리포터와 색상은 옵션을 따르고, 리포트 너비는 96열이며, 경로는 전체 경로로 표시됩니다.
 
 :::
 
@@ -309,6 +423,32 @@ if not result.success:
 
 :::
 
+::: lang rs
+
+```rust
+use std::process;
+
+use chki18n::{check_translation_files, Level, Options};
+
+let result = check_translation_files(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+
+if !result.success {
+    for issue in result.issues.iter().filter(|one| one.level == Level::Error) {
+        eprintln!("{} {}: {}", issue.locale, issue.key, issue.message);
+    }
+
+    process::exit(1);
+}
+```
+
+:::
+
 `success`는 `error` 수준 이슈가 하나라도 있으면 거짓이 됩니다. 경고만으로는 실패하지 않으므로, 프로젝트에서 차단 요소로 취급한다면 [`levels`](/ko/guide/options#levels)로 심각도를 올리세요.
 
 ## 오류 처리 방식
@@ -351,11 +491,26 @@ result.of("INVALID_FILE")
 
 :::
 
+::: lang rs
+
+```rust
+let result = check_translation_files(Some("./does-not-exist"), &Options::default());
+
+result.success; // false
+result.issues_by_code().get(&CheckCode::InvalidFile);
+// Some([
+//     Issue { code: InvalidFile, level: Error, message: "Failed to read the directory …", .. },
+//     Issue { code: InvalidFile, level: Error, message: "No translation file was found in …", .. },
+// ])
+```
+
+:::
+
 경로를 아예 전달하지 않은 경우도 같은 방식으로, `INVALID_OPTIONS` 오류로 보고됩니다.
 
 ## 소요 시간
 
-<Lang js="result.elapsedMs" dart="result.elapsedMs" py="result.elapsed_ms" code />는 파일 탐색과 파싱, 비교를 모두 포함한 전체 호출 시간입니다. 같은 디렉터리를 여러 번 검사하면 그만큼 여러 번 읽으므로, 그런 작업에는 [`loadTranslations`](./load-translations)를 쓰세요.
+<Lang js="result.elapsedMs" dart="result.elapsedMs" py="result.elapsed_ms" rs="result.elapsed_ms" code />는 파일 탐색과 파싱, 비교를 모두 포함한 전체 호출 시간입니다. 같은 디렉터리를 여러 번 검사하면 그만큼 여러 번 읽으므로, 그런 작업에는 [`loadTranslations`](./load-translations)를 쓰세요.
 
 ## 함께 보기
 

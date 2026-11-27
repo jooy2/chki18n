@@ -36,6 +36,16 @@ def analyze_translations(data: Input, options: Options | None = None) -> Result:
 
 :::
 
+::: lang rs
+
+```rust
+pub fn analyze_translations(input: &Input, options: &Options) -> CheckResult
+```
+
+입력과 옵션을 빌려 쓰기만 하므로, 같은 값을 다음 호출에 그대로 다시 넘길 수 있습니다.
+
+:::
+
 ## 사용법
 
 로케일 하나의 묶음을 전달합니다.
@@ -110,6 +120,42 @@ result.of("NO_INTERPOLATION_KEY")[0].interpolation  # 'name'
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{analyze_translations, CheckCode, Input, Options, TranslationMap};
+use indexmap::IndexMap;
+use serde_json::json;
+
+let en = TranslationMap::from_iter([(
+    "desc".into(),
+    json!({ "hello": "Hello {name}", "bye": "Goodbye" }),
+)]);
+let ko = TranslationMap::from_iter([("desc".into(), json!({ "hello": "안녕하세요" }))]);
+
+let result = analyze_translations(
+    &Input {
+        locales: Some(IndexMap::from([("en".into(), en), ("ko".into(), ko)])),
+        ..Input::default()
+    },
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+let by_code = result.issues_by_code();
+
+result.key_count; // 2
+by_code[&CheckCode::NoKey][0].key.as_str(); // "desc.bye"
+by_code[&CheckCode::NoInterpolationKey][0]
+    .interpolation
+    .as_deref(); // Some("name")
+```
+
+`Input`은 `indexmap`과 `serde_json`의 타입으로 만들지만 chki18n은 두 크레이트를 다시 공개하지 않습니다. `cargo add indexmap serde_json`으로 프로젝트에 직접 추가하세요. 타입이 같아야 하므로 메이저 버전은 chki18n과 같은 `indexmap` 2와 `serde_json` 1로 맞추세요.
+
+:::
+
 중첩 객체는 비교 전에 평탄화되므로, 모든 이슈는 `desc.hello` 형태로 키를 보고합니다.
 
 ## 번역 파일이 여러 개일 때
@@ -173,6 +219,44 @@ analyze_translations(
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{analyze_translations, Input, Options, TranslationMap};
+use indexmap::IndexMap;
+
+let strings = |key: &str, value: &str| TranslationMap::from_iter([(key.into(), value.into())]);
+
+analyze_translations(
+    &Input {
+        groups: Some(IndexMap::from([
+            (
+                "common.json".into(),
+                IndexMap::from([
+                    ("en".into(), strings("ok", "OK")),
+                    ("ko".into(), strings("ok", "확인")),
+                ]),
+            ),
+            (
+                "errors.json".into(),
+                IndexMap::from([
+                    ("en".into(), strings("failed", "Failed")),
+                    ("ko".into(), TranslationMap::new()),
+                ]),
+            ),
+        ])),
+        ..Input::default()
+    },
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+// 하나뿐인 NO_KEY 이슈의 group은 "errors.json"입니다
+```
+
+:::
+
 `locales`는 이름이 `''`인 그룹 하나에 대한 축약형입니다. 디렉터리 검사가 어떻게 같은 형태에 도달하는지는 [파일 구조](/ko/guide/file-layouts#그룹)를 참고하세요.
 
 ## 평탄화 건너뛰기
@@ -218,6 +302,29 @@ analyze_translations(Input(locales={"en": en, "ko": ko}), Options(target="en", f
 ```
 
 이것이 빠른 경로입니다. 전달한 딕셔너리를 비교가 그대로 읽습니다.
+
+:::
+
+::: lang rs
+
+```rust
+let en = TranslationMap::from_iter([("desc.hello".into(), "Hello {name}".into())]);
+let ko = TranslationMap::from_iter([("desc.hello".into(), "안녕하세요".into())]);
+
+analyze_translations(
+    &Input {
+        locales: Some(IndexMap::from([("en".into(), en), ("ko".into(), ko)])),
+        ..Input::default()
+    },
+    &Options {
+        target: Some("en".into()),
+        flattened: Some(true),
+        ..Options::default()
+    },
+);
+```
+
+이것이 빠른 경로입니다. 비교는 전달한 맵을 빌려 읽을 뿐 하나도 복사하지 않습니다.
 
 :::
 
@@ -273,7 +380,26 @@ class Input:
 
 :::
 
-`files`는 그룹과 로케일을 원본 파일에 연결해, 이슈가 `file` 경로를 담을 수 있게 합니다. `issues`에는 입력을 만든 쪽이 이미 발견한 문제를 함께 넣을 수 있습니다. 디렉터리 스캔에서 읽지 못한 파일 오류가 비교 결과와 한 목록에 담기는 것도 이 방식입니다. <Lang js="fileFormat" dart="fileFormat" py="file_format" code />은 결과로 그대로 전달되며, 마지막 두 필드는 [`UNUSED_KEY`](/ko/guide/checks#unused-key)와 [`UNDEFINED_KEY`](/ko/guide/checks#undefined-key)의 답을 이미 알고 있는 애플리케이션을 위한 것입니다.
+::: lang rs
+
+```rust
+#[derive(Clone, Debug, Default)]
+pub struct Input {
+    pub groups: Option<TranslationGroups>,
+    pub locales: Option<IndexMap<String, TranslationMap>>,
+    pub files: Option<Vec<SourceFile>>,
+    pub issues: Option<Vec<Issue>>,
+    pub file_format: Option<FileFormat>,
+    pub unused_keys: Option<Vec<String>>,
+    pub undefined_keys: Option<Vec<KeyUsage>>,
+}
+```
+
+필드가 모두 `Option`이므로, 지정하지 않은 필드는 `..Input::default()`로 채웁니다. `TranslationMap`은 `serde_json::Map<String, Value>`이고, `chki18n::types`에 있는 `TranslationGroups`는 `IndexMap<String, IndexMap<String, TranslationMap>>`입니다. chki18n이 `serde_json`의 `preserve_order` 기능을 켜 두므로, 직접 만든 `serde_json::Map`도 키를 넣은 순서를 그대로 유지합니다.
+
+:::
+
+`files`는 그룹과 로케일을 원본 파일에 연결해, 이슈가 `file` 경로를 담을 수 있게 합니다. `issues`에는 입력을 만든 쪽이 이미 발견한 문제를 함께 넣을 수 있습니다. 디렉터리 스캔에서 읽지 못한 파일 오류가 비교 결과와 한 목록에 담기는 것도 이 방식입니다. <Lang js="fileFormat" dart="fileFormat" py="file_format" rs="file_format" code />은 결과로 그대로 전달되며, 마지막 두 필드는 [`UNUSED_KEY`](/ko/guide/checks#unused-key)와 [`UNDEFINED_KEY`](/ko/guide/checks#undefined-key)의 답을 이미 알고 있는 애플리케이션을 위한 것입니다.
 
 ## 결과가 말해주는 것
 
@@ -313,6 +439,18 @@ result.key_count  # 비교한 고유 키 수
 
 :::
 
+::: lang rs
+
+```rust
+result.files; // [] — 디스크에서 읽은 것이 없습니다
+result.file_format; // None — 직접 전달하지 않았다면
+result.locales; // 모든 그룹에서 발견된 모든 로케일
+result.groups; // 모든 그룹 이름, 입력 순서대로
+result.key_count; // 비교한 고유 키 수
+```
+
+:::
+
 나머지는 [`checkTranslationFiles`](./check-translation-files)가 반환하는 것과 같은 형태입니다. [결과 객체](/ko/reference/result)를 참고하세요.
 
 ## 객체가 아닌 로케일
@@ -340,6 +478,12 @@ Dart에서는 타입 시스템이 실행 전에 걸러냅니다. `Chki18nInput.l
 analyze_translations(Input(locales={"en": {"a": "A"}, "ko": None}), Options(target="en"))
 # result.of("INVALID_FILE") — "The translations of `ko` are not an object."
 ```
+
+:::
+
+::: lang rs
+
+Rust에서는 타입 시스템이 실행 전에 걸러냅니다. `Input`의 `locales`와 `groups`에는 `serde_json::Map`인 `TranslationMap`만 담을 수 있으므로, 키의 맵이 아닌 값은 애초에 넣을 수 없습니다. 디스크의 파일이 다른 것을 담고 있다면 스캐너가 `INVALID_FILE`로 보고합니다.
 
 :::
 

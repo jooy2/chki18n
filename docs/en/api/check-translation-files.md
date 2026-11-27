@@ -37,6 +37,16 @@ Synchronous, unlike the JavaScript package. Python's file reads are synchronous,
 
 :::
 
+::: lang rs
+
+```rust
+pub fn check_translation_files(path: Option<&str>, options: &Options) -> CheckResult
+```
+
+Synchronous, unlike the JavaScript and Dart packages. Files are read with the standard library, which blocks, and the crate depends on no async runtime. When `source` is set, the source files are read on several threads at once, but inside the call, which still returns only once all of them have been read. Rust has no default arguments, so pass `None` for no path and `&Options::default()` for no options.
+
+:::
+
 ## Usage
 
 ::: lang js
@@ -116,6 +126,45 @@ result.of("NO_KEY")[0]
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{check_translation_files, CheckCode, Options};
+
+let result = check_translation_files(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+
+result.success; // false
+result.summary.error; // 1
+result.issues_by_code()[&CheckCode::NoKey][0];
+// Issue {
+//     code: NoKey,
+//     level: Error,
+//     locale: "ko",
+//     key: "attr.folder",
+//     group: "",
+//     value: None,
+//     target_value: Some(
+//         "Folder",
+//     ),
+//     interpolation: None,
+//     related_key: None,
+//     file: Some(
+//         "/project/locales/ko.json",
+//     ),
+//     message: "The key exists in the target language but is missing here.",
+// }
+```
+
+Every field of `Options` is an `Option`, so `..Options::default()` leaves out the ones you do not set. `issues_by_code()` groups the issues by check, and `result.issues` is a plain `Vec<Issue>` to filter however you like.
+
+:::
+
 The path can also be given as an option, which is how the CLI passes its positional argument:
 
 ::: lang js
@@ -144,6 +193,23 @@ check_translation_files(options=Options(path="./locales", target="en"))
 
 :::
 
+::: lang rs
+
+```rust
+check_translation_files(
+    None,
+    &Options {
+        path: Some("./locales".into()),
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+```
+
+When both are given, `path` in the options wins over the argument.
+
+:::
+
 Every option is on [Options](/guide/options), and the result on [The result object](/reference/result).
 
 ## Printing and exiting
@@ -151,7 +217,7 @@ Every option is on [Options](/guide/options), and the result on [The result obje
 Two things this function deliberately does not do:
 
 - **It prints nothing** unless `verbose` is set. Importing the module cannot pollute a host application's output.
-- **It never exits the process.** A failing check comes back as <Lang js="result.success === false" dart="result.success == false" py="result.success is False" code />. Exiting is the CLI's job, and it does it after this function returns.
+- **It never exits the process.** A failing check comes back as <Lang js="result.success === false" dart="result.success == false" py="result.success is False" rs="result.success == false" code />. Exiting is the CLI's job, and it does it after this function returns.
 
 Turn the output on when you want the CLI's report from your own script:
 
@@ -178,6 +244,21 @@ await checkTranslationFiles(
 
 ```python
 check_translation_files("./locales", Options(target="en", verbose=True))
+```
+
+:::
+
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        verbose: Some(true),
+        ..Options::default()
+    },
+);
 ```
 
 :::
@@ -211,7 +292,22 @@ check_translation_files("./locales", Options(target="en", output="report.md"))
 
 :::
 
-To render a result without printing or saving it, call <Lang js="formatResult" dart="formatResult" py="format_result" code /> yourself:
+::: lang rs
+
+```rust
+check_translation_files(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        output: Some("report.md".into()),
+        ..Options::default()
+    },
+);
+```
+
+:::
+
+To render a result without printing or saving it, call <Lang js="formatResult" dart="formatResult" py="format_result" rs="format_result" code /> yourself:
 
 ::: lang js
 
@@ -245,6 +341,24 @@ from chki18n import Options, format_result, resolve_options
 
 format_result(result, resolve_options(Options(target="en", reporter="markdown"))[0])
 ```
+
+:::
+
+::: lang rs
+
+```rust
+use chki18n::{format_result, resolve_options, Options, ReportInit};
+
+let (options, _issues) = resolve_options(&Options {
+    target: Some("en".into()),
+    reporter: Some("markdown".into()),
+    ..Options::default()
+});
+
+format_result(&result, &options, &ReportInit::default());
+```
+
+`resolve_options` returns the resolved options together with the `INVALID_OPTIONS` issues it raised. The third argument of `format_result` is what one rendering may set beyond the options: the reporter, the colour, the width, and the directory that paths are shown relative to. With `ReportInit::default()` the reporter and colour come from the options, the report is 96 columns wide, and paths are shown in full.
 
 :::
 
@@ -309,6 +423,32 @@ if not result.success:
 
 :::
 
+::: lang rs
+
+```rust
+use std::process;
+
+use chki18n::{check_translation_files, Level, Options};
+
+let result = check_translation_files(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+
+if !result.success {
+    for issue in result.issues.iter().filter(|one| one.level == Level::Error) {
+        eprintln!("{} {}: {}", issue.locale, issue.key, issue.message);
+    }
+
+    process::exit(1);
+}
+```
+
+:::
+
 `success` is false when at least one issue is at `error` level. Warnings never make it false, so promote one with [`levels`](/guide/options#levels) if your project treats it as a blocker.
 
 ## How errors are reported
@@ -351,11 +491,26 @@ result.of("INVALID_FILE")
 
 :::
 
+::: lang rs
+
+```rust
+let result = check_translation_files(Some("./does-not-exist"), &Options::default());
+
+result.success; // false
+result.issues_by_code().get(&CheckCode::InvalidFile);
+// Some([
+//     Issue { code: InvalidFile, level: Error, message: "Failed to read the directory …", .. },
+//     Issue { code: InvalidFile, level: Error, message: "No translation file was found in …", .. },
+// ])
+```
+
+:::
+
 Calling it with no path at all is reported the same way, as an `INVALID_OPTIONS` error.
 
 ## Timing
 
-<Lang js="result.elapsedMs" dart="result.elapsedMs" py="result.elapsed_ms" code /> covers the whole call: the scan, the parse and the comparison. Checking the same directory more than once means scanning it more than once, so use [`loadTranslations`](./load-translations) for that kind of work.
+<Lang js="result.elapsedMs" dart="result.elapsedMs" py="result.elapsed_ms" rs="result.elapsed_ms" code /> covers the whole call: the scan, the parse and the comparison. Checking the same directory more than once means scanning it more than once, so use [`loadTranslations`](./load-translations) for that kind of work.
 
 ## See also
 

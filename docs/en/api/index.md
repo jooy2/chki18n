@@ -15,9 +15,19 @@ chki18n has four entry points. Which one you want depends on who owns the transl
 | Read a directory once, then check it repeatedly | [`loadTranslations`](./load-translations) | once |
 | Your own application owns the values and needs only a verdict | [`createAnalyzer`](./create-analyzer) | no |
 
+::: lang js dart py
+
 `analyzeTranslations` and `createAnalyzer` are also published on their own as <Lang js="chki18n/core" dart="package:chki18n/core.dart" py="chki18n.core" code />, which reaches no file system at all. See [The core entry point](./core).
 
-Every name below is written in its JavaScript spelling. Dart uses the same one; Python is snake_case, so `analyzeTranslations` is `analyze_translations`. [Getting started](/guide/getting-started#how-the-names-map) states that mapping once.
+:::
+
+::: lang rs
+
+`analyze_translations` and `create_analyzer` live in the `chki18n::core` module, which reaches no file system at all. It is part of the same crate rather than a separate build. See [The core entry point](./core).
+
+:::
+
+Every name below is written in its JavaScript spelling. Dart uses the same one; Python and Rust are snake_case, so `analyzeTranslations` is `analyze_translations`. [Getting started](/guide/getting-started#how-the-names-map) states that mapping once.
 
 ## Who owns the values
 
@@ -31,13 +41,19 @@ When chki18n owns the values, as it does in a script, a file watcher or a CI ste
 
 Beyond the four entry points:
 
-- **Check metadata** — <Lang js="CHECK_CODE" dart="Chki18nCheckCode" py="CHECK_CODES" code />, `CHECK_META`, `ANALYZE_CHECK_CODES`, `CROSS_KEY_CHECK_CODES`. See [Checks](/guide/checks).
+- **Check metadata** — <Lang js="CHECK_CODE" dart="Chki18nCheckCode" py="CHECK_CODES" rs="CheckCode" code />, `CHECK_META`, `ANALYZE_CHECK_CODES`, `CROSS_KEY_CHECK_CODES`. See [Checks](/guide/checks).
 - **Result helpers** — `groupIssuesByCode`, `summarizeIssues`, `createIssue`, `buildResult`. See [The result object](/reference/result).
-- **Options** — `resolveOptions`, <Lang js="argsToOptions" dart="optionsFromArgs" py="options_from_args" code />, `buildUsageText`, `OPTION_DEFINITIONS`. See [Options](/guide/options).
-- **Defaults** — `DEFAULT_TARGET_LOCALE`, `DEFAULT_EXCLUDE_DIRS`, `DEFAULT_INTERPOLATION_PREFIX`, `DEFAULT_INTERPOLATION_SUFFIX`, <Lang js="FILE_FORMAT" dart="Chki18nFileFormat" py="FILE_FORMATS" code />.
+- **Options** — `resolveOptions`, <Lang js="argsToOptions" dart="optionsFromArgs" py="options_from_args" rs="options_from_args" code />, `buildUsageText`, `OPTION_DEFINITIONS`. See [Options](/guide/options).
+- **Defaults** — `DEFAULT_TARGET_LOCALE`, `DEFAULT_EXCLUDE_DIRS`, `DEFAULT_INTERPOLATION_PREFIX`, `DEFAULT_INTERPOLATION_SUFFIX`, <Lang js="FILE_FORMAT" dart="Chki18nFileFormat" py="FILE_FORMATS" rs="FileFormat" code />.
 - **Reporting** — `formatResult`, `groupIssues`, `displayWidth`, `padTo`, `truncate`. See [Options](/guide/options#reporter).
 - **Utilities** — `isLocaleCode`, `extractInterpolationKeys`, `scanTranslationDirectory`.
 - **Sessions** — `createSession`, for translations you pass in rather than a directory.
+
+::: lang rs
+
+Two of these have no Rust counterpart under that name. A check's metadata comes from `CheckCode::meta()` rather than a `CHECK_META` table, and a result groups its own issues with `CheckResult::issues_by_code()` rather than `groupIssuesByCode`. Of the names above, the crate root re-exports `resolve_options`, `format_result`, `scan_translation_directory`, `create_session` and the enums, as it does the four entry points. The rest are reached through the module that holds them, such as `chki18n::constants::ANALYZE_CHECK_CODES`, `chki18n::core::issue::create_issue` or `chki18n::reporter::text::truncate`.
+
+:::
 
 Every type is exported too.
 
@@ -56,5 +72,11 @@ Every type is exported too.
 ::: lang py
 
 `Options`, `Result`, `Issue`, `Summary`, `Entry`, `Session` and the rest. Python does not prefix them, because `chki18n.Result` already says which library it belongs to.
+
+:::
+
+::: lang rs
+
+`Options`, `CheckResult`, `Issue`, `Input`, `Entry`, `Session` and the rest. Rust does not prefix them either, because a path such as `chki18n::Issue` already names the crate. The result is `CheckResult` rather than `Result` so that importing it does not shadow the standard library's `Result`. `Summary`, `LevelCount` and `TranslationGroups` are not re-exported at the crate root and live in `chki18n::types`.
 
 :::

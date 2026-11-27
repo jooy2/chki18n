@@ -35,6 +35,18 @@ def load_translations(
 
 :::
 
+::: lang rs
+
+```rust
+pub fn load_translations(path: Option<&str>, options: &Options) -> FileSession;
+```
+
+The call is synchronous. A `path` set in `options` wins over the argument.
+
+`FileSession` keeps the translations in a `Session` and lends it out: `session()` to read and check, `session_mut()` to edit. `analyze()`, `reload()` and the properties that describe the directory are on `FileSession` itself. Every `group?` below is a trailing `Option<&str>` argument, and `None` lets the session find the group.
+
+:::
+
 ## Usage
 
 ::: lang js
@@ -115,6 +127,40 @@ session.reload()  # throw the edits away and read the directory again
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{load_translations, Options};
+
+let mut loaded = load_translations(
+    Some("./locales"),
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+let session = loaded.session();
+
+session.locales(); // ["en", "ko"]
+session.groups(); // [""]
+session.file_format(); // Some(FileFormat::Single)
+session.keys(None); // ["desc.hello", "desc.bye", …] — target language order
+
+loaded.analyze(); // the full result, without reading a file
+
+session.get("ko", "desc.hello", None); // Some(String("안녕하세요"))
+session.check_key("desc.hello", None); // [Issue { code: NoInterpolationKey, … }]
+
+let session = loaded.session_mut();
+
+session.set("ko", "desc.hello", "{name}님 안녕하세요", None); // [] — that key is now clean
+loaded.analyze(); // one fewer error
+
+loaded.reload(); // throw the edits away and read the directory again
+```
+
+:::
+
 ## Reading
 
 ### `analyze()`
@@ -127,7 +173,7 @@ Every key of a group, target language first so a report follows its order.
 
 ### `get(locale, key, group?)`
 
-One value, or <Lang js="undefined" dart="null" py="None" code /> when that locale does not define the key. Keys are flat: `'desc.hello'`, not `['desc', 'hello']`.
+One value, or <Lang js="undefined" dart="null" py="None" rs="None" code /> when that locale does not define the key. Keys are flat: `'desc.hello'`, not `['desc', 'hello']`.
 
 ### `translations(group?)`
 
@@ -154,6 +200,16 @@ session.translations(); // {'en': {'desc.hello': 'Hello {name}'}, 'ko': {…}}
 ```python
 session.translations()  # {'en': {'desc.hello': 'Hello {name}'}, 'ko': {…}}
 ```
+
+:::
+
+::: lang rs
+
+```rust
+session.translations(None); // Some({"en": {"desc.hello": String("Hello {name}"), …}, "ko": {…}})
+```
+
+The return type is `Option<&IndexMap<String, TranslationMap>>`, and it is `None` when there is no such group. The borrow is shared, so a write has to go through `set` or `remove` anyway.
 
 :::
 
@@ -204,7 +260,26 @@ session.detected_interpolation  # Delimiters('{{', '}}') — what the files look
 
 :::
 
-<Lang js="detectedInterpolation" dart="detectedInterpolation" py="detected_interpolation" code /> is a guess offered to whoever is setting a project up, read off the raw text of the files the scan accepted. It is <Lang js="null" dart="null" py="None" code /> when none of them holds anything that looks like a placeholder. It never changes what the run compared: the checks used `interpolationPrefix` whatever the files turned out to look like.
+::: lang rs
+
+In Rust these are methods. The ones about the directory are on `FileSession`, and the rest are on the `Session` it holds:
+
+```rust
+let session = loaded.session();
+
+loaded.options(); // the resolved options every check runs with
+session.locales(); // every locale held
+session.groups(); // every group held, in scan order
+session.files(); // the files they were read from
+session.file_format(); // Some(FileFormat::Single), Folder or Nested
+loaded.path(); // the absolute path that was scanned
+loaded.skipped(); // files that belong to no locale
+loaded.detected_interpolation(); // Some(Delimiters { prefix: "{{", suffix: "}}" }) — what the files look like
+```
+
+:::
+
+<Lang js="detectedInterpolation" dart="detectedInterpolation" py="detected_interpolation" rs="detected_interpolation()" code /> is a guess offered to whoever is setting a project up, read off the raw text of the files the scan accepted. It is <Lang js="null" dart="null" py="None" rs="None" code /> when none of them holds anything that looks like a placeholder. It never changes what the run compared: the checks used `interpolationPrefix` whatever the files turned out to look like.
 
 ## Writing
 
@@ -248,6 +323,22 @@ session.set("ko", "desc.hello", "{name}님 안녕하세요")
 
 :::
 
+::: lang rs
+
+```rust
+let session = loaded.session_mut();
+
+session.set("ko", "desc.hello", "안녕하세요", None);
+// [Issue { code: NoInterpolationKey, level: Error, … }] — {name} is missing
+
+session.set("ko", "desc.hello", "{name}님 안녕하세요", None);
+// [] — clean
+```
+
+The value is a `&str`, stored as a JSON string.
+
+:::
+
 A locale that was not there before is added, which is how a new language starts.
 
 ### `remove(key, { locale, group })`
@@ -278,6 +369,17 @@ session.remove('attr.folder'); // gone everywhere -> []
 session.remove("attr.folder", locale="ko")  # [Issue(code='NO_KEY', …)]
 session.remove("attr.folder")  # gone everywhere -> []
 ```
+
+:::
+
+::: lang rs
+
+```rust
+session.remove("attr.folder", Some("ko"), None); // [Issue { code: NoKey, … }]
+session.remove("attr.folder", None, None); // gone everywhere -> []
+```
+
+`locale` and `group` are the second and third arguments, each an `Option<&str>`.
 
 :::
 
@@ -338,11 +440,26 @@ session.set("ko", "failed", "실패", "errors.json")  # named explicitly
 
 :::
 
+::: lang rs
+
+```rust
+let session = loaded.session_mut();
+
+session.groups(); // ["common.json", "errors.json"]
+
+session.get("en", "failed", None); // found in errors.json
+&session.check_key("failed", None)[0].group; // "errors.json"
+
+session.set("ko", "failed", "실패", Some("errors.json")); // named explicitly
+```
+
+:::
+
 You only have to name a group when adding a key that does not exist yet, since there is nowhere to look it up.
 
 ## Translations you already hold
 
-<Lang js="createSession" dart="createSession" py="create_session" code /> is the same thing without the directory, and is exported from [the core entry point](./core) as well:
+<Lang js="createSession" dart="createSession" py="create_session" rs="create_session" code /> is the same thing without the directory, and is exported from [the core entry point](./core) as well:
 
 ::: lang js
 
@@ -385,7 +502,43 @@ session.reset(Input(groups=next_groups))  # swap the data, keep the options
 
 :::
 
+::: lang rs
+
+```rust
+use chki18n::{create_session, Input, Options};
+use indexmap::IndexMap;
+
+let mut session = create_session(
+    Input {
+        groups: Some(IndexMap::from([(
+            "common.json".into(),
+            IndexMap::from([("en".into(), en), ("ko".into(), ko)]),
+        )])),
+        ..Input::default()
+    },
+    &Options {
+        target: Some("en".into()),
+        ..Options::default()
+    },
+);
+
+session.reset(Input {
+    groups: Some(next_groups),
+    ..Input::default()
+}); // swap the data, keep the options
+```
+
+`en` and `ko` are `TranslationMap`s, the `serde_json` object a parsed file becomes. The crate re-exports neither `serde_json` nor `indexmap`, so add both to your own `Cargo.toml`.
+
+:::
+
 It has everything above except `path`, `skipped` and `reload`, which only mean something for a directory.
+
+::: lang rs
+
+In Rust it is the same `Session` that a `FileSession` lends out, so its methods are called on it directly. `path()`, `skipped()`, `detected_interpolation()` and `reload()` belong to `FileSession` alone.
+
+:::
 
 ## The copy a session holds
 
@@ -427,5 +580,19 @@ session = load_translations("./does-not-exist")
 session.analyze().success  # False
 session.analyze().of("INVALID_FILE")  # the reason
 ```
+
+:::
+
+::: lang rs
+
+```rust
+let loaded = load_translations(Some("./does-not-exist"), &Options::default());
+let result = loaded.analyze();
+
+result.success; // false
+result.issues_by_code().get(&CheckCode::InvalidFile); // the reason
+```
+
+The return type is a `FileSession`, not a `Result`: a directory that cannot be read is one of the issues.
 
 :::
