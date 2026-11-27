@@ -1,0 +1,39 @@
+[package]
+name = "chki18n"
+version = "0.1.0"
+description = "Checks that your i18n translation files agree with each other: missing keys, untranslated values, broken placeholders."
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+repository = "https://github.com/jooy2/chki18n"
+homepage = "https://chki18n.cdget.com"
+readme = "README.md"
+keywords = ["i18n", "translation", "localization", "validation", "cli"]
+categories = ["command-line-utilities", "development-tools", "internationalization"]
+include = ["src/**/*.rs", "Cargo.toml", "README.md", "CHANGELOG.md", "LICENSE"]
+
+[lib]
+name = "chki18n"
+path = "src/lib.rs"
+
+[[bin]]
+name = "chki18n"
+path = "src/main.rs"
+
+[dependencies]
+# The ordered map `serde_json` keeps its objects in, used for groups and
+# locales as well so that every map of the library keeps the order of the files.
+indexmap = "2"
+# Objects keep the order their keys were written in, which is the order a
+# JavaScript object reports them and so the order every report follows.
+serde_json = { version = "1", features = ["preserve_order"] }
+# Only for what has no small hand-written equivalent: the Unicode letter class.
+regex = { version = "1", default-features = false, features = ["std", "unicode-perl", "unicode-gencat"] }
+
+# The terminal's width, read with `ioctl` where the platform has it.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[profile.release]
+codegen-units = 1
+lto = true

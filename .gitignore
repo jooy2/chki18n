@@ -30,6 +30,11 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
+# Rust
+# Built by `cargo`. `Cargo.lock` is kept: the crate ships a binary, and a
+# binary is built from the versions it was tested with.
+packages/rust/target/
+
 # IDEs
 .idea/
 

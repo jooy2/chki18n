@@ -1,0 +1,4 @@
+# The repository indents with tabs and wraps at 100 columns (`.editorconfig`),
+# and rustfmt can be told so, unlike the Dart and Python formatters.
+hard_tabs = true
+max_width = 100
