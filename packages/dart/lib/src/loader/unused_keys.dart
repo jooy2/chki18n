@@ -40,6 +40,28 @@ String leafOfKey(String key) {
 
 bool _isScannableName(String name) => _extensions.contains(extensionOf(name));
 
+/// The text of a source file, or `null` when it is too large to search or
+/// cannot be read as text. A tree of sources holds binaries and generated
+/// bundles as well, and the scan passes over them rather than failing on them.
+///
+/// Read synchronously. A source tree is thousands of small files, and every
+/// asynchronous call hands the work to another thread and waits for the answer:
+/// four thousand files took more than twice as long that way. The search that
+/// follows each read holds the isolate anyway.
+String? _readSource(String path) {
+  try {
+    final file = File(path);
+
+    if (file.lengthSync() > sourceMaxFileBytes) {
+      return null;
+    }
+
+    return file.readAsStringSync();
+  } catch (_) {
+    return null;
+  }
+}
+
 /// Whether [unit] is one of the characters a key segment is nearly always
 /// spelled with: ASCII letters and digits, `_`, `$` and `-`. Any occurrence of
 /// a leaf spelled only with them sits inside one unbroken run of them, so the
@@ -289,24 +311,7 @@ Future<Chki18nUsageScan> findUnusedKeys(
             !skip.contains(file.path),
   );
 
-  await for (final file in walk) {
-    if (remaining.isEmpty && !wantsUndefined) {
-      break;
-    }
-
-    final path = file.path;
-    String content;
-
-    try {
-      if (await File(path).length() > sourceMaxFileBytes) {
-        continue;
-      }
-
-      content = await File(path).readAsString();
-    } catch (_) {
-      continue;
-    }
-
+  void scan(String path, String content) {
     scannedFileCount += 1;
 
     if (remaining.isNotEmpty) {
@@ -314,7 +319,7 @@ Future<Chki18nUsageScan> findUnusedKeys(
     }
 
     if (addresses == null) {
-      continue;
+      return;
     }
 
     for (final key in _callsIn(content, patterns)) {
@@ -324,6 +329,18 @@ Future<Chki18nUsageScan> findUnusedKeys(
 
       reported.add(key);
       undefinedKeys.add(Chki18nKeyUsage(key: key, file: path));
+    }
+  }
+
+  await for (final file in walk) {
+    if (remaining.isEmpty && !wantsUndefined) {
+      break;
+    }
+
+    final content = _readSource(file.path);
+
+    if (content != null) {
+      scan(file.path, content);
     }
   }
 
