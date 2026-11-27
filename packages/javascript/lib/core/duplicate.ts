@@ -15,32 +15,54 @@
  */
 import type { TranslationMap } from '../_types/global.js';
 
-/** Whether flattening descends into a value: a plain object or an array with something in it. */
-const isBranch = (value: unknown): value is Record<string, unknown> => {
+/**
+ * The keys of a value flattening descends into, a plain object or an array with
+ * something in it, or `null` for a leaf.
+ *
+ * Asked of every node of every file, so a string or a number is answered by its
+ * type before an object's tag is read, and the keys are listed once and handed
+ * to the walk rather than listed once to decide and again to walk.
+ */
+const keysOfBranch = (value: unknown): string[] | null => {
+	if (value === null || typeof value !== 'object') {
+		return null;
+	}
+
 	const tag = Object.prototype.toString.call(value);
 
-	return (
-		(tag === '[object Object]' || tag === '[object Array]') &&
-		Object.keys(value as object).length > 0
-	);
+	if (tag !== '[object Object]' && tag !== '[object Array]') {
+		return null;
+	}
+
+	const keys = Object.keys(value);
+
+	return keys.length > 0 ? keys : null;
 };
 
 /** Every leaf below `translations`, with its flattened key, in the order the keys are reached. */
 function walkLeaves(translations: unknown, visit: (key: string, value: unknown) => void): void {
 	const walk = (value: unknown, path: string): void => {
-		if (!isBranch(value)) {
+		const keys = keysOfBranch(value);
+
+		if (!keys) {
 			visit(path, value);
 			return;
 		}
 
-		for (const key of Object.keys(value)) {
-			walk(value[key], path ? `${path}.${key}` : key);
+		const branch = value as Record<string, unknown>;
+
+		for (const key of keys) {
+			walk(branch[key], path ? `${path}.${key}` : key);
 		}
 	};
 
-	if (isBranch(translations)) {
-		for (const key of Object.keys(translations)) {
-			walk(translations[key], key);
+	const keys = keysOfBranch(translations);
+
+	if (keys) {
+		const branch = translations as Record<string, unknown>;
+
+		for (const key of keys) {
+			walk(branch[key], key);
 		}
 	}
 }
