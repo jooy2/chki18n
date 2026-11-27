@@ -231,6 +231,26 @@ function addressesOf(keys: string[]): { has: (address: string) => boolean } {
 	};
 }
 
+/** How many source files are read ahead of the one being searched. */
+const READ_AHEAD = 16;
+
+/**
+ * The text of a source file, or `null` when it is too large to search or cannot
+ * be read. A tree of sources holds binaries and generated bundles as well, and
+ * the scan passes over them rather than failing on them.
+ */
+async function readSource(path: string): Promise<string | null> {
+	try {
+		if ((await stat(path)).size > SOURCE_MAX_FILE_BYTES) {
+			return null;
+		}
+
+		return await readFile(path, { encoding: 'utf-8' });
+	} catch {
+		return null;
+	}
+}
+
 /**
  * Search `sourcePath` for each key, and report the ones never found.
  *
@@ -297,23 +317,7 @@ export async function findUnusedKeys(
 			!skip.has(path)
 	});
 
-	for await (const { path } of walk) {
-		if (remaining.size < 1 && !wantsUndefined) {
-			break;
-		}
-
-		let content: string;
-
-		try {
-			if ((await stat(path)).size > SOURCE_MAX_FILE_BYTES) {
-				continue;
-			}
-
-			content = await readFile(path, { encoding: 'utf-8' });
-		} catch {
-			continue;
-		}
-
+	const scan = (path: string, content: string): void => {
 		scannedFileCount += 1;
 
 		if (remaining.size > 0) {
@@ -321,7 +325,7 @@ export async function findUnusedKeys(
 		}
 
 		if (!addresses) {
-			continue;
+			return;
 		}
 
 		for (const key of callsIn(content, patterns)) {
@@ -332,6 +336,45 @@ export async function findUnusedKeys(
 			reported.add(key);
 			undefinedKeys.push({ key, file: path });
 		}
+	};
+
+	// Files are read ahead of the one being searched, so the scan waits on the
+	// file system for several at once rather than for each in turn. They are
+	// still searched in the order of the walk, which is what decides the file an
+	// undefined key is reported against.
+	const ahead: { path: string; read: Promise<string | null> }[] = [];
+	let done = false;
+
+	const isDone = (): boolean => (done ||= remaining.size < 1 && !wantsUndefined);
+
+	const scanNext = async (): Promise<void> => {
+		const next = ahead.shift();
+
+		if (!next) {
+			return;
+		}
+
+		const content = await next.read;
+
+		if (content !== null && !isDone()) {
+			scan(next.path, content);
+		}
+	};
+
+	for await (const { path } of walk) {
+		if (isDone()) {
+			break;
+		}
+
+		ahead.push({ path, read: readSource(path) });
+
+		if (ahead.length >= READ_AHEAD) {
+			await scanNext();
+		}
+	}
+
+	while (ahead.length > 0) {
+		await scanNext();
 	}
 
 	const unusedKeys: string[] = [];
