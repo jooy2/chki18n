@@ -241,19 +241,39 @@ Future<Object> _readTranslationFile(Chki18nWalkedFile file, Chki18nResolvedOptio
   );
 }
 
+/// How many files are read at once. Enough to keep the disk busy, few enough
+/// that a large tree does not run out of file handles.
+const int _readConcurrency = 16;
+
 /// Reads the files of [slots] that [isWanted] asks for, each into its own slot.
+///
+/// Several are read at once, as the JavaScript package reads them: a read
+/// spends most of its time waiting on the file system, and waiting on one file
+/// at a time adds those waits up. Each result lands in its own slot, so the
+/// order of the walk is kept whatever order the reads finish in.
 Future<void> _readSlots(
   List<_Slot> slots,
   bool Function(Chki18nWalkedFile file) isWanted,
   Chki18nResolvedOptions options,
 ) async {
-  for (final slot in slots) {
-    final file = slot.file;
+  final pending = [
+    for (final slot in slots)
+      if (slot.file case final file? when slot.read == null && isWanted(file)) (slot, file),
+  ];
+  var next = 0;
 
-    if (file != null && slot.read == null && isWanted(file)) {
+  Future<void> worker() async {
+    while (next < pending.length) {
+      final (slot, file) = pending[next];
+
+      next += 1;
       slot.read = await _readTranslationFile(file, options);
     }
   }
+
+  await Future.wait([
+    for (var count = 0; count < _readConcurrency && count < pending.length; count += 1) worker(),
+  ]);
 }
 
 Iterable<_ScannedFile> _scannedOf(List<_Slot> slots) =>
