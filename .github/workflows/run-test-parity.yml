@@ -1,6 +1,6 @@
 name: run-test-parity
 
-# The one check no package can run on its own: that the three command lines
+# The one check no package can run on its own: that the four command lines
 # print the same report. Each package's suite only knows its own expected
 # output, so a drift between two of them passes everywhere until someone
 # compares them.
@@ -18,7 +18,7 @@ on:
 jobs:
   run-test-parity:
     runs-on: ubuntu-latest
-    name: Compare the three command lines
+    name: Compare the four command lines
 
     steps:
       - uses: actions/checkout@v5
@@ -35,6 +35,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+      # The runner image ships a stable toolchain; the build goes into a folder
+      # of the comparison's own.
+      - name: Check the Rust toolchain
+        run: cargo --version
       # The reference implementation is compared from its build, so it has to
       # be a current one.
       - name: Build the JavaScript package

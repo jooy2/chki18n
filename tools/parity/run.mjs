@@ -1,23 +1,24 @@
 /**
- * Runs the three command lines over the same files and diffs what they print.
+ * Runs the four command lines over the same files and diffs what they print.
  *
- * The documentation says the packages are one library rather than three: the
+ * The documentation says the packages are one library rather than four: the
  * same checks in the same order, and a report that matches to the column
  * whichever one produced it. That claim is only worth making if it is tested,
  * and no single package's suite can test it — each one only knows its own
  * expected output.
  *
- * The JavaScript package is the reference. Dart and Python are compared against
+ * The JavaScript package is the reference. Dart, Python and Rust are compared against
  * it, over every sample directory, every reporter and every grouping. Two
  * things are normalised before comparing, because neither carries meaning:
  * the elapsed time, which differs run to run, and the key order of a JSON
- * report, which the three write in the order their own types declare.
+ * report, which each writes in the order its own types declare, and the version
+ * in the banner, since each package versions on its own.
  *
  * Usage, from anywhere in the repository:
  *
  *     node tools/parity/run.mjs
  *
- * It needs `node`, `dart` and a Python 3 on the path, and the JavaScript
+ * It needs `node`, `dart`, `cargo` and a Python 3 on the path, and the JavaScript
  * package built (`npm run build` in `packages/javascript`). Set `PYTHON` to
  * pick a particular interpreter.
  */
@@ -34,7 +35,11 @@ const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SAMPLES = 'packages/javascript/test/samples';
 
 /** The same tree, as the other two packages keep it. */
-const MIRRORS = ['packages/dart/test/samples', 'packages/python/tests/samples'];
+const MIRRORS = [
+	'packages/dart/test/samples',
+	'packages/python/tests/samples',
+	'packages/rust/tests/samples'
+];
 
 /**
  * What to run each sample with.
@@ -185,6 +190,25 @@ function dartRunner(workDir) {
 	return { name: 'dart', command: exe, prefix: [] };
 }
 
+/**
+ * The Rust command, built once in release mode into `workDir`, so the checkout
+ * keeps no build of its own from a comparison.
+ */
+function rustRunner(workDir) {
+	const targetDir = join(workDir, 'rust-target');
+	const built = spawnSync('cargo', ['build', '--release', '--quiet', '--target-dir', targetDir], {
+		cwd: resolve(rootDir, 'packages/rust'),
+		encoding: 'utf8'
+	});
+
+	if (built.error) fail(`Could not run \`cargo\`: ${built.error.message}`);
+	if (built.status !== 0) fail(`\`cargo build\` failed:\n${built.stderr || built.stdout}`);
+
+	const exe = join(targetDir, 'release', process.platform === 'win32' ? 'chki18n.exe' : 'chki18n');
+
+	return { name: 'rust', command: exe, prefix: [] };
+}
+
 /** The Python command, run from the source tree rather than an install. */
 function pythonRunner() {
 	const candidates = [process.env.PYTHON, 'python3', 'python'].filter(Boolean);
@@ -220,7 +244,8 @@ function run(runner, args) {
 
 /** The output with what cannot be compared removed. */
 function normalise(output) {
-	const trimmed = output.trimEnd();
+	// Each package versions on its own, so the banner's version says nothing.
+	const trimmed = output.trimEnd().replace(/^Chki18n \S+$/m, 'Chki18n (version)');
 
 	if (!trimmed.startsWith('{')) return trimmed.replace(/\(\d+ms\)/g, '(elapsed)');
 
@@ -271,7 +296,7 @@ function main() {
 
 	try {
 		const reference = javascriptRunner();
-		const others = [dartRunner(workDir), pythonRunner()];
+		const others = [dartRunner(workDir), pythonRunner(), rustRunner(workDir)];
 		const failures = [];
 		let comparisons = 0;
 
@@ -290,7 +315,7 @@ function main() {
 					failures.push(
 						[
 							`${runner.name} differs on ${testCase.name} ${options.join(' ')}`,
-							`  ${runner.name === 'dart' ? 'dart' : 'python'} exit ${actual.code}, javascript exit ${expected.code}`,
+							`  ${runner.name} exit ${actual.code}, javascript exit ${expected.code}`,
 							firstDifference(expected.output, actual.output),
 							actual.stderr.trim() ? `  stderr: ${actual.stderr.trim()}` : ''
 						]
@@ -302,7 +327,7 @@ function main() {
 		}
 
 		console.log(
-			`${cases.length} samples × ${OPTION_SETS.length} option sets × 2 packages = ${comparisons} comparisons.`
+			`${cases.length} samples × ${OPTION_SETS.length} option sets × ${others.length} packages = ${comparisons} comparisons.`
 		);
 
 		if (failures.length > 0) {
@@ -313,7 +338,7 @@ function main() {
 			return;
 		}
 
-		console.log('Dart and Python both match the JavaScript output exactly.');
+		console.log('Dart, Python and Rust all match the JavaScript output exactly.');
 	} finally {
 		rmSync(workDir, { recursive: true, force: true });
 	}
