@@ -6,6 +6,11 @@
 
 - Every GitHub release of the Dart package carries the command line compiled ahead of time, for Linux on x64 and arm64, macOS on Apple silicon and Windows on x64. A machine or a CI job without the Dart SDK can unpack it and run it, and it starts in a few milliseconds where `dart pub global activate` starts the Dart VM and compiles the command first
 
+### Changed
+
+- Checking translations is about four times faster, with the same findings. On 5,000 keys across 5 locales, `checkTranslationFiles` takes 58ms where it took 263ms, 91ms where it took 364ms with `source` scanned, and one run of the command line 119ms where it took 373ms. A value is read one character at a time rather than handed to a regular expression for each check, which in Dart costs a call into the runtime every time, and translation files are read sixteen at a time
+- The scan of `source` reads each file synchronously, which is more than twice as fast over a tree of thousands of small files. It holds the isolate while it runs, as the comparison after it always has
+
 ## 1.3.0 (2026-10-26)
 
 > Reports now agree with the JavaScript and Python packages in every case they used to differ on, the unused key scan takes a second where it took two minutes, and numbers, ordinal plurals and Thai or Hindi text are read the way their languages write them.
