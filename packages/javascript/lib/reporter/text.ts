@@ -1,5 +1,5 @@
 import { CHECK_META } from '../constants.js';
-import { charWidth, displayWidth } from '../core/width.js';
+import { charWidth, displayWidth, displayWidthOf } from '../core/width.js';
 import { type Chki18nPaint } from './paint.js';
 import type { Chki18nIssue, Chki18nLevelCount, Chki18nResult } from '../_types/global.js';
 
@@ -40,8 +40,9 @@ export function truncate(text: string, max: number): string {
 
 	const room = Math.max(1, max - 3);
 	let width = 0;
-	let kept = '';
+	let end = 0;
 
+	// Measured character by character and cut once, where the room runs out.
 	for (const char of text) {
 		const next = width + charWidth(char);
 
@@ -50,10 +51,10 @@ export function truncate(text: string, max: number): string {
 		}
 
 		width = next;
-		kept += char;
+		end += char.length;
 	}
 
-	return `${kept}...`;
+	return `${text.slice(0, end)}...`;
 }
 
 /**
@@ -68,21 +69,38 @@ export function wrap(text: string, width: number): string[] {
 	}
 
 	const lines: string[] = [];
-	let line = '';
+	// The words of a line are the text between its first and its last, so a line
+	// is kept as where it starts and ends, and its width as it grows, rather than
+	// joined again and measured again for every word.
+	let lineStart = 0;
+	let lineEnd = 0;
+	let lineWidth = 0;
+	let wordStart = 0;
 
-	for (const word of text.split(' ')) {
-		if (!line) {
-			line = word;
-		} else if (displayWidth(line) + 1 + displayWidth(word) > width) {
-			lines.push(line);
-			line = word;
+	while (wordStart <= text.length) {
+		const space = text.indexOf(' ', wordStart);
+		const wordEnd = space === -1 ? text.length : space;
+		const wordWidth = displayWidthOf(text, wordStart, wordEnd);
+
+		if (lineEnd === lineStart) {
+			lineStart = wordStart;
+			lineEnd = wordEnd;
+			lineWidth = wordWidth;
+		} else if (lineWidth + 1 + wordWidth > width) {
+			lines.push(text.slice(lineStart, lineEnd));
+			lineStart = wordStart;
+			lineEnd = wordEnd;
+			lineWidth = wordWidth;
 		} else {
-			line += ` ${word}`;
+			lineEnd = wordEnd;
+			lineWidth += 1 + wordWidth;
 		}
+
+		wordStart = wordEnd + 1;
 	}
 
-	if (line) {
-		lines.push(line);
+	if (lineEnd > lineStart) {
+		lines.push(text.slice(lineStart, lineEnd));
 	}
 
 	return lines;

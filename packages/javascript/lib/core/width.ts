@@ -120,9 +120,17 @@ export function charWidth(char: string): number {
 
 /** Columns a string occupies, rather than the number of characters in it. */
 export function displayWidth(text: string): number {
+	return displayWidthOf(text, 0, text.length);
+}
+
+/**
+ * Columns the part of `text` from `start` up to `end` occupies, measured where
+ * it is rather than cut out first.
+ */
+export function displayWidthOf(text: string, start: number, end: number): number {
 	let width = 0;
 
-	for (let index = 0; index < text.length; index += 1) {
+	for (let index = start; index < end; index += 1) {
 		const code = text.codePointAt(index) ?? 0;
 
 		// A character outside the Basic Multilingual Plane is two UTF-16 units.
