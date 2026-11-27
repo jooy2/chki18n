@@ -1,5 +1,6 @@
 import { CHECK_CODE } from '../constants.js';
 import { resolveOptions } from '../options.js';
+import { isSpaceCode } from './chars.js';
 import { extractInterpolationKeys } from './interpolation.js';
 import { flattenWithDuplicates } from './duplicate.js';
 import { applyLevelOverrides, createIssue } from './issue.js';
@@ -30,7 +31,13 @@ import type {
 	TranslationMap
 } from '../_types/global.js';
 
-const SURROUNDING_WHITESPACE_PATTERN = /^\s|\s$/;
+/**
+ * Whether a value, which is not empty, starts or ends with whitespace. This is
+ * what `^\s|\s$` asks, answered from the two ends instead of by a pattern that
+ * walks the whole value to find its end.
+ */
+const hasSurroundingWhitespace = (value: string): boolean =>
+	isSpaceCode(value.charCodeAt(0)) || isSpaceCode(value.charCodeAt(value.length - 1));
 
 const NO_KEYS: readonly string[] = Object.freeze([]);
 
@@ -374,7 +381,7 @@ function checkKeySlots(
 			continue;
 		}
 
-		if (flags.surroundingWhitespace && SURROUNDING_WHITESPACE_PATTERN.test(value)) {
+		if (flags.surroundingWhitespace && hasSurroundingWhitespace(value)) {
 			issues.push(createIssue(CHECK_CODE.SURROUNDING_WHITESPACE, { ...base, value }));
 		}
 
