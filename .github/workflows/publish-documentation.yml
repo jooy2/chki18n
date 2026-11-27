@@ -5,11 +5,18 @@ on:
     branches: [main]
     paths:
       - docs/**
-      # The site reads the package's manifest for its own URL and repository
-      # link, and folds its changelog into a page. Nothing else in `packages/`
-      # changes what it publishes.
+      # The site reads each package's manifest for its registry link, the
+      # JavaScript one for its own URL and repository link too, and folds every
+      # changelog into one page. Nothing else in `packages/` changes what it
+      # publishes.
       - packages/javascript/package.json
       - packages/javascript/CHANGELOG.md
+      - packages/dart/pubspec.yaml
+      - packages/dart/CHANGELOG.md
+      - packages/python/pyproject.toml
+      - packages/python/CHANGELOG.md
+      - packages/rust/Cargo.toml
+      - packages/rust/CHANGELOG.md
       - .github/workflows/publish-documentation.yml
   # Deploy on demand — for a rollback, or after a DNS change that the site's
   # own content had no reason to trigger.
