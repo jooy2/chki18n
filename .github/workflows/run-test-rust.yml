@@ -1,0 +1,45 @@
+name: run-test-rust
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - packages/rust/**
+      - .github/workflows/run-test-rust.yml
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: packages/rust
+
+jobs:
+  run-test-rust:
+    runs-on: ${{ matrix.os }}
+    name: Test Rust ${{ matrix.toolchain }} on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor `rust-version` declares, and whatever is current. Anything
+        # in between is covered by the two.
+        toolchain: ['1.85.0', 'stable']
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup Rust ${{ matrix.toolchain }}
+        run: |
+          rustup toolchain install ${{ matrix.toolchain }} --profile minimal --component rustfmt,clippy
+          rustup default ${{ matrix.toolchain }}
+      # Style, on one leg only. The formatter and the lints change between
+      # toolchains, so asking the floor to agree with code checked by a current
+      # one fails on a difference that means nothing.
+      - name: Check formatting
+        if: matrix.toolchain == 'stable'
+        run: cargo fmt --check
+      - name: Lint
+        if: matrix.toolchain == 'stable'
+        run: cargo clippy --all-targets --locked -- -D warnings
+      - name: Test
+        run: cargo test --locked
