@@ -4,6 +4,7 @@ library;
 import 'dart:convert';
 
 import 'package:chki18n/src/constants.dart';
+import 'package:chki18n/src/core/chars.dart';
 import 'package:chki18n/src/core/duplicate.dart';
 import 'package:chki18n/src/core/interpolation.dart';
 import 'package:chki18n/src/core/issue.dart';
@@ -15,7 +16,11 @@ import 'package:chki18n/src/core/width.dart';
 import 'package:chki18n/src/options.dart';
 import 'package:chki18n/src/types.dart';
 
-final RegExp _surroundingWhitespacePattern = RegExp(r'^\s|\s$');
+/// Whether [value], which is not empty, starts or ends with whitespace. This is
+/// what `^\s|\s$` asks, answered from the two ends instead of by a pattern
+/// that walks the whole value to find its end.
+bool _hasSurroundingWhitespace(String value) =>
+    isSpaceUnit(value.codeUnitAt(0)) || isSpaceUnit(value.codeUnitAt(value.length - 1));
 
 const List<String> _noKeys = [];
 
@@ -479,7 +484,7 @@ void _checkKeySlots(
       continue;
     }
 
-    if (flags.surroundingWhitespace && _surroundingWhitespacePattern.hasMatch(value)) {
+    if (flags.surroundingWhitespace && _hasSurroundingWhitespace(value)) {
       issues.add(
         createIssue(
           Chki18nCheckCode.surroundingWhitespace,
@@ -591,10 +596,10 @@ void _checkKeySlots(
       // language is already reported as untranslated, and saying it twice adds
       // nothing.
       if (flags.untranslatedScript && (isTarget || value != targetValue)) {
-        final script = scriptOfLocale(locale);
+        final script = scriptRangesOfLocale(locale);
 
         if (script != null &&
-            !script.hasMatch(value) &&
+            !holdsScript(value, script) &&
             hasTranslatableText(value, options.interpolationPrefix, options.interpolationSuffix)) {
           issues.add(
             createIssue(
