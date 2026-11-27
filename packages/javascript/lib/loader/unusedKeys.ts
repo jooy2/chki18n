@@ -58,6 +58,10 @@ const WORD_ONLY_PATTERN = /^[A-Za-z0-9_$-]+$/;
  * not cut again, since identifiers repeat from file to file. A leaf with any
  * other character in it is still found with `includes`.
  */
+/** The two characters of `text` at `at`, as one number a set can hold. */
+const headOf = (text: string, at: number): number =>
+	(text.charCodeAt(at) << 16) | text.charCodeAt(at + 1);
+
 function createLeafSearch(remaining: Set<string>): (text: string) => void {
 	const words = new Set<string>();
 	const others = new Set<string>();
@@ -67,6 +71,16 @@ function createLeafSearch(remaining: Set<string>): (text: string) => void {
 	}
 
 	const lengths = [...new Set([...words].map((leaf) => leaf.length))].sort((a, b) => a - b);
+	// The first two characters of every leaf of two or more. A piece that starts
+	// with neither pair of them is passed over without being cut out of its run.
+	const heads = new Set<number>();
+
+	for (const leaf of words) {
+		if (leaf.length > 1) {
+			heads.add(headOf(leaf, 0));
+		}
+	}
+
 	const seenRuns = new Set<string>();
 
 	return (text) => {
@@ -84,6 +98,10 @@ function createLeafSearch(remaining: Set<string>): (text: string) => void {
 					}
 
 					for (let at = 0; at + length <= run.length; at += 1) {
+						if (length > 1 && !heads.has(headOf(run, at))) {
+							continue;
+						}
+
 						const piece = run.slice(at, at + length);
 
 						if (words.delete(piece)) {
