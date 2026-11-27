@@ -7,6 +7,8 @@
 /// code points is folded into the ranges around it.
 library;
 
+import 'package:chki18n/src/core/chars.dart';
+
 /// Code points a terminal draws in no column of their own: the marks that sit on
 /// the character before them (general categories `Mn` and `Me`), the zero width
 /// spaces, joiners and direction marks, the variation selectors, and the vowel
@@ -99,7 +101,7 @@ bool _within(List<int> ranges, int code) {
 }
 
 /// Columns one code point occupies: none, one, or two.
-int _widthOf(int code) {
+int codePointWidth(int code) {
   // Nothing below the first combining mark is drawn wide or not at all, and
   // ASCII and Latin-1 are what most values are made of.
   if (code < 0x300) {
@@ -114,14 +116,34 @@ int _widthOf(int code) {
 }
 
 /// Columns one character occupies: none, one, or two.
-int charWidth(String char) => _widthOf(char.runes.isEmpty ? 0 : char.runes.first);
+int charWidth(String char) => codePointWidth(char.isEmpty ? 0 : codePointAt(char, 0));
 
 /// Columns a string occupies, rather than the number of characters in it.
-int displayWidth(String text) {
+///
+/// Read by code unit rather than through `runes`, whose iterator costs more per
+/// character than the lookup it feeds. A report measures every line it draws.
+int displayWidth(String text) => displayWidthOf(text, 0, text.length);
+
+/// Columns the part of [text] from [start] up to [end] occupies, measured where
+/// it is rather than cut out first.
+int displayWidthOf(String text, int start, int end) {
   var width = 0;
 
-  for (final rune in text.runes) {
-    width += _widthOf(rune);
+  for (var index = start; index < end; index += 1) {
+    final unit = text.codeUnitAt(index);
+
+    if (unit < 0x300) {
+      width += 1;
+      continue;
+    }
+
+    final code = codePointAt(text, index);
+
+    if (code > 0xffff) {
+      index += 1;
+    }
+
+    width += codePointWidth(code);
   }
 
   return width;

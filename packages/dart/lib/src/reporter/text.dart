@@ -2,11 +2,10 @@
 library;
 
 import 'package:chki18n/src/constants.dart';
+import 'package:chki18n/src/core/chars.dart';
 import 'package:chki18n/src/core/width.dart';
 import 'package:chki18n/src/reporter/paint.dart';
 import 'package:chki18n/src/types.dart';
-
-final RegExp _whitespaceRun = RegExp(r'\s+');
 
 /// `1 key` / `2 keys`, so a count never has to be read as `2 key(s)`.
 String plural(int count, String noun) => '$count $noun${count == 1 ? '' : 's'}';
@@ -16,7 +15,50 @@ String plural(int count, String noun) => '$count $noun${count == 1 ? '' : 's'}';
 ///
 /// Only the report collapses them; nothing is changed for the checks
 /// themselves, which is where whitespace still matters.
-String oneLine(String value) => value.replaceAll(_whitespaceRun, ' ');
+String oneLine(String value) {
+  final length = value.length;
+  var index = 0;
+
+  // Most values hold single spaces and nothing else, and come back untouched.
+  while (index < length) {
+    final unit = value.codeUnitAt(index);
+
+    if (isSpaceUnit(unit) &&
+        (unit != 0x20 || (index + 1 < length && isSpaceUnit(value.codeUnitAt(index + 1))))) {
+      break;
+    }
+
+    index += 1;
+  }
+
+  if (index == length) {
+    return value;
+  }
+
+  // Every run of whitespace becomes one space, which is what `\s+` would match.
+  final line = StringBuffer(value.substring(0, index));
+
+  while (index < length) {
+    if (!isSpaceUnit(value.codeUnitAt(index))) {
+      final start = index;
+
+      while (index < length && !isSpaceUnit(value.codeUnitAt(index))) {
+        index += 1;
+      }
+
+      line.write(value.substring(start, index));
+      continue;
+    }
+
+    while (index < length && isSpaceUnit(value.codeUnitAt(index))) {
+      index += 1;
+    }
+
+    line.write(' ');
+  }
+
+  return line.toString();
+}
 
 /// A value as the report shows it, or `(none)` when there was none.
 String quote(String? value) => value == null ? '(none)' : '"${oneLine(value)}"';
@@ -50,22 +92,23 @@ String truncate(String text, int max) {
   }
 
   final room = max - 3 > 1 ? max - 3 : 1;
-  final kept = StringBuffer();
   var width = 0;
+  var end = 0;
 
-  for (final rune in text.runes) {
-    final char = String.fromCharCode(rune);
-    final next = width + charWidth(char);
+  // Measured character by character and cut once, where the room runs out.
+  while (end < text.length) {
+    final code = codePointAt(text, end);
+    final next = width + codePointWidth(code);
 
     if (next > room) {
       break;
     }
 
     width = next;
-    kept.write(char);
+    end += code > 0xffff ? 2 : 1;
   }
 
-  return '$kept...';
+  return '${text.substring(0, end)}...';
 }
 
 /// Breaks a sentence on its spaces so it fits a column count.
@@ -79,21 +122,38 @@ List<String> wrap(String text, int width) {
   }
 
   final lines = <String>[];
-  var line = '';
+  // The words of a line are the text between its first and its last, so a line
+  // is kept as where it starts and ends, and its width as it grows, rather than
+  // joined again and measured again for every word.
+  var lineStart = 0;
+  var lineEnd = 0;
+  var lineWidth = 0;
+  var wordStart = 0;
 
-  for (final word in text.split(' ')) {
-    if (line.isEmpty) {
-      line = word;
-    } else if (displayWidth(line) + 1 + displayWidth(word) > width) {
-      lines.add(line);
-      line = word;
+  while (wordStart <= text.length) {
+    final space = text.indexOf(' ', wordStart);
+    final wordEnd = space == -1 ? text.length : space;
+    final wordWidth = displayWidthOf(text, wordStart, wordEnd);
+
+    if (lineEnd == lineStart) {
+      lineStart = wordStart;
+      lineEnd = wordEnd;
+      lineWidth = wordWidth;
+    } else if (lineWidth + 1 + wordWidth > width) {
+      lines.add(text.substring(lineStart, lineEnd));
+      lineStart = wordStart;
+      lineEnd = wordEnd;
+      lineWidth = wordWidth;
     } else {
-      line = '$line $word';
+      lineEnd = wordEnd;
+      lineWidth += 1 + wordWidth;
     }
+
+    wordStart = wordEnd + 1;
   }
 
-  if (line.isNotEmpty) {
-    lines.add(line);
+  if (lineEnd > lineStart) {
+    lines.add(text.substring(lineStart, lineEnd));
   }
 
   return lines;
@@ -108,24 +168,35 @@ String truncateStart(String text, int max) {
     return text;
   }
 
-  final characters = text.runes.toList();
   final room = max - 3 > 1 ? max - 3 : 1;
   var width = 0;
-  var kept = '';
+  var start = text.length;
 
-  for (var index = characters.length - 1; index >= 0; index -= 1) {
-    final char = String.fromCharCode(characters[index]);
-    final next = width + charWidth(char);
+  // Walked back from the end, reading a surrogate pair as one character.
+  while (start > 0) {
+    var from = start - 1;
+    var code = text.codeUnitAt(from);
+
+    if (code >= 0xdc00 && code <= 0xdfff && from > 0) {
+      final high = text.codeUnitAt(from - 1);
+
+      if (high >= 0xd800 && high <= 0xdbff) {
+        from -= 1;
+        code = 0x10000 + ((high - 0xd800) << 10) + (code - 0xdc00);
+      }
+    }
+
+    final next = width + codePointWidth(code);
 
     if (next > room) {
       break;
     }
 
     width = next;
-    kept = '$char$kept';
+    start = from;
   }
 
-  return '...$kept';
+  return '...${text.substring(start)}';
 }
 
 /// A tally as the report paints it, and how wide it would be unpainted.
