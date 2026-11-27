@@ -65,21 +65,20 @@ Whichever one you ran:
   Locales  en, ko
   Layout   single, 1 group, 10 keys
 
- ko ──────────────────────────────────────────────────────────────────────── 1 error · 1 warning
+ ko ──────────────────────────────────────────────────────────────────────────────────── 1 error
 
   ERROR  NO_KEY (1)
          The key exists in the target language but is missing here.
     attr.folder  en: "Folder"
 
-  WARN   NOT_TRANSLATED_VALUE (1)
-         The value is identical to the target language, so the translation may be incomplete.
-    desc.no-str  en: "12345"
-
  Summary ───────────────────────────────────────────────────────────────────────────────────────
 
   Compared 10 keys across 2 locales in 1 group. (3ms)
-  1 error · 1 warning
+  1 error
   Clean: en
+
+  By check
+    NO_KEY  1 error
 
   FAIL  1 error must be fixed before this passes.
 ```
@@ -94,7 +93,7 @@ import { checkTranslationFiles } from 'chki18n';
 const result = await checkTranslationFiles('./locales', { target: 'en' });
 
 result.success; // false
-result.summary; // { error: 1, warn: 2, info: 0, total: 3, ... }
+result.summary; // { error: 1, warn: 0, info: 0, total: 1, ... }
 result.issues; // every issue, with its level, key, locale and file
 ```
 
