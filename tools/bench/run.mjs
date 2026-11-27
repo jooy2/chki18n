@@ -1,5 +1,5 @@
 /**
- * Times the three packages on the same generated translations.
+ * Times the four packages on the same generated translations.
  *
  * The parity tool proves the packages print the same report; nothing proved
  * they take a similar time to print it, and one of them fell several times
@@ -9,13 +9,14 @@
  *
  * Usage, from anywhere in the repository:
  *
- *     node tools/bench/run.mjs [--keys 5000] [--runs 10] [--only javascript,dart]
+ *     node tools/bench/run.mjs [--keys 5000] [--runs 10] [--only javascript,rust]
  *
- * It needs the same tools as the parity test: `node`, `dart` and a Python 3 on
+ * It needs the same tools as the parity test: `node`, `dart`, `cargo` and a Python 3 on
  * the path, and the JavaScript package built (`npm run build` in
  * `packages/javascript`). Set `PYTHON` to pick a particular interpreter. Dart
  * is timed as the AOT executable `dart compile exe` writes, which is what the
- * release ships and what a Flutter release build runs.
+ * release ships and what a Flutter release build runs. Rust is timed as a
+ * release build.
  *
  * Every figure is the median of `--runs` runs after a short warm-up, in
  * milliseconds. Each step is described in the table that is printed.
@@ -285,6 +286,28 @@ function runnersFor(workDir) {
 				cli: [compile('bin/chki18n.dart', join(workDir, `chki18n${suffix}`))]
 			};
 		},
+		rust() {
+			const targetDir = join(workDir, 'rust-target');
+			const suffix = process.platform === 'win32' ? '.exe' : '';
+			const built = spawnSync(
+				'cargo',
+				['build', '--release', '--quiet', '--examples', '--bins', '--target-dir', targetDir],
+				{ cwd: join(rootDir, 'packages/rust'), encoding: 'utf8' }
+			);
+
+			if (built.error) {
+				fail(`Could not run \`cargo\`: ${built.error.message}`);
+			}
+
+			if (built.status !== 0) {
+				fail(`\`cargo build\` failed:\n${built.stderr || built.stdout}`);
+			}
+
+			return {
+				bench: [join(targetDir, 'release', 'examples', `bench${suffix}`)],
+				cli: [join(targetDir, 'release', `chki18n${suffix}`)]
+			};
+		},
 		python() {
 			const python = pythonCommand();
 
@@ -328,7 +351,7 @@ const { values: flags } = parseArgs({
 	options: {
 		keys: { type: 'string', default: '5000' },
 		runs: { type: 'string', default: '10' },
-		only: { type: 'string', default: 'javascript,dart,python' }
+		only: { type: 'string', default: 'javascript,dart,python,rust' }
 	}
 });
 const keyCount = Number(flags.keys);
@@ -348,7 +371,7 @@ try {
 
 	for (const name of names) {
 		if (!runners[name]) {
-			fail(`\`${name}\` is not a package. Use javascript, dart or python.`);
+			fail(`\`${name}\` is not a package. Use javascript, dart, python or rust.`);
 		}
 
 		const runner = runners[name]();
