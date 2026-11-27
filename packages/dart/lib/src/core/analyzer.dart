@@ -150,9 +150,6 @@ class _CheckFlags {
   final bool suspiciousLength;
 }
 
-/// The file one group's locale was read from, or `null` when nothing was read.
-typedef _FileLookup = String? Function(String group, String locale);
-
 /// Values are reported as text, whatever their original type was. Anything
 /// that is not a string is spelled the way JavaScript's `JSON.stringify` spells
 /// it, so a report quotes `{}` and `1` and reads the same in every package.
@@ -218,7 +215,9 @@ String _typeNameOf(Object? value) {
 /// The article [_typeNameOf] reads with: `an object`, `a number`.
 String _articleOf(Object? value) => _typeNameOf(value) == 'object' ? 'an' : 'a';
 
-_FileLookup? _buildFileLookup(List<Chki18nSourceFile>? files) {
+/// The file each group's locale was read from, by `group locale`, or `null`
+/// when nothing was read from a file at all.
+Map<String, String>? _buildFilePaths(List<Chki18nSourceFile>? files) {
   if (files == null || files.isEmpty) {
     return null;
   }
@@ -229,7 +228,20 @@ _FileLookup? _buildFileLookup(List<Chki18nSourceFile>? files) {
     paths['${file.group} ${file.locale}'] = file.path;
   }
 
-  return (group, locale) => paths['$group $locale'];
+  return paths;
+}
+
+/// The file each of [localeNames] was read from in [group], in that order.
+///
+/// Resolved once per group rather than once per value: every finding about a
+/// key names its file, and the lookup would otherwise build a string for every
+/// locale of every key.
+List<String?>? _filesOf(Map<String, String>? paths, String group, List<String> localeNames) {
+  if (paths == null) {
+    return null;
+  }
+
+  return [for (final locale in localeNames) paths['$group $locale']];
 }
 
 /// Fields every issue about one locale's value carries.
@@ -350,7 +362,7 @@ void _checkKeySlots(
   int targetIndex,
   _CheckFlags flags,
   Chki18nResolvedOptions options,
-  _FileLookup? fileOf,
+  List<String?>? files,
 ) {
   final hasTargetKey = targetIndex != -1 && present[targetIndex];
   final targetValue = hasTargetKey ? values[targetIndex] : null;
@@ -397,17 +409,10 @@ void _checkKeySlots(
     final isTarget = index == targetIndex;
     final locale = localeNames[index];
     final value = values[index];
-    final file = fileOf == null ? null : fileOf(group, locale);
+    final file = files?[index];
     // Nothing is quoted beside a finding of the target language's own: the
     // value the report already shows is the value it would be compared to.
     final reference = isTarget ? null : targetText;
-    final base = _IssueBase(
-      locale: locale,
-      key: key,
-      group: group,
-      file: file,
-      targetValue: reference,
-    );
 
     if (!present[index]) {
       if (hasTargetKey && flags.noKey && (plural == null || usesPluralForm(locale, plural))) {
@@ -587,7 +592,12 @@ void _checkKeySlots(
         }
 
         if (targetTagCounts != null && (targetTagCounts.isNotEmpty || value.contains('<'))) {
-          _reportTagMismatch(issues, base, value, targetTagCounts);
+          _reportTagMismatch(
+            issues,
+            _IssueBase(locale: locale, key: key, group: group, file: file, targetValue: reference),
+            value,
+            targetTagCounts,
+          );
         }
       }
 
@@ -746,7 +756,7 @@ void _checkDuplicateValues(
   List<String> localeNames,
   List<TranslationMap> maps,
   int targetIndex,
-  _FileLookup? fileOf,
+  List<String?>? files,
 ) {
   for (var index = 0; index < localeNames.length; index += 1) {
     final locale = localeNames[index];
@@ -778,7 +788,7 @@ void _checkDuplicateValues(
           value: value,
           targetValue: targetValue == null ? null : _asDisplayValue(targetValue),
           relatedKey: firstKey,
-          file: fileOf == null ? null : fileOf(group, locale),
+          file: files?[index],
           message: 'The key `$firstKey` in the same locale already uses this value.',
         ),
       );
@@ -799,7 +809,7 @@ void _checkInconsistentValues(
   List<TranslationMap> maps,
   int targetIndex,
   String target,
-  _FileLookup? fileOf,
+  List<String?>? files,
 ) {
   final targetMap = maps[targetIndex];
   final keysOfValue = <String, List<String>>{};
@@ -856,7 +866,7 @@ void _checkInconsistentValues(
             value: value,
             targetValue: entry.key,
             relatedKey: firstKey,
-            file: fileOf == null ? null : fileOf(group, localeNames[index]),
+            file: files?[index],
             message:
                 'The key `$firstKey` has the same $target value but is translated as '
                 '"$firstValue".',
@@ -879,7 +889,7 @@ void _checkPluralForms(
   String group,
   List<String> localeNames,
   List<TranslationMap> maps,
-  _FileLookup? fileOf,
+  List<String?>? files,
 ) {
   for (var index = 0; index < localeNames.length; index += 1) {
     final locale = localeNames[index];
@@ -917,7 +927,7 @@ void _checkPluralForms(
           locale: locale,
           key: entry.key,
           group: group,
-          file: fileOf == null ? null : fileOf(group, locale),
+          file: files?[index],
           message:
               '`$locale` needs '
               '${_listOf([for (final category in missing) '`${entry.key}_${category.name}`'])} '
@@ -1062,7 +1072,7 @@ class Chki18nAnalyzer {
       allLocales.addAll(groups[group]!.keys);
     }
 
-    final fileOf = _buildFileLookup(input.files);
+    final filePaths = _buildFilePaths(input.files);
     // Supplied rather than worked out: whether a key is referenced is a fact
     // about the source tree, which the comparison never sees.
     final unusedKeys =
@@ -1127,6 +1137,7 @@ class Chki18nAnalyzer {
       }
 
       final maps = [for (final locale in localeNames) localeMaps[locale]!];
+      final files = _filesOf(filePaths, group, localeNames);
       final keys = collectKeys(maps, targetIndex);
       final values = List<Object?>.filled(maps.length, null);
       final present = List<bool>.filled(maps.length, false);
@@ -1139,10 +1150,13 @@ class Chki18nAnalyzer {
         checkKeyShape(issues, key, group, options);
 
         for (var index = 0; index < maps.length; index += 1) {
-          final exists = maps[index].containsKey(key);
+          final map = maps[index];
+          final value = map[key];
 
-          present[index] = exists;
-          values[index] = exists ? maps[index][key] : null;
+          // Only a value of `null` leaves the question open, so a key that is
+          // there is looked up once rather than twice.
+          present[index] = value != null || map.containsKey(key);
+          values[index] = value;
         }
 
         _checkKeySlots(
@@ -1155,7 +1169,7 @@ class Chki18nAnalyzer {
           targetIndex,
           _flags,
           options,
-          fileOf,
+          files,
         );
 
         // Not locale-bound: the key is unreferenced, not one language's
@@ -1166,11 +1180,11 @@ class Chki18nAnalyzer {
       }
 
       if (_flags.duplicateValue) {
-        _checkDuplicateValues(issues, group, localeNames, maps, targetIndex, fileOf);
+        _checkDuplicateValues(issues, group, localeNames, maps, targetIndex, files);
       }
 
       if (_flags.noPluralForm) {
-        _checkPluralForms(issues, group, localeNames, maps, fileOf);
+        _checkPluralForms(issues, group, localeNames, maps, files);
       }
 
       if (_flags.inconsistentValue) {
@@ -1181,7 +1195,7 @@ class Chki18nAnalyzer {
           maps,
           targetIndex,
           options.target,
-          fileOf,
+          files,
         );
       }
     }
