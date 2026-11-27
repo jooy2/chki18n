@@ -5,7 +5,7 @@
  *   node .github/scripts/release-notes.mjs --tag javascript
  *
  * Each package versions on its own, so a tag names the package as well as the
- * version: `javascript-v1.3.0`, `dart-v1.3.0` or `python-v1.3.0`. The first
+ * version: `javascript-v1.3.0`, `dart-v1.3.0`, `python-v1.3.0` or `rust-v0.1.0`. The first
  * form writes the notes for such a tag; the second prints the tag the
  * package's files say comes next, which is what the release workflow tags.
  *
@@ -59,6 +59,14 @@ const PACKAGES = {
 		versions: {
 			'pyproject.toml': readMatch(/^version\s*=\s*"([^"]+)"/m),
 			'src/chki18n/_version.py': readMatch(/^PACKAGE_VERSION\s*=\s*"([^"]+)"/m)
+		}
+	},
+	rust: {
+		dir: 'packages/rust',
+		versions: {
+			'Cargo.toml': readMatch(/^version\s*=\s*"([^"]+)"/m),
+			// The lock file names the crate's own version in its entry.
+			'Cargo.lock': readMatch(/\[\[package\]\]\nname = "chki18n"\nversion = "([^"]+)"/)
 		}
 	}
 };

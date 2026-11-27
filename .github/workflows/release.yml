@@ -1,7 +1,7 @@
 name: release
 
 # Releases one package. Each package versions on its own and is tagged on its
-# own, as `javascript-v1.3.0`, `dart-v1.3.0` or `python-v1.3.0`.
+# own, as `javascript-v1.3.0`, `dart-v1.3.0`, `python-v1.3.0` or `rust-v0.1.0`.
 #
 # Run it from the Actions tab, or with `gh workflow run release.yml -f
 # package=javascript`, once the commit that cut the version is on `main`. The
@@ -15,13 +15,13 @@ name: release
 # On the tag, `build` runs the package's tests, builds it the way its registry
 # takes it, and writes the notes from the changelog. One `publish-*` job then
 # puts that build on its registry. No registry token is stored anywhere: npm,
-# pub.dev and PyPI each trust this workflow file of this repository in the
-# `release` environment, and trade the job's OIDC token for one that lasts
-# minutes. pub.dev only takes a run whose ref is a tag, which the second run
-# is. A Dart release also compiles its command line on each platform.
+# pub.dev, PyPI and crates.io each trust this workflow file of this repository
+# in the `release` environment, and trade the job's OIDC token for one that
+# lasts minutes. pub.dev only takes a run whose ref is a tag, which the second run
+# is. A Dart or a Rust release also compiles its command line on each platform.
 # `github-release` runs last, so a release page only appears for a version its
 # registry already serves, and it carries the build and the package's source as
-# they were at the tag, and for Dart the compiled executables.
+# they were at the tag, and for Dart and Rust the compiled executables.
 on:
   workflow_dispatch:
     inputs:
@@ -33,11 +33,13 @@ on:
           - javascript
           - dart
           - python
+          - rust
   push:
     tags:
       - 'javascript-v*'
       - 'dart-v*'
       - 'python-v*'
+      - 'rust-v*'
 
 # Each job asks for what it needs beyond this.
 permissions:
@@ -175,6 +177,17 @@ jobs:
           twine check --strict "$RUNNER_TEMP"/release/dist/*
           cp "$RUNNER_TEMP"/release/dist/* "$RUNNER_TEMP/release/assets/"
 
+      # The crate exactly as `cargo publish` uploads it: `cargo package` packs it
+      # and builds the packed copy on its own, so a file left out of `include`
+      # fails here rather than on crates.io.
+      - name: Test and pack the Rust package
+        if: steps.tag.outputs.package == 'rust'
+        working-directory: packages/rust
+        run: |
+          cargo test --locked
+          cargo package --locked
+          cp target/package/chki18n-*.crate "$RUNNER_TEMP/release/assets/"
+
       # The notes and the build, handed to the jobs below so that the registry
       # and the release page carry the same files.
       - uses: actions/upload-artifact@v7
@@ -240,6 +253,74 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: dart-executable-${{ matrix.target }}
+          path: ${{ runner.temp }}/executables
+          if-no-files-found: error
+
+  # The Rust command line, one archive per platform. A target the runner can
+  # run is tried once before it is archived; the Intel Mac build is made on an
+  # Apple silicon runner and only compiled.
+  build-rust-executables:
+    name: Build the Rust command for ${{ matrix.name }}
+    needs: build
+    if: needs.build.outputs.package == 'rust'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        include:
+          - name: linux-x64
+            runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            native: true
+          - name: linux-arm64
+            runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            native: true
+          - name: macos-arm64
+            runner: macos-latest
+            target: aarch64-apple-darwin
+            native: true
+          - name: macos-x64
+            runner: macos-latest
+            target: x86_64-apple-darwin
+            native: false
+          - name: windows-x64
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            native: true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build, try and archive the executable
+        shell: bash
+        working-directory: packages/rust
+        env:
+          NAME: ${{ matrix.name }}
+          NATIVE: ${{ matrix.native }}
+          TARGET: ${{ matrix.target }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          name="chki18n-rust-$VERSION-$NAME"
+          exe="chki18n"
+          if [ "$RUNNER_OS" = "Windows" ]; then exe="chki18n.exe"; fi
+          staging="$RUNNER_TEMP/staging"
+          out="$RUNNER_TEMP/executables"
+          mkdir -p "$staging/$name" "$out"
+          rustup target add "$TARGET"
+          cargo build --release --locked --target "$TARGET"
+          cp "target/$TARGET/release/$exe" LICENSE README.md "$staging/$name/"
+          if [ "$NATIVE" = "true" ]; then "$staging/$name/$exe" --version; fi
+          cd "$staging"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            7z a -bso0 "$out/$name.zip" "$name"
+          else
+            tar -czf "$out/$name.tar.gz" "$name"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rust-executable-${{ matrix.name }}
           path: ${{ runner.temp }}/executables
           if-no-files-found: error
 
@@ -336,10 +417,57 @@ jobs:
           packages-dir: release/dist/
           skip-existing: true
 
+  publish-crates:
+    name: Publish to crates.io
+    needs: build
+    if: needs.build.outputs.package == 'rust'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # crates.io asks every client to say what it is.
+      - name: Check whether crates.io already has this version
+        id: published
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          if curl -sf -A "chki18n release workflow (https://github.com/jooy2/chki18n)" \
+            "https://crates.io/api/v1/crates/chki18n/$VERSION" > /dev/null; then
+            echo "::notice::chki18n $VERSION is already on crates.io."
+            echo "done=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Trades the job's OIDC token for a crates.io token that lasts minutes.
+      - uses: rust-lang/crates-io-auth-action@v1
+        if: steps.published.outputs.done != 'true'
+        id: auth
+
+      - name: Publish the crate
+        if: steps.published.outputs.done != 'true'
+        working-directory: packages/rust
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: cargo publish --locked
+
   github-release:
     name: GitHub release
-    needs: [build, build-dart-executables, publish-npm, publish-pub, publish-pypi]
-    # Two of the three publish jobs are skipped on every run, which would skip
+    needs:
+      [
+        build,
+        build-dart-executables,
+        build-rust-executables,
+        publish-npm,
+        publish-pub,
+        publish-pypi,
+        publish-crates
+      ]
+    # All but one of the publish jobs are skipped on every run, which would skip
     # this one as well; it runs unless one of them failed.
     if: ${{ !failure() && !cancelled() && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
@@ -353,11 +481,11 @@ jobs:
           name: release
           path: release
 
-      # Only a Dart release has them, and they join the other assets.
+      # Only a Dart or a Rust release has them, and they join the other assets.
       - uses: actions/download-artifact@v8
-        if: needs.build.outputs.package == 'dart'
+        if: needs.build.outputs.package == 'dart' || needs.build.outputs.package == 'rust'
         with:
-          pattern: dart-executable-*
+          pattern: ${{ needs.build.outputs.package }}-executable-*
           path: release/assets
           merge-multiple: true
 
@@ -375,6 +503,7 @@ jobs:
             javascript) title="JavaScript $VERSION" ;;
             dart) title="Dart $VERSION" ;;
             python) title="Python $VERSION" ;;
+            rust) title="Rust $VERSION" ;;
           esac
           notes="release/notes.md"
           assets=$(find release/assets -type f | sort)
