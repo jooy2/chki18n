@@ -98,6 +98,71 @@ pub fn flatten_object(map: &TranslationMap) -> (TranslationMap, Vec<String>) {
 	(flat, duplicates)
 }
 
+/// The leaves of an object in the order a JavaScript object lists its keys,
+/// moved out of it rather than copied.
+fn entries_owned(map: Map<String, Value>) -> Vec<(String, Value)> {
+	let mut entries: Vec<(String, Value)> = map.into_iter().collect();
+
+	if entries
+		.iter()
+		.any(|(key, _)| crate::core::js::is_array_index(key))
+	{
+		entries.sort_by_key(|(key, _)| {
+			if crate::core::js::is_array_index(key) {
+				(0, key.parse::<u64>().unwrap_or(0))
+			} else {
+				(1, 0)
+			}
+		});
+	}
+
+	entries
+}
+
+fn walk_owned(value: Value, path: String, visit: &mut impl FnMut(String, Value)) {
+	match value {
+		Value::Object(map) if !map.is_empty() => {
+			for (key, child) in entries_owned(map) {
+				let path = join(&path, &key);
+
+				walk_owned(child, path, visit);
+			}
+		}
+		Value::Array(items) if !items.is_empty() => {
+			for (index, item) in items.into_iter().enumerate() {
+				walk_owned(item, join(&path, &index.to_string()), visit);
+			}
+		}
+		other => visit(path, other),
+	}
+}
+
+/// [flatten_object] for translations the caller hands over, whose values move
+/// into the flat map instead of being copied into it.
+pub fn flatten_object_owned(map: TranslationMap) -> (TranslationMap, Vec<String>) {
+	let mut flat = Map::new();
+	let mut duplicates: Vec<String> = Vec::new();
+
+	for (key, value) in entries_owned(map) {
+		walk_owned(value, key, &mut |key, value| {
+			if flat.contains_key(&key) && !duplicates.contains(&key) {
+				duplicates.push(key.clone());
+			}
+
+			flat.insert(key, value);
+		});
+	}
+
+	(flat, duplicates)
+}
+
+/// Every flattened key an object will produce, added to [into].
+pub fn collect_flat_keys_of_map(map: &TranslationMap, into: &mut IndexSet<String>) {
+	walk_map(map, &mut |key, _| {
+		into.insert(key);
+	});
+}
+
 /// Flattens nested translations into the dotted keys the comparison works on.
 pub fn flatten_translations(translations: &Value) -> TranslationMap {
 	flatten_with_duplicates(translations).0

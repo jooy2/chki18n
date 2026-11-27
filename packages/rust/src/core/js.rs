@@ -64,6 +64,25 @@ pub fn names_in_object_order<T>(map: &indexmap::IndexMap<String, T>) -> Vec<&Str
 	indices
 }
 
+/// The entries of an object in the order a JavaScript object lists its keys,
+/// read off the object rather than looked up in it one key at a time.
+pub fn object_entries(map: &Map<String, Value>) -> Vec<(&String, &Value)> {
+	let mut entries: Vec<(&String, &Value)> = map.iter().collect();
+
+	if entries.iter().any(|(key, _)| is_array_index(key)) {
+		// Stable, so every other key keeps the order it was written in.
+		entries.sort_by_key(|(key, _)| {
+			if is_array_index(key) {
+				(0, key.parse::<u64>().unwrap_or(0))
+			} else {
+				(1, 0)
+			}
+		});
+	}
+
+	entries
+}
+
 /// A number as JavaScript's `String(number)` writes it: the shortest digits
 /// that read back as the same number, in plain notation from 10^-6 up to 10^21
 /// and in exponent notation outside it.
@@ -294,6 +313,14 @@ fn write_pretty(value: &Value, indent: &str, depth: usize, out: &mut String) {
 			out.push('}');
 		}
 		other => write_json(other, out),
+	}
+}
+
+/// [display_value] without copying a string, which is what nearly every value is.
+pub fn display_text(value: &Value) -> std::borrow::Cow<'_, str> {
+	match value {
+		Value::String(text) => std::borrow::Cow::Borrowed(text),
+		other => std::borrow::Cow::Owned(display_value(other)),
 	}
 }
 

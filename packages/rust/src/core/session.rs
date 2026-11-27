@@ -4,7 +4,7 @@ use indexmap::{IndexMap, IndexSet};
 use serde_json::Value;
 
 use crate::constants::FileFormat;
-use crate::core::analyzer::{collect_keys, prepare_groups, Analyzer};
+use crate::core::analyzer::{collect_keys, prepare_groups_owned, Analyzer};
 use crate::core::js::object_keys;
 use crate::options::{Options, ResolvedOptions};
 use crate::types::{
@@ -81,20 +81,35 @@ impl Session {
 	/// Replaces everything the session holds.
 	pub fn reset(&mut self, next: Input) {
 		let mut load_issues = Vec::new();
+		let Input {
+			groups,
+			locales,
+			files,
+			issues,
+			file_format,
+			unused_keys,
+			undefined_keys,
+		} = next;
 
-		self.groups = prepare_groups(
-			&next,
+		// The session keeps its own maps, which it changes as values are set, so
+		// the translations it is handed move into them.
+		self.groups = prepare_groups_owned(
+			Input {
+				groups,
+				locales,
+				..Input::default()
+			},
 			&self.analyzer.options,
 			self.input_is_flat,
 			&mut load_issues,
 		);
 		self.group_names = self.groups.keys().cloned().collect();
-		self.files = next.files.unwrap_or_default();
-		self.file_format = next.file_format;
-		self.source_issues = next.issues.unwrap_or_default();
+		self.files = files.unwrap_or_default();
+		self.file_format = file_format;
+		self.source_issues = issues.unwrap_or_default();
 		self.source_issues.extend(load_issues);
-		self.unused_keys = next.unused_keys.unwrap_or_default();
-		self.undefined_keys = next.undefined_keys.unwrap_or_default();
+		self.unused_keys = unused_keys.unwrap_or_default();
+		self.undefined_keys = undefined_keys.unwrap_or_default();
 
 		let mut locales: IndexSet<String> = IndexSet::new();
 

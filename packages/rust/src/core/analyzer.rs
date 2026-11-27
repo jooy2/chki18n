@@ -1,6 +1,7 @@
 //! The comparison itself: every check that reads translation data.
 
-use std::collections::{HashMap, HashSet};
+use std::borrow::Cow;
+use std::collections::HashMap;
 use std::time::Instant;
 
 use indexmap::{IndexMap, IndexSet};
@@ -8,10 +9,13 @@ use serde_json::Value;
 
 use crate::constants::CheckCode;
 use crate::core::chars::is_space;
-use crate::core::duplicate::flatten_object;
+use crate::core::duplicate::{flatten_object, flatten_object_owned};
+use crate::core::hash::{FastIndexMap, FastMap, FastSet};
 use crate::core::interpolation::extract_interpolation_keys;
 use crate::core::issue::{apply_level_overrides, create_issue, IssueInit};
-use crate::core::js::{display_value, names_in_object_order, object_keys, to_fixed};
+use crate::core::js::{
+	display_text, display_value, names_in_object_order, object_entries, to_fixed,
+};
 use crate::core::key::check_key_shape;
 use crate::core::order::compare_text;
 use crate::core::plural::{
@@ -50,8 +54,8 @@ fn list_of(items: &[String]) -> String {
 }
 
 /// How often each item appears, in the order the items are first met.
-fn count_of<'a>(items: &[&'a str]) -> IndexMap<&'a str, usize> {
-	let mut counts = IndexMap::new();
+fn count_of<'a>(items: &[&'a str]) -> FastIndexMap<&'a str, usize> {
+	let mut counts = FastIndexMap::default();
 
 	for item in items {
 		*counts.entry(*item).or_insert(0) += 1;
@@ -84,8 +88,8 @@ fn same_items(a: &[String], b: &[String]) -> bool {
 /// Markup tags by their lower case spelling, keeping the first spelling seen so
 /// a message can quote the tag as it was written. HTML tag names are case
 /// insensitive, so `<B>` and `<b>` are the same tag.
-fn count_tags<'a>(tags: &[&'a str]) -> IndexMap<String, (usize, &'a str)> {
-	let mut counts: IndexMap<String, (usize, &'a str)> = IndexMap::new();
+fn count_tags<'a>(tags: &[&'a str]) -> FastIndexMap<String, (usize, &'a str)> {
+	let mut counts: FastIndexMap<String, (usize, &'a str)> = FastIndexMap::default();
 
 	for tag in tags {
 		counts
@@ -167,7 +171,7 @@ struct IssueBase<'a> {
 	key: &'a str,
 	group: &'a str,
 	file: Option<&'a String>,
-	target_value: Option<&'a String>,
+	target_value: Option<&'a str>,
 }
 
 impl IssueBase<'_> {
@@ -190,7 +194,7 @@ impl IssueBase<'_> {
 				key: Some(self.key.to_string()),
 				group: Some(self.group.to_string()),
 				file: self.file.cloned(),
-				target_value: self.target_value.cloned(),
+				target_value: self.target_value.map(str::to_string),
 				value: value.map(str::to_string),
 				interpolation: interpolation.map(str::to_string),
 				message,
@@ -236,7 +240,7 @@ fn report_tag_mismatch(
 	issues: &mut Vec<Issue>,
 	base: &IssueBase<'_>,
 	value: &str,
-	expected: &IndexMap<String, (usize, &str)>,
+	expected: &FastIndexMap<String, (usize, &str)>,
 ) {
 	let found = count_tags(&extract_tags(value));
 
@@ -333,7 +337,7 @@ fn check_key_slots(
 	let target_value = target_index.and_then(|index| values[index]);
 	let has_target_key = target_value.is_some();
 	let target_string = target_value.and_then(Value::as_str);
-	let target_text = target_value.map(display_value);
+	let target_text: Option<Cow<'_, str>> = target_value.map(display_text);
 	let target_interpolations: Vec<&str> = target_string.map_or_else(Vec::new, |text| {
 		extract_interpolation_keys(text, prefix, suffix)
 	});
@@ -382,7 +386,7 @@ fn check_key_slots(
 			target_value: if is_target {
 				None
 			} else {
-				target_text.as_ref()
+				target_text.as_deref()
 			},
 		};
 
@@ -399,14 +403,12 @@ fn check_key_slots(
 			continue;
 		};
 
-		let text = display_value(value);
-
 		if !has_target_key
 			&& flags.dummy_key
 			// The target language may simply have no use for this plural form.
 			&& plural.as_ref().is_none_or(|parts| uses_plural_form(&options.target, parts))
 		{
-			issues.push(base.issue(CheckCode::DummyKey, Some(&text), None));
+			issues.push(base.issue(CheckCode::DummyKey, Some(&display_text(value)), None));
 		}
 
 		let Some(value) = value.as_str() else {
@@ -421,7 +423,7 @@ fn check_key_slots(
 
 				issues.push(base.issue(
 					CheckCode::InvalidValueType,
-					Some(&text),
+					Some(&display_text(value)),
 					Some(format!(
 						"The value is {described}, not a translatable string."
 					)),
@@ -610,17 +612,16 @@ fn check_duplicate_values(
 	issues: &mut Vec<Issue>,
 	group: &str,
 	locale_names: &[String],
-	maps: &[&TranslationMap],
-	own_keys: &[Vec<&String>],
+	table: &KeyTable<'_>,
+	entries: &[Vec<(&String, &Value)>],
 	target_index: usize,
 	files: Option<&[Option<String>]>,
 ) {
 	for (index, locale) in locale_names.iter().enumerate() {
-		let map = maps[index];
-		let mut first_key_of_value: HashMap<&str, &str> = HashMap::new();
+		let mut first_key_of_value: FastMap<&str, &str> = FastMap::default();
 
-		for key in &own_keys[index] {
-			let Some(value) = map.get(key.as_str()).and_then(Value::as_str) else {
+		for (key, value) in &entries[index] {
+			let Some(value) = value.as_str() else {
 				continue;
 			};
 
@@ -640,7 +641,7 @@ fn check_duplicate_values(
 					key: Some(key.to_string()),
 					group: Some(group.to_string()),
 					value: Some(value.to_string()),
-					target_value: maps[target_index].get(key.as_str()).map(display_value),
+					target_value: table.value(key, target_index).map(display_value),
 					related_key: Some(first_key.to_string()),
 					file: files.and_then(|files| files[index].clone()),
 					message: Some(format!(
@@ -661,17 +662,16 @@ fn check_inconsistent_values(
 	issues: &mut Vec<Issue>,
 	group: &str,
 	locale_names: &[String],
-	maps: &[&TranslationMap],
-	own_keys: &[Vec<&String>],
+	table: &KeyTable<'_>,
+	entries: &[Vec<(&String, &Value)>],
 	target_index: usize,
 	target: &str,
 	files: Option<&[Option<String>]>,
 ) {
-	let target_map = maps[target_index];
-	let mut keys_of_value: IndexMap<&str, Vec<&String>> = IndexMap::new();
+	let mut keys_of_value: FastIndexMap<&str, Vec<&String>> = FastIndexMap::default();
 
-	for key in &own_keys[target_index] {
-		let Some(value) = target_map.get(key.as_str()).and_then(Value::as_str) else {
+	for (key, value) in &entries[target_index] {
+		let Some(value) = value.as_str() else {
 			continue;
 		};
 
@@ -690,13 +690,12 @@ fn check_inconsistent_values(
 				continue;
 			}
 
-			let map = maps[index];
 			let mut first: Option<(&str, &str)> = None;
 
 			for key in keys {
 				// A key this locale does not have, or has not filled in, is somebody
 				// else's finding.
-				let Some(value) = map.get(key.as_str()).and_then(Value::as_str) else {
+				let Some(value) = table.value(key, index).and_then(Value::as_str) else {
 					continue;
 				};
 
@@ -741,7 +740,7 @@ fn check_plural_forms(
 	issues: &mut Vec<Issue>,
 	group: &str,
 	locale_names: &[String],
-	own_keys: &[Vec<&String>],
+	entries: &[Vec<(&String, &Value)>],
 	files: Option<&[Option<String>]>,
 ) {
 	for (index, locale) in locale_names.iter().enumerate() {
@@ -749,9 +748,10 @@ fn check_plural_forms(
 			continue;
 		};
 
-		let mut forms_of_base: IndexMap<&str, HashSet<PluralCategory>> = IndexMap::new();
+		let mut forms_of_base: FastIndexMap<&str, FastSet<PluralCategory>> =
+			FastIndexMap::default();
 
-		for key in &own_keys[index] {
+		for (key, _) in &entries[index] {
 			if let Some(parts) = plural_parts_of(key) {
 				forms_of_base
 					.entry(parts.base)
@@ -791,6 +791,66 @@ fn check_plural_forms(
 	}
 }
 
+/// Every key of a group once, the target language's first so reports follow its
+/// order, with the value each locale holds for it.
+///
+/// Built by reading each locale's entries once. Looking every key up in every
+/// locale's map instead hashed each key once per locale with the map's own
+/// SipHash, and that was the largest single cost of a comparison.
+struct KeyTable<'a> {
+	keys: Vec<&'a str>,
+	slot_of: FastMap<&'a str, usize>,
+	values: Vec<Option<&'a Value>>,
+	width: usize,
+}
+
+impl<'a> KeyTable<'a> {
+	fn build(entries: &[Vec<(&'a String, &'a Value)>], target_index: usize) -> KeyTable<'a> {
+		let width = entries.len();
+		let capacity = entries[target_index].len();
+		let mut table = KeyTable {
+			keys: Vec::with_capacity(capacity),
+			slot_of: FastMap::with_capacity_and_hasher(capacity, Default::default()),
+			values: Vec::with_capacity(capacity * width),
+			width,
+		};
+		let order =
+			std::iter::once(target_index).chain((0..width).filter(|index| *index != target_index));
+
+		for index in order {
+			for (key, value) in &entries[index] {
+				let slot = match table.slot_of.get(key.as_str()) {
+					Some(slot) => *slot,
+					None => {
+						let slot = table.keys.len();
+
+						table.slot_of.insert(key, slot);
+						table.keys.push(key);
+						table.values.resize(table.values.len() + width, None);
+						slot
+					}
+				};
+
+				table.values[slot * width + index] = Some(value);
+			}
+		}
+
+		table
+	}
+
+	/// The value each locale holds for the key in [slot].
+	fn row(&self, slot: usize) -> &[Option<&'a Value>] {
+		&self.values[slot * self.width..(slot + 1) * self.width]
+	}
+
+	/// The value one locale holds for [key].
+	fn value(&self, key: &str, index: usize) -> Option<&'a Value> {
+		self.slot_of
+			.get(key)
+			.and_then(|slot| self.values[slot * self.width + index])
+	}
+}
+
 /// Keys of every locale, the target language first so reports follow its order.
 pub fn collect_keys(own_keys: &[Vec<&String>], target_index: Option<usize>) -> Vec<String> {
 	let mut keys: IndexSet<String> = IndexSet::new();
@@ -808,61 +868,129 @@ pub fn collect_keys(own_keys: &[Vec<&String>], target_index: Option<usize>) -> V
 	keys.into_iter().collect()
 }
 
-/// Brings the input into the `group -> locale -> flat map` shape the analysis
-/// works on. With [flattened] the maps are used as they are.
-pub fn prepare_groups(
-	input: &Input,
+/// Reports the keys flattening found defined more than once. Found while
+/// flattening, because flattening is what hides it: two definitions go in and one
+/// key comes out.
+fn report_duplicate_keys(
+	issues: &mut Vec<Issue>,
+	options: &ResolvedOptions,
+	locale: &str,
+	group: &str,
+	duplicates: Vec<String>,
+) {
+	if !options.enabled_checks.contains(&CheckCode::DuplicateKey) {
+		return;
+	}
+
+	for key in duplicates {
+		issues.push(create_issue(
+			CheckCode::DuplicateKey,
+			IssueInit {
+				locale: Some(locale.to_string()),
+				group: Some(group.to_string()),
+				message: Some(format!(
+					"The key `{key}` is defined more than once, so one of its values is lost."
+				)),
+				key: Some(key),
+				..IssueInit::default()
+			},
+		));
+	}
+}
+
+/// [prepare_groups] for an input the caller hands over: its values move into
+/// the flat maps instead of being copied, which is what a session does with the
+/// files it has just read.
+pub fn prepare_groups_owned(
+	input: Input,
 	options: &ResolvedOptions,
 	flattened: bool,
 	issues: &mut Vec<Issue>,
 ) -> TranslationGroups {
-	let single;
-	let source: &TranslationGroups = match &input.groups {
+	let mut source: TranslationGroups = match input.groups {
 		Some(groups) => groups,
-		None => {
-			single = IndexMap::from([(String::new(), input.locales.clone().unwrap_or_default())]);
-			&single
-		}
+		None => IndexMap::from([(String::new(), input.locales.unwrap_or_default())]),
 	};
+	let order: Vec<String> = names_in_object_order(&source)
+		.into_iter()
+		.cloned()
+		.collect();
 	let mut prepared = TranslationGroups::new();
 
-	// In the order a JavaScript object lists its keys, whole numbers first.
-	for group in names_in_object_order(source) {
-		let locales = &source[group];
+	for group in order {
+		let mut locales = source.swap_remove(&group).unwrap_or_default();
+		let locale_order: Vec<String> = names_in_object_order(&locales)
+			.into_iter()
+			.cloned()
+			.collect();
 		let mut prepared_locales = IndexMap::new();
 
-		for locale in names_in_object_order(locales) {
-			let map = &locales[locale];
+		for locale in locale_order {
+			let Some(map) = locales.swap_remove(&locale) else {
+				continue;
+			};
+
 			if flattened {
-				prepared_locales.insert(locale.clone(), map.clone());
+				prepared_locales.insert(locale, map);
+				continue;
+			}
+
+			let (flat, duplicates) = flatten_object_owned(map);
+
+			report_duplicate_keys(issues, options, &locale, &group, duplicates);
+			prepared_locales.insert(locale, flat);
+		}
+
+		prepared.insert(group, prepared_locales);
+	}
+
+	prepared
+}
+
+/// The groups of an input as the analysis reads them: the caller's own maps when
+/// they are already flat, flattened copies when they are not.
+pub type PreparedGroups<'a> = IndexMap<String, IndexMap<String, Cow<'a, TranslationMap>>>;
+
+/// Brings the input into the `group -> locale -> flat map` shape the analysis
+/// works on. With [flattened] the caller's maps are read where they are, so
+/// analysing translations already held flat in memory copies nothing.
+pub fn prepare_groups<'a>(
+	input: &'a Input,
+	options: &ResolvedOptions,
+	flattened: bool,
+	issues: &mut Vec<Issue>,
+) -> PreparedGroups<'a> {
+	let source: Vec<(String, Option<&'a IndexMap<String, TranslationMap>>)> = match &input.groups {
+		// In the order a JavaScript object lists its keys, whole numbers first.
+		Some(groups) => names_in_object_order(groups)
+			.into_iter()
+			.map(|group| (group.clone(), Some(&groups[group])))
+			.collect(),
+		None => vec![(String::new(), input.locales.as_ref())],
+	};
+	let mut prepared = PreparedGroups::new();
+
+	for (group, locales) in source {
+		let mut prepared_locales = IndexMap::new();
+
+		for locale in locales.map(names_in_object_order).unwrap_or_default() {
+			let Some(map) = locales.and_then(|locales| locales.get(locale)) else {
+				continue;
+			};
+
+			if flattened {
+				prepared_locales.insert(locale.clone(), Cow::Borrowed(map));
 				continue;
 			}
 
 			let (flat, duplicates) = flatten_object(map);
 
-			prepared_locales.insert(locale.clone(), flat);
+			prepared_locales.insert(locale.clone(), Cow::Owned(flat));
 
-			// Found while flattening, because flattening is what hides it: two
-			// definitions go in and one key comes out.
-			if options.enabled_checks.contains(&CheckCode::DuplicateKey) {
-				for key in duplicates {
-					issues.push(create_issue(
-						CheckCode::DuplicateKey,
-						IssueInit {
-							locale: Some(locale.clone()),
-							group: Some(group.clone()),
-							message: Some(format!(
-								"The key `{key}` is defined more than once, so one of its values is lost."
-							)),
-							key: Some(key),
-							..IssueInit::default()
-						},
-					));
-				}
-			}
+			report_duplicate_keys(issues, options, locale, &group, duplicates);
 		}
 
-		prepared.insert(group.clone(), prepared_locales);
+		prepared.insert(group, prepared_locales);
 	}
 
 	prepared
@@ -921,11 +1049,11 @@ impl Analyzer {
 		}
 
 		let file_paths = build_file_paths(input.files.as_ref());
-		let unused_keys: Option<HashSet<&String>> = input
+		let unused_keys: Option<FastSet<&str>> = input
 			.unused_keys
 			.as_ref()
 			.filter(|keys| flags.unused_key && !keys.is_empty())
-			.map(|keys| keys.iter().collect());
+			.map(|keys| keys.iter().map(String::as_str).collect());
 
 		if flags.undefined_key {
 			for usage in input.undefined_keys.iter().flatten() {
@@ -991,34 +1119,27 @@ impl Analyzer {
 				continue;
 			};
 
-			let maps: Vec<&TranslationMap> = locale_names
+			// Each locale's entries, in the order a JavaScript object lists its keys,
+			// read off once and shared by every check that walks them.
+			let entries: Vec<Vec<(&String, &Value)>> = locale_names
 				.iter()
-				.map(|locale| &locale_maps[locale])
+				.map(|locale| object_entries(&locale_maps[locale]))
 				.collect();
-			// Listed once per map and shared by every check that walks it, in the
-			// order a JavaScript object lists its keys.
-			let own_keys: Vec<Vec<&String>> = maps.iter().map(|map| object_keys(map)).collect();
+			let table = KeyTable::build(&entries, target_index);
 			let files = files_of(file_paths.as_ref(), group, &locale_names);
-			let keys = collect_keys(&own_keys, Some(target_index));
-			let mut values: Vec<Option<&Value>> = vec![None; maps.len()];
 
-			key_count += keys.len();
+			key_count += table.keys.len();
 
-			for key in &keys {
+			for (slot, key) in table.keys.iter().enumerate() {
 				// The shape of a key is the same in every language, so it is judged
 				// once rather than once per locale.
 				check_key_shape(&mut issues, key, group, options);
-
-				for (slot, map) in values.iter_mut().zip(&maps) {
-					*slot = map.get(key.as_str());
-				}
-
 				check_key_slots(
 					&mut issues,
 					key,
 					group,
 					&locale_names,
-					&values,
+					table.row(slot),
 					Some(target_index),
 					flags,
 					options,
@@ -1034,7 +1155,7 @@ impl Analyzer {
 					issues.push(create_issue(
 						CheckCode::UnusedKey,
 						IssueInit {
-							key: Some(key.clone()),
+							key: Some(key.to_string()),
 							group: Some(group.clone()),
 							..IssueInit::default()
 						},
@@ -1047,8 +1168,8 @@ impl Analyzer {
 					&mut issues,
 					group,
 					&locale_names,
-					&maps,
-					&own_keys,
+					&table,
+					&entries,
 					target_index,
 					files.as_deref(),
 				);
@@ -1059,7 +1180,7 @@ impl Analyzer {
 					&mut issues,
 					group,
 					&locale_names,
-					&own_keys,
+					&entries,
 					files.as_deref(),
 				);
 			}
@@ -1069,8 +1190,8 @@ impl Analyzer {
 					&mut issues,
 					group,
 					&locale_names,
-					&maps,
-					&own_keys,
+					&table,
+					&entries,
 					target_index,
 					&options.target,
 					files.as_deref(),

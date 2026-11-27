@@ -83,13 +83,25 @@ fn is_delimiter_at(text: &str, at: usize, delimiter: &str, single: bool) -> bool
 	before != unit && behind != unit
 }
 
+/// The first occurrence of [needle] in [text]. A delimiter of one character, which
+/// nearly every delimiter is, is searched for as a character, which scans the
+/// bytes directly instead of setting up a substring search for every value.
+fn find_in(text: &str, needle: &str) -> Option<usize> {
+	let mut characters = needle.chars();
+
+	match (characters.next(), characters.next()) {
+		(Some(only), None) => text.find(only),
+		_ => text.find(needle),
+	}
+}
+
 /// The next occurrence of [needle] in [text] at or after byte [from].
 fn find_from(text: &str, needle: &str, from: usize) -> Option<usize> {
 	if from > text.len() {
 		return None;
 	}
 
-	text[from..].find(needle).map(|found| from + found)
+	find_in(&text[from..], needle).map(|found| from + found)
 }
 
 /// The next character boundary after byte [at], so a search can move on past a
@@ -112,7 +124,7 @@ fn after(text: &str, at: usize) -> usize {
 pub fn extract_interpolation_keys<'a>(value: &'a str, prefix: &str, suffix: &str) -> Vec<&'a str> {
 	let mut keys = Vec::new();
 
-	if !value.contains(prefix) || !value.contains(suffix) {
+	if find_in(value, prefix).is_none() || find_in(value, suffix).is_none() {
 		return keys;
 	}
 
@@ -123,7 +135,7 @@ pub fn extract_interpolation_keys<'a>(value: &'a str, prefix: &str, suffix: &str
 
 	// Measured in UTF-16 code units, as JavaScript measures a string.
 	let single = prefix.encode_utf16().count() == 1 && suffix.encode_utf16().count() == 1;
-	let mut at = value.find(prefix);
+	let mut at = find_in(value, prefix);
 
 	while let Some(open) = at {
 		if !is_delimiter_at(value, open, prefix, single) {
@@ -149,7 +161,10 @@ pub fn extract_interpolation_keys<'a>(value: &'a str, prefix: &str, suffix: &str
 
 		let key = &value[from..end];
 
-		if key.bytes().all(is_word_byte) && !key.contains(prefix) && !key.contains(suffix) {
+		if key.bytes().all(is_word_byte)
+			&& find_in(key, prefix).is_none()
+			&& find_in(key, suffix).is_none()
+		{
 			keys.push(key);
 		}
 

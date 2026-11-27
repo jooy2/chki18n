@@ -4,6 +4,7 @@ pub mod analyzer;
 pub mod chars;
 pub mod duplicate;
 pub mod exclude;
+pub mod hash;
 pub mod interpolation;
 pub mod issue;
 pub mod js;
