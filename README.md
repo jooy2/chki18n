@@ -6,7 +6,7 @@
 
 ### [chki18n.cdget.com](https://chki18n.cdget.com)
 
-The documentation site has every check, every option and every example for all three packages. This README is the map, and each package has a quick start of its own.
+The documentation site has every check, every option and every example for the JavaScript, Dart and Python packages; the Rust package takes the same options under the same names. This README is the map, and each package has a quick start of its own.
 
 ---
 
@@ -14,7 +14,7 @@ The documentation site has every check, every option and every example for all t
 
 - **Twenty-five checks.** Missing keys, empty values, strings nobody translated, interpolation placeholders that do not match, terminology that drifted between two screens, and, pointed at your sources, keys nothing references and keys nothing defines. [The full list](https://chki18n.cdget.com/guide/checks) is on the documentation site.
 - **Every layout.** One file per locale (`en.json`), one folder per locale (`en/common.json`), or one file holding them all. Files that share keys are compared as a group, so a key missing from `errors.json` is never reported against `common.json`.
-- **Three languages, one library.** The JavaScript, Dart and Python packages run the same checks in the same order and print the same report, character for character. A parity test in CI compares their output on every pull request.
+- **Four languages, one library.** The JavaScript, Dart, Python and Rust packages run the same checks in the same order and print the same report, character for character. A parity test in CI compares their output on every pull request.
 - **From the command line or from code.** A CLI flag and its API option come from a single definition, so the two cannot disagree.
 - **A report in the shape you need.** Grouped by language, by check, by file or not at all; rendered for a terminal, for `grep`, as JSON, as Markdown or as GitHub Actions annotations; written to a file when you want to keep it.
 - **Measured in milliseconds.** Comparing 5,000 keys across 5 locales takes about 17ms in memory, and re-checking one edited key about 2µs.
@@ -22,11 +22,12 @@ The documentation site has every check, every option and every example for all t
 
 ## Packages
 
-| Package                                      | Registry                                                | Requires             | Quick start                             |
-| -------------------------------------------- | ------------------------------------------------------- | -------------------- | --------------------------------------- |
-| [`packages/javascript`](packages/javascript) | [npm: `chki18n`](https://www.npmjs.com/package/chki18n) | Node.js 22 or later  | [README](packages/javascript/README.md) |
-| [`packages/dart`](packages/dart)             | [pub.dev: `chki18n`](https://pub.dev/packages/chki18n)  | Dart 3.7 or later    | [README](packages/dart/README.md)       |
-| [`packages/python`](packages/python)         | [PyPI: `chki18n`](https://pypi.org/project/chki18n/)    | Python 3.10 or later | [README](packages/python/README.md)     |
+| Package                                      | Registry                                                 | Requires             | Quick start                             |
+| -------------------------------------------- | -------------------------------------------------------- | -------------------- | --------------------------------------- |
+| [`packages/javascript`](packages/javascript) | [npm: `chki18n`](https://www.npmjs.com/package/chki18n)  | Node.js 22 or later  | [README](packages/javascript/README.md) |
+| [`packages/dart`](packages/dart)             | [pub.dev: `chki18n`](https://pub.dev/packages/chki18n)   | Dart 3.7 or later    | [README](packages/dart/README.md)       |
+| [`packages/python`](packages/python)         | [PyPI: `chki18n`](https://pypi.org/project/chki18n/)     | Python 3.10 or later | [README](packages/python/README.md)     |
+| [`packages/rust`](packages/rust)             | [crates.io: `chki18n`](https://crates.io/crates/chki18n) | Rust 1.85 or later   | [README](packages/rust/README.md)       |
 
 The JavaScript package is the reference implementation, and the other two are held to its output rather than to a description of it. Each package keeps its own changelog and versions independently, so a release on one side is not a release on the others.
 
@@ -48,6 +49,12 @@ chki18n ./locales --target en
 ```bash
 # Python
 pipx run chki18n ./locales --target en
+```
+
+```bash
+# Rust
+cargo install chki18n
+chki18n ./locales --target en
 ```
 
 Whichever one you ran:
@@ -114,7 +121,20 @@ result.summary.error  # 1
 result.issues  # every issue, with its level, key, locale and file
 ```
 
-Every issue carries the words to describe it, so a build script, a dashboard or a translation editor can render the result without hard-coding a single string. The quick start for each package has the rest: [JavaScript](packages/javascript/README.md), [Dart](packages/dart/README.md), [Python](packages/python/README.md).
+```rust
+use chki18n::{check_translation_files, Options};
+
+let result = check_translation_files(
+    Some("./locales"),
+    &Options { target: Some("en".into()), ..Options::default() },
+);
+
+result.success; // false
+result.summary.error; // 1
+result.issues; // every issue, with its level, key, locale and file
+```
+
+Every issue carries the words to describe it, so a build script, a dashboard or a translation editor can render the result without hard-coding a single string. The quick start for each package has the rest: [JavaScript](packages/javascript/README.md), [Dart](packages/dart/README.md), [Python](packages/python/README.md), [Rust](packages/rust/README.md).
 
 ## Repository layout
 
@@ -123,9 +143,10 @@ packages/
   javascript/   # npm package `chki18n` (TypeScript in lib/, built to dist/)
   dart/         # pub package `chki18n` (library in lib/, command line in bin/)
   python/       # PyPI package `chki18n` (src/chki18n/)
+  rust/         # crates.io crate `chki18n` (library and command line in src/)
 docs/           # VitePress documentation site, English and Korean
-tools/parity/   # runs the three command lines over the same samples
-tools/bench/    # times the three packages on one generated project
+tools/parity/   # runs the four command lines over the same samples
+tools/bench/    # times the four packages on one generated project
 ```
 
 Each package carries its own `README.md`, `CHANGELOG.md` and `LICENSE`.
@@ -134,13 +155,14 @@ Each package carries its own `README.md`, `CHANGELOG.md` and `LICENSE`.
 
 Work inside the package you are changing:
 
-| Package                           | Install                   | Test        | Lint and format                  |
-| --------------------------------- | ------------------------- | ----------- | -------------------------------- |
-| [JavaScript](packages/javascript) | `npm install`             | `npm test`  | `npx eslint .`, `npm run format` |
-| [Dart](packages/dart)             | `dart pub get`            | `dart test` | `dart analyze`, `dart format .`  |
-| [Python](packages/python)         | `pip install -e ".[dev]"` | `pytest`    | `ruff check .`, `ruff format .`  |
+| Package                           | Install                   | Test         | Lint and format                  |
+| --------------------------------- | ------------------------- | ------------ | -------------------------------- |
+| [JavaScript](packages/javascript) | `npm install`             | `npm test`   | `npx eslint .`, `npm run format` |
+| [Dart](packages/dart)             | `dart pub get`            | `dart test`  | `dart analyze`, `dart format .`  |
+| [Python](packages/python)         | `pip install -e ".[dev]"` | `pytest`     | `ruff check .`, `ruff format .`  |
+| [Rust](packages/rust)             | `cargo build`             | `cargo test` | `cargo clippy`, `cargo fmt`      |
 
-A change to a check touches all three packages, so run the parity test before you open a pull request. It needs `node`, `dart`, a Python 3 and the JavaScript package built:
+A change to a check touches all four packages, so run the parity test before you open a pull request. It needs `node`, `dart`, `cargo`, a Python 3 and the JavaScript package built:
 
 ```bash
 node tools/parity/run.mjs

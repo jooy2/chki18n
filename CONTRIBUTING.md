@@ -32,17 +32,17 @@ The process is:
 5. Update the documentation, or add a page if none covers it. `docs/` ships in English and Korean, so update both. Write the content in your own language rather than leaving a page out; a translation can follow later.
 6. Add or change tests where the code has them, and confirm the existing tests still pass.
 
-### Keep the three packages in step
+### Keep the four packages in step
 
-The JavaScript, Dart and Python packages are one library, and the documentation promises they print the same report. Each package's own suite only knows its own expected output, so a change to one of them can drift from the others and still pass everywhere. Compare them directly:
+The JavaScript, Dart, Python and Rust packages are one library, and the documentation promises they print the same report. Each package's own suite only knows its own expected output, so a change to one of them can drift from the others and still pass everywhere. Compare them directly:
 
 ```bash
 node tools/parity/run.mjs
 ```
 
-It runs the three command lines over the same samples, with every reporter and every grouping, and fails on the first line that differs. It needs `node`, `dart` and a Python 3, and the JavaScript package built (`npm run build` in `packages/javascript`). CI runs it on every pull request to `main`.
+It runs the four command lines over the same samples, with every reporter and every grouping, and fails on the first line that differs. It needs `node`, `dart`, `cargo` and a Python 3, and the JavaScript package built (`npm run build` in `packages/javascript`). CI runs it on every pull request to `main`.
 
-The packages should also stay close in speed. A change to a check that runs on every value, or to the scanner, is worth timing against the other two:
+The packages should also stay close in speed. A change to a check that runs on every value, or to the scanner, is worth timing against the others:
 
 ```bash
 node tools/bench/run.mjs --keys 5000
@@ -60,7 +60,7 @@ There are no strict rules for commit messages, but follow these where you can:
 - Summarise what changed.
 - Split unrelated changes into separate commits.
 
-Because this repository holds three packages, name the one you changed in square brackets before the tag: `[javascript] fix: …`, `[dart]`, `[python]`, or `[common]` for a change that covers all of them. Leave the prefix off when the change belongs to no single package.
+Because this repository holds four packages, name the one you changed in square brackets before the tag: `[javascript] fix: …`, `[dart]`, `[python]`, `[rust]`, or `[common]` for a change that covers all of them. Leave the prefix off when the change belongs to no single package.
 
 The tags follow the [Udacity Git Commit Message Style Guide](https://udacity.github.io/git-styleguide). Tags outside this list are fine for situations it does not cover.
 
@@ -89,7 +89,7 @@ A maintainer reviews and tests the change before merging it. That takes some tim
 
 ## Releasing
 
-This part is for maintainers. Each package is released on its own, under a tag such as `javascript-v1.3.0`, `dart-v1.3.0` or `python-v1.3.0`, by the `release` workflow in `.github/workflows/release.yml`.
+This part is for maintainers. Each package is released on its own, under a tag such as `javascript-v1.3.0`, `dart-v1.3.0`, `python-v1.3.0` or `rust-v0.1.0`, by the `release` workflow in `.github/workflows/release.yml`.
 
 1. Raise the version in every file of the package that carries it, and give its changelog section the version and the date in place of `vNext`, as `## 1.3.0 (2026-10-26)`.
 
@@ -98,9 +98,10 @@ This part is for maintainers. Each package is released on its own, under a tag s
    | `javascript` | `package.json`, `package-lock.json`         |
    | `dart`       | `pubspec.yaml`, `lib/src/version.dart`      |
    | `python`     | `pyproject.toml`, `src/chki18n/_version.py` |
+   | `rust`       | `Cargo.toml`, `Cargo.lock`                  |
 
 1. Push that commit to `main`.
-1. Run the `release` workflow from the Actions tab, or with `gh workflow run release.yml -f package=javascript`. It checks the version files and the changelog, tags the commit, runs the tests, publishes the package and creates the GitHub release with the changelog section, the build and the package's source. A Dart release also carries its command line compiled ahead of time for Linux, macOS and Windows.
+1. Run the `release` workflow from the Actions tab, or with `gh workflow run release.yml -f package=javascript`. It checks the version files and the changelog, tags the commit, runs the tests, publishes the package and creates the GitHub release with the changelog section, the build and the package's source. A Dart or a Rust release also carries its command line compiled for Linux, macOS and Windows.
 
 A failed release is run again by choosing its tag under "Use workflow from". A step that already succeeded, such as the upload to the registry, is skipped.
 
@@ -111,3 +112,6 @@ No registry token is stored in the repository. Each registry trusts the `release
 | npm | The package's settings, "Trusted Publisher" | Organization or user `jooy2`, repository `chki18n`, workflow filename `release.yml`, environment name `release`, and `npm publish` allowed besides `npm stage publish` |
 | pub.dev | The package's admin page, "Automated publishing" | Repository `jooy2/chki18n`, tag pattern `dart-v{{version}}`, publishing from `push` and from `workflow_dispatch` events enabled, GitHub Actions environment `release` required |
 | PyPI | The project's publishing settings, "GitHub" | Owner `jooy2`, repository name `chki18n`, workflow name `release.yml`, environment name `release` |
+| crates.io | The crate's settings, "Trusted Publishing" | Repository owner `jooy2`, repository name `chki18n`, workflow filename `release.yml`, environment `release` |
+
+crates.io lets a trusted publisher be added only to a crate that already exists, so the first Rust release is published by hand from `packages/rust` with `cargo publish` and a token of your own, and every release after it goes through the workflow.
