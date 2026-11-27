@@ -125,6 +125,7 @@ packages/
   python/       # PyPI package `chki18n` (src/chki18n/)
 docs/           # VitePress documentation site, English and Korean
 tools/parity/   # runs the three command lines over the same samples
+tools/bench/    # times the three packages on one generated project
 ```
 
 Each package carries its own `README.md`, `CHANGELOG.md` and `LICENSE`.

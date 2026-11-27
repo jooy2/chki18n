@@ -42,6 +42,14 @@ node tools/parity/run.mjs
 
 It runs the three command lines over the same samples, with every reporter and every grouping, and fails on the first line that differs. It needs `node`, `dart` and a Python 3, and the JavaScript package built (`npm run build` in `packages/javascript`). CI runs it on every pull request to `main`.
 
+The packages should also stay close in speed. A change to a check that runs on every value, or to the scanner, is worth timing against the other two:
+
+```bash
+node tools/bench/run.mjs --keys 5000
+```
+
+It generates one project of that size, times each package in process and from its command line, and prints the medians side by side with each package's time as a multiple of the JavaScript one. It needs the same tools as the parity test, and `--only dart` times one package on its own.
+
 ### Write a commit message
 
 There are no strict rules for commit messages, but follow these where you can:
