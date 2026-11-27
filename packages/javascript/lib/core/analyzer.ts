@@ -138,7 +138,8 @@ type CheckFlags = {
 	suspiciousLength: boolean;
 };
 
-type FileLookup = ((group: string, locale: string) => string | undefined) | null;
+/** The file each locale of one group was read from, in the order of its locales. */
+type GroupFiles = (string | undefined)[] | null;
 
 const buildCheckFlags = (enabled: Set<Chki18nCheckCode>): CheckFlags => ({
 	invalidValueType: enabled.has(CHECK_CODE.INVALID_VALUE_TYPE),
@@ -191,7 +192,7 @@ const asDisplayValue = (value: unknown): string | undefined => {
 	return String(value);
 };
 
-const buildFileLookup = (files?: Chki18nSourceFile[]): FileLookup => {
+const buildFilePaths = (files?: Chki18nSourceFile[]): Map<string, string> | null => {
 	if (!files || files.length < 1) {
 		return null;
 	}
@@ -202,8 +203,20 @@ const buildFileLookup = (files?: Chki18nSourceFile[]): FileLookup => {
 		paths.set(`${file.group} ${file.locale}`, file.path);
 	}
 
-	return (group, locale) => paths.get(`${group} ${locale}`);
+	return paths;
 };
+
+/**
+ * The file each of `localeNames` was read from in `group`, in that order.
+ * Resolved once per group rather than once per value: every finding about a key
+ * names its file, and the lookup would otherwise build a string for every
+ * locale of every key.
+ */
+const filesOf = (
+	paths: Map<string, string> | null,
+	group: string,
+	localeNames: string[]
+): GroupFiles => (paths ? localeNames.map((locale) => paths.get(`${group} ${locale}`)) : null);
 
 /**
  * Report the markup this value does not carry the way the target language does.
@@ -290,7 +303,7 @@ function checkKeySlots(
 	targetIndex: number,
 	flags: CheckFlags,
 	options: Chki18nResolvedOptions,
-	fileOf: FileLookup
+	files: GroupFiles
 ): void {
 	const hasTargetKey = targetIndex !== -1 && present[targetIndex];
 	const targetValue = hasTargetKey ? values[targetIndex] : undefined;
@@ -335,7 +348,7 @@ function checkKeySlots(
 		const isTarget = index === targetIndex;
 		const locale = localeNames[index];
 		const value = values[index];
-		const file = fileOf ? fileOf(group, locale) : undefined;
+		const file = files ? files[index] : undefined;
 		// Nothing is quoted beside a finding of the target language's own: the
 		// value the report already shows is the value it would be compared to.
 		const base = { locale, key, group, file, targetValue: isTarget ? undefined : targetText };
@@ -563,15 +576,16 @@ function checkDuplicateValues(
 	group: string,
 	localeNames: string[],
 	maps: TranslationMap[],
+	ownKeys: string[][],
 	targetIndex: number,
-	fileOf: FileLookup
+	files: GroupFiles
 ): void {
 	for (let index = 0; index < localeNames.length; index += 1) {
 		const locale = localeNames[index];
 		const map = maps[index];
 		const firstKeyOfValue = new Map<string, string>();
 
-		for (const key of Object.keys(map)) {
+		for (const key of ownKeys[index]) {
 			const value = map[key];
 
 			if (typeof value !== 'string' || value.length < 1) {
@@ -593,7 +607,7 @@ function checkDuplicateValues(
 					value,
 					targetValue: asDisplayValue(maps[targetIndex]?.[key]),
 					relatedKey: firstKey,
-					file: fileOf ? fileOf(group, locale) : undefined,
+					file: files ? files[index] : undefined,
 					message: `The key \`${firstKey}\` in the same locale already uses this value.`
 				})
 			);
@@ -612,14 +626,15 @@ function checkInconsistentValues(
 	group: string,
 	localeNames: string[],
 	maps: TranslationMap[],
+	ownKeys: string[][],
 	targetIndex: number,
 	target: string,
-	fileOf: FileLookup
+	files: GroupFiles
 ): void {
 	const targetMap = maps[targetIndex];
 	const keysOfValue = new Map<string, string[]>();
 
-	for (const key of Object.keys(targetMap)) {
+	for (const key of ownKeys[targetIndex]) {
 		const value = targetMap[key];
 
 		if (typeof value !== 'string' || value.length < 1) {
@@ -677,7 +692,7 @@ function checkInconsistentValues(
 						value,
 						targetValue,
 						relatedKey: firstKey,
-						file: fileOf ? fileOf(group, localeNames[index]) : undefined,
+						file: files ? files[index] : undefined,
 						message: `The key \`${firstKey}\` has the same ${target} value but is translated as "${firstValue}".`
 					})
 				);
@@ -696,8 +711,8 @@ function checkPluralForms(
 	issues: Chki18nIssue[],
 	group: string,
 	localeNames: string[],
-	maps: TranslationMap[],
-	fileOf: FileLookup
+	ownKeys: string[][],
+	files: GroupFiles
 ): void {
 	for (let index = 0; index < localeNames.length; index += 1) {
 		const locale = localeNames[index];
@@ -709,7 +724,7 @@ function checkPluralForms(
 
 		const formsOfBase = new Map<string, Set<string>>();
 
-		for (const key of Object.keys(maps[index])) {
+		for (const key of ownKeys[index]) {
 			const parts = pluralPartsOf(key);
 
 			if (!parts) {
@@ -740,7 +755,7 @@ function checkPluralForms(
 					locale,
 					key: base,
 					group,
-					file: fileOf ? fileOf(group, locale) : undefined,
+					file: files ? files[index] : undefined,
 					message: `\`${locale}\` needs ${listOf(missing.map((category) => `\`${base}_${category}\``))} and the file does not define ${missing.length === 1 ? 'it' : 'them'}.`
 				})
 			);
@@ -749,12 +764,16 @@ function checkPluralForms(
 }
 
 /** Keys of every locale, target language first so reports follow its order. */
-export const collectKeys = (maps: TranslationMap[], targetIndex: number): string[] => {
+export const collectKeys = (
+	maps: TranslationMap[],
+	targetIndex: number,
+	ownKeys: string[][] = maps.map((map) => Object.keys(map))
+): string[] => {
 	const keys: string[] = [];
 	const seen = new Set<string>();
 
-	const collect = (map: TranslationMap) => {
-		for (const key of Object.keys(map)) {
+	const collect = (index: number) => {
+		for (const key of ownKeys[index]) {
 			if (seen.has(key)) {
 				continue;
 			}
@@ -765,12 +784,12 @@ export const collectKeys = (maps: TranslationMap[], targetIndex: number): string
 	};
 
 	if (targetIndex !== -1) {
-		collect(maps[targetIndex]);
+		collect(targetIndex);
 	}
 
 	for (let index = 0; index < maps.length; index += 1) {
 		if (index !== targetIndex) {
-			collect(maps[index]);
+			collect(index);
 		}
 	}
 
@@ -891,7 +910,7 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 			}
 		}
 
-		const fileOf = buildFileLookup(input?.files);
+		const filePaths = buildFilePaths(input?.files);
 		// Supplied rather than worked out: whether a key is referenced is a fact
 		// about the source tree, which the comparison never sees.
 		const unusedKeys =
@@ -946,7 +965,12 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 			}
 
 			const maps = localeNames.map((locale) => localeMaps[locale]);
-			const keys = collectKeys(maps, targetIndex);
+			// Listed once per map and shared by every check that walks it. A map of
+			// thousands of keys is a dictionary to V8, and listing one sorts its keys
+			// back into the order they were added.
+			const ownKeys = maps.map((map) => Object.keys(map));
+			const files = filesOf(filePaths, group, localeNames);
+			const keys = collectKeys(maps, targetIndex, ownKeys);
 			const values: unknown[] = new Array(maps.length);
 			const present: boolean[] = new Array(maps.length);
 
@@ -974,7 +998,7 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 					targetIndex,
 					flags,
 					resolved.options,
-					fileOf
+					files
 				);
 
 				// Not locale-bound: the key is unreferenced, not one language's
@@ -985,11 +1009,11 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 			}
 
 			if (flags.duplicateValue) {
-				checkDuplicateValues(issues, group, localeNames, maps, targetIndex, fileOf);
+				checkDuplicateValues(issues, group, localeNames, maps, ownKeys, targetIndex, files);
 			}
 
 			if (flags.noPluralForm) {
-				checkPluralForms(issues, group, localeNames, maps, fileOf);
+				checkPluralForms(issues, group, localeNames, ownKeys, files);
 			}
 
 			if (flags.inconsistentValue) {
@@ -998,9 +1022,10 @@ export function createAnalyzer(options?: Chki18nOptions): Chki18nAnalyzer {
 					group,
 					localeNames,
 					maps,
+					ownKeys,
 					targetIndex,
 					resolved.options.target,
-					fileOf
+					files
 				);
 			}
 		}
