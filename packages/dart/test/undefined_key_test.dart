@@ -65,6 +65,57 @@ void main() {
       expect(found.undefinedKeys.any((usage) => usage.key == 'folder'), isFalse);
     });
 
+    test('counts a run of whole segments as defined, and nothing shorter', () async {
+      // An ordinal key is asked for by the base in front of its `_ordinal`
+      // infix, so `place` is defined and `list.place_ordinal` is not.
+      final dir = await Directory.systemTemp.createTemp('chki18n-address-');
+      const asked = [
+        'menu.file.save',
+        'file.save',
+        'save',
+        'le.save',
+        'ile.save',
+        'menu.file',
+        '.save',
+        'menu.file.save.more',
+        'place',
+        'list.place_ordinal',
+        'page.item',
+      ];
+      const defined = [
+        'menu.file.save',
+        'top.list.place_ordinal_one',
+        'top.list.place_ordinal_other',
+        'page.item_one',
+      ];
+
+      try {
+        await File(
+          '${dir.path}/app.ts',
+        ).writeAsString([for (final key in asked) "t('$key');"].join('\n'));
+
+        final found = await findUnusedKeys(
+          dir.path,
+          defined,
+          resolveOptions(const Chki18nOptions(target: 'en')).options,
+        );
+
+        expect(
+          [for (final usage in found.undefinedKeys) usage.key],
+          [
+            'le.save',
+            'ile.save',
+            'menu.file',
+            '.save',
+            'menu.file.save.more',
+            'list.place_ordinal',
+          ],
+        );
+      } finally {
+        await dir.delete(recursive: true);
+      }
+    });
+
     test('counts a plural key asked for by its base as defined', () async {
       final found = await scan();
 

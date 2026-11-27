@@ -216,39 +216,68 @@ Set<String> _callsIn(String content, List<RegExp> patterns) {
   return keys;
 }
 
+/// The last segment of a dotted key: `folder` for `attr.folder`.
+String _lastSegmentOf(String key) => key.substring(key.lastIndexOf('.') + 1);
+
 /// Every way a defined key can be addressed: in full, by its plural base, and
 /// by any run of segments that ends either.
 ///
 /// A `t` bound with a `keyPrefix`, or a namespace loaded higher up, asks for
 /// `folder` rather than `attr.folder`, and reporting that as undefined would
 /// cry wolf on working code — the same trade the unused scan makes.
-Set<String> _addressesOf(List<String> keys) {
-  final addresses = <String>{};
+///
+/// Every such address ends with the last segment of the key it addresses, so
+/// the keys are filed under that segment and an address is answered by the few
+/// filed under its own. Writing out every run of every key up front cost a
+/// string for each segment of each key, most of them never asked about.
+class _Addresses {
+  _Addresses(List<String> keys) {
+    for (final key in keys) {
+      _file(key);
 
-  void add(String key) {
-    addresses.add(key);
+      // The source asks for `item`, never for `item_one`: the runtime picks the
+      // form, so the base is an address of the key as much as the key is.
+      final base = pluralBaseOf(key);
 
-    var separator = key.indexOf('.');
-
-    while (separator != -1) {
-      addresses.add(key.substring(separator + 1));
-      separator = key.indexOf('.', separator + 1);
+      if (base != null) {
+        _file(base);
+      }
     }
   }
 
-  for (final key in keys) {
-    add(key);
+  final Map<String, List<String>> _keysByLast = {};
 
-    // The source asks for `item`, never for `item_one`: the runtime picks the
-    // form, so the base is an address of the key as much as the key is.
-    final base = pluralBaseOf(key);
-
-    if (base != null) {
-      add(base);
-    }
+  void _file(String key) {
+    (_keysByLast[_lastSegmentOf(key)] ??= <String>[]).add(key);
   }
 
-  return addresses;
+  /// Whether [address] is a key in full or the run of segments one ends with.
+  bool contains(String address) {
+    final candidates = _keysByLast[_lastSegmentOf(address)];
+
+    if (candidates == null) {
+      return false;
+    }
+
+    for (final key in candidates) {
+      if (key.length == address.length) {
+        if (key == address) {
+          return true;
+        }
+
+        continue;
+      }
+
+      // A run of segments starts right after a dot.
+      if (key.length > address.length &&
+          key.endsWith(address) &&
+          key.codeUnitAt(key.length - address.length - 1) == 0x2e) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 }
 
 /// Searches [sourcePath] for each key, and reports the ones never found.
@@ -277,7 +306,7 @@ Future<Chki18nUsageScan> findUnusedKeys(
   // Only worth reading every file for; the unused scan can stop as soon as the
   // last leaf turns up, and this one cannot.
   final wantsUndefined = options.enabledChecks.contains(Chki18nCheckCode.undefinedKey);
-  final addresses = wantsUndefined ? _addressesOf(keys) : null;
+  final addresses = wantsUndefined ? _Addresses(keys) : null;
   final patterns = wantsUndefined ? _callPatterns(options.translateFunctions) : <RegExp>[];
   final undefinedKeys = <Chki18nKeyUsage>[];
   final reported = <String>{};
