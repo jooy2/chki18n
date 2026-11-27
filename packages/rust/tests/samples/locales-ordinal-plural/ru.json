@@ -1,0 +1,7 @@
+{
+	"place_ordinal_one": "{count}-е место",
+	"item_one": "{count} товар",
+	"item_few": "{count} товара",
+	"item_many": "{count} товаров",
+	"item_other": "{count} товара"
+}

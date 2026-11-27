@@ -1,0 +1,16 @@
+{
+	"desc": {
+		"hello": "Hello",
+		"bye": "Goodbye",
+		"dynamic": "{a} is {b}.",
+		"no-str": "12345"
+	},
+	"attr": {
+		"menu": "Menu",
+		"close": "Close",
+		"open": "Open",
+		"file": "File",
+		"folder": "Folder",
+		"open-with": "Open with {target}"
+	}
+}

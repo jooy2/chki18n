@@ -1,0 +1,12 @@
+{
+	"greeting": "Hello {name}",
+	"empty": "Empty value",
+	"same": "Same",
+	"count": "You have 3 items",
+	"trim": "Trimmed",
+	"link": "Go",
+	"num": "1",
+	"dup-a": "Alpha",
+	"dup-b": "Beta",
+	"only-en": "Only in English"
+}

@@ -1,0 +1,10 @@
+{
+	"empty-object": "빈 객체",
+	"empty-list": "빈 목록",
+	"whole": "1",
+	"tiny": "0.0000001",
+	"huge": "1e21",
+	"flag": "참",
+	"nothing": "없음",
+	"text": "텍스트"
+}

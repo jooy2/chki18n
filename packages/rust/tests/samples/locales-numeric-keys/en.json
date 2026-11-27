@@ -1,0 +1,11 @@
+{
+	"title": "Errors",
+	"500": "Server error",
+	"404": "Not found",
+	"": "A key with no name",
+	"nested": {
+		"b": "Bee",
+		"10": "Ten",
+		"2": "Two"
+	}
+}
