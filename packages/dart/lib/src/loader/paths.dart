@@ -11,18 +11,34 @@ import 'dart:io';
 /// Both separators, because a Windows path may be written with either.
 final RegExp _separator = RegExp(r'[/\\]');
 
+/// Where the last `/` or `\` of [path] is, or `-1`.
+///
+/// Walked back by hand: `lastIndexOf` with a pattern runs the pattern once at
+/// every position from the end, and a directory walk asks this of every entry.
+int _lastSeparatorIn(String path) {
+  for (var index = path.length - 1; index >= 0; index -= 1) {
+    final unit = path.codeUnitAt(index);
+
+    if (unit == 0x2f || unit == 0x5c) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
 /// The last segment of a path, which is a file's or a directory's own name.
 String basenameOf(String path) {
   final trimmed =
       path.endsWith('/') || path.endsWith(r'\') ? path.substring(0, path.length - 1) : path;
-  final cut = trimmed.lastIndexOf(_separator);
+  final cut = _lastSeparatorIn(trimmed);
 
   return cut == -1 ? trimmed : trimmed.substring(cut + 1);
 }
 
 /// Everything above the last segment, or `.` when there is nothing above it.
 String dirnameOf(String path) {
-  final cut = path.lastIndexOf(_separator);
+  final cut = _lastSeparatorIn(path);
 
   if (cut == -1) {
     return '.';

@@ -36,11 +36,11 @@ Stream<Chki18nWalkedFile> walkFiles(
       return;
     }
 
-    entries.sort((a, b) => basenameOf(a.path).compareTo(basenameOf(b.path)));
+    // Named once each rather than twice per comparison of the sort.
+    final named = [for (final entry in entries) (name: basenameOf(entry.path), entry: entry)]
+      ..sort((a, b) => a.name.compareTo(b.name));
 
-    for (final entry in entries) {
-      final name = basenameOf(entry.path);
-
+    for (final (:name, :entry) in named) {
       if (name.startsWith('.')) {
         continue;
       }
