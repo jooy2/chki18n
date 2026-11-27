@@ -168,39 +168,67 @@ function callsIn(content: string, patterns: RegExp[]): Set<string> {
 	return keys;
 }
 
+/** The last segment of a dotted key: `folder` for `attr.folder`. */
+const lastSegmentOf = (key: string): string => key.slice(key.lastIndexOf('.') + 1);
+
 /**
  * Every way a defined key can be addressed: in full, by its plural base, and by
- * any run of segments that ends either. A `t` bound with a `keyPrefix`, or a namespace loaded higher up,
- * asks for `folder` rather than `attr.folder`, and reporting that as undefined
- * would cry wolf on working code — the same trade the unused scan makes.
+ * any run of segments that ends either. A `t` bound with a `keyPrefix`, or a
+ * namespace loaded higher up, asks for `folder` rather than `attr.folder`, and
+ * reporting that as undefined would cry wolf on working code — the same trade
+ * the unused scan makes.
+ *
+ * Every such address ends with the last segment of the key it addresses, so the
+ * keys are filed under that segment and an address is answered by the few filed
+ * under its own. Writing out every run of every key up front cost a string for
+ * each segment of each key, most of them never asked about.
  */
-function addressesOf(keys: string[]): Set<string> {
-	const addresses = new Set<string>();
+function addressesOf(keys: string[]): { has: (address: string) => boolean } {
+	const keysByLast = new Map<string, string[]>();
 
-	const add = (key: string) => {
-		addresses.add(key);
+	const file = (key: string): void => {
+		const last = lastSegmentOf(key);
+		const filed = keysByLast.get(last);
 
-		let separator = key.indexOf('.');
-
-		while (separator !== -1) {
-			addresses.add(key.slice(separator + 1));
-			separator = key.indexOf('.', separator + 1);
+		if (filed) {
+			filed.push(key);
+		} else {
+			keysByLast.set(last, [key]);
 		}
 	};
 
 	for (const key of keys) {
-		add(key);
+		file(key);
 
 		// The source asks for `item`, never for `item_one`: the runtime picks the
 		// form, so the base is an address of the key as much as the key is.
 		const base = pluralBaseOf(key);
 
 		if (base) {
-			add(base);
+			file(base);
 		}
 	}
 
-	return addresses;
+	return {
+		has: (address) => {
+			for (const key of keysByLast.get(lastSegmentOf(address)) ?? []) {
+				if (key === address) {
+					return true;
+				}
+
+				// A run of segments starts right after a dot.
+				if (
+					key.length > address.length &&
+					key.endsWith(address) &&
+					key.charCodeAt(key.length - address.length - 1) === 0x2e
+				) {
+					return true;
+				}
+			}
+
+			return false;
+		}
+	};
 }
 
 /**

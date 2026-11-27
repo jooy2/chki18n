@@ -81,6 +81,48 @@ describe('findUnusedKeys, on the keys the source asks for', () => {
 		);
 	});
 
+	it('counts a run of whole segments as defined, and nothing shorter', async () => {
+		// An ordinal key is asked for by the base in front of its `_ordinal` infix,
+		// so `place` is defined and `list.place_ordinal` is not.
+		const dir = await mkdtemp(join(tmpdir(), 'chki18n-address-'));
+		const asked = [
+			'menu.file.save',
+			'file.save',
+			'save',
+			'le.save',
+			'ile.save',
+			'menu.file',
+			'.save',
+			'menu.file.save.more',
+			'place',
+			'list.place_ordinal',
+			'page.item'
+		];
+		const defined = [
+			'menu.file.save',
+			'top.list.place_ordinal_one',
+			'top.list.place_ordinal_other',
+			'page.item_one'
+		];
+
+		try {
+			await writeFile(join(dir, 'app.ts'), asked.map((key) => `t('${key}');`).join('\n'));
+
+			const { undefinedKeys } = await findUnusedKeys(
+				dir,
+				defined,
+				resolveOptions({ target: 'en' }).options
+			);
+
+			assert.deepStrictEqual(
+				undefinedKeys.map((usage) => usage.key),
+				['le.save', 'ile.save', 'menu.file', '.save', 'menu.file.save.more', 'list.place_ordinal']
+			);
+		} finally {
+			await rm(dir, { recursive: true, force: true });
+		}
+	});
+
 	it('counts a plural key asked for by its base as defined', async () => {
 		const { undefinedKeys, unusedKeys } = await scan();
 
